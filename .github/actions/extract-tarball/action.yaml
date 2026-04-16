@@ -1,0 +1,19 @@
+name: Extract Tarball
+description: Extract grammar shared libraries from a release tarball
+
+inputs:
+  tarball:
+    description: Path to the release tarball
+    required: true
+  outputDir:
+    description: Output directory for shared libraries
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Extract shared libraries
+      shell: bash
+      run: |
+        $GITHUB_ACTION_PATH/scripts/extract-tarball.sh \
+          ${{ inputs.tarball }} ${{ inputs.outputDir }}

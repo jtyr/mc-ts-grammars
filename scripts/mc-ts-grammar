@@ -1,0 +1,999 @@
+#!/bin/bash
+#
+# mc-ts-grammar - Tree-sitter grammar installer for Midnight Commander
+#
+# Manages building, installing, updating, and removing tree-sitter grammars
+# for MC's syntax highlighting.
+#
+# Usage:
+#   mc-ts-grammar build [--install] [--validate] [--dir PATH] [--libdir PATH]
+#   mc-ts-grammar install NAME...|--all [--version VER] [--no-cache] [--dir PATH] [--libdir PATH]
+#   mc-ts-grammar update NAME...|--all [--version VER] [--no-cache] [--dir PATH] [--libdir PATH]
+#   mc-ts-grammar list
+#   mc-ts-grammar uninstall NAME...|--all [--dir PATH] [--libdir PATH]
+
+set -euo pipefail
+
+PROG=$(basename "$0")
+REPO_URL='https://github.com/jtyr/mc-ts-grammars'
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/mc-ts-grammar"
+DEFAULT_PREFIX="$HOME/.local"
+
+# Detect platform and shared library extension
+detect_platform() {
+    local arch os
+    arch=$(uname -m)
+    os=$(uname -s)
+
+    case "$os" in
+        Linux)
+            case "$arch" in
+                x86_64)  echo 'x86_64-linux' ;;
+                aarch64) echo 'aarch64-linux' ;;
+                *)       echo "ERROR: unsupported architecture: $arch" >&2; return 1 ;;
+            esac
+            ;;
+        Darwin)
+            case "$arch" in
+                x86_64)  echo 'x86_64-macos' ;;
+                arm64)   echo 'aarch64-macos' ;;
+                *)       echo "ERROR: unsupported architecture: $arch" >&2; return 1 ;;
+            esac
+            ;;
+        MINGW*|MSYS*|CYGWIN*)
+            echo 'x86_64-windows'
+            ;;
+        *)
+            echo "ERROR: unsupported OS: $os" >&2
+            return 1
+            ;;
+    esac
+}
+
+so_ext() {
+    case "$(uname -s)" in
+        Darwin)              echo 'dylib' ;;
+        MINGW*|MSYS*|CYGWIN*) echo 'dll' ;;
+        *)                   echo 'so' ;;
+    esac
+}
+
+usage() {
+    cat <<EOF
+Usage: $PROG <command> [options]
+
+Commands:
+  build      Build grammars from source (run from cloned repo)
+  install    Install grammars from pre-built release bundles
+  update     Update installed grammars to latest release
+  list       List installed grammars
+  available  List grammars available in a release bundle
+  uninstall  Remove installed grammars
+EOF
+    usage_global_options
+    echo ''
+    echo "Run '$PROG <command> --help' for command-specific options."
+}
+
+# --- Per-command help ---
+
+usage_global_options() {
+    cat <<EOF
+
+Global options:
+  --dir PATH      Install prefix (default: ~/.local)
+  --libdir PATH   Library install path (default: <prefix>/lib)
+  --help, -h      Show this help message
+EOF
+}
+
+usage_build() {
+    cat <<EOF
+Usage: $PROG build [--install] [--validate] [--dir PATH] [--libdir PATH]
+
+Build grammars from source. Must be run from within a cloned copy of the
+mc-ts-grammars repository. Requires a C compiler and the tree-sitter CLI.
+
+Options:
+  --install       Install after building
+  --validate      Validate queries against built grammars
+EOF
+    usage_global_options
+}
+
+usage_install() {
+    cat <<EOF
+Usage: $PROG install NAME...|--all [OPTIONS]
+
+Install grammars from a pre-built release bundle.
+
+Options:
+  --all           Install all available grammars
+  --version VER   Pin to a specific release version
+  --arch ARCH     Target platform (default: auto-detect)
+  --no-cache      Force re-download of release bundle
+EOF
+    usage_global_options
+}
+
+usage_update() {
+    cat <<EOF
+Usage: $PROG update NAME...|--all [OPTIONS]
+
+Update installed grammars to the latest release.
+
+Options:
+  --all           Update all installed grammars
+  --version VER   Pin to a specific release version
+  --arch ARCH     Target platform (default: auto-detect)
+  --no-cache      Force re-download of release bundle
+EOF
+    usage_global_options
+}
+
+usage_list() {
+    cat <<EOF
+Usage: $PROG list [--verbose|-v]
+
+List installed grammars with version and scope information.
+
+Options:
+  --verbose, -v   Show installation paths
+  --help, -h      Show this help message
+EOF
+}
+
+usage_available() {
+    cat <<EOF
+Usage: $PROG available [OPTIONS]
+
+List grammars available in a release bundle and show which are already
+installed locally.
+
+Options:
+  --version VER   Show a specific release (default: latest)
+  --arch ARCH     Target platform (default: auto-detect)
+  --no-cache      Force re-download of release bundle
+  --help, -h      Show this help message
+EOF
+}
+
+usage_uninstall() {
+    cat <<EOF
+Usage: $PROG uninstall NAME...|--all [--dir PATH] [--libdir PATH]
+
+Remove installed grammars.
+
+Options:
+  --all           Remove all grammars
+EOF
+    usage_global_options
+}
+
+# --- Build command ---
+
+cmd_build() {
+    local prefix="$DEFAULT_PREFIX"
+    local libdir=""
+    local do_install=false
+    local do_validate=false
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --help|-h)  usage_build; exit 0 ;;
+            --dir)      prefix=$2; shift ;;
+            --dir=*)    prefix=${1#--dir=} ;;
+            --libdir)   libdir=$2; shift ;;
+            --libdir=*) libdir=${1#--libdir=} ;;
+            --install)  do_install=true ;;
+            --validate) do_validate=true ;;
+            *) echo "ERROR: unknown option: $1" >&2; exit 1 ;;
+        esac
+        shift
+    done
+
+    [ -z "$libdir" ] && libdir="$prefix/lib"
+
+    # Must be run from within the repo
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
+    if [ -z "$repo_root" ] || [ ! -f "$repo_root/grammars.yaml" ]; then
+        echo 'ERROR: must be run from within the mc-ts-grammars repository' >&2
+        exit 1
+    fi
+
+    # Find grammars with config.ini + highlights.scm
+    local grammars=()
+    for dir in "$repo_root"/grammars/*/; do
+        local lang
+        lang=$(basename "$dir")
+        if [ -f "$dir/config.ini" ] && [ -f "$dir/highlights.scm" ]; then
+            grammars+=("$lang")
+        fi
+    done
+
+    if [ ${#grammars[@]} -eq 0 ]; then
+        echo 'No grammars with config.ini + highlights.scm found'
+        exit 1
+    fi
+
+    echo "Building ${#grammars[@]} grammars..."
+
+    # Check for compiler and tree-sitter CLI
+    local cc="${CC:-gcc}"
+    if ! command -v "$cc" >/dev/null 2>&1; then
+        echo "ERROR: C compiler not found: $cc" >&2
+        exit 1
+    fi
+
+    if ! command -v tree-sitter >/dev/null 2>&1; then
+        echo 'ERROR: tree-sitter CLI not found' >&2
+        exit 1
+    fi
+
+    local build_dir="$repo_root/build"
+    mkdir -p "$build_dir"
+
+    local ext
+    ext=$(so_ext)
+    local so_flags
+    case "$(uname -s)" in
+        Darwin) so_flags='-dynamiclib' ;;
+        *)      so_flags='-shared' ;;
+    esac
+
+    local built=0
+    local failed=0
+
+    for lang in "${grammars[@]}"; do
+        local src_dir="$repo_root/grammars/$lang/src"
+        local parser_dir="$src_dir/src"
+
+        # Generate parser if needed
+        if [ ! -f "$parser_dir/parser.c" ] && [ -f "$src_dir/grammar.js" ]; then
+            echo "  GENERATE $lang"
+            if [ -f "$src_dir/package.json" ] && \
+               grep -q '"dependencies"' "$src_dir/package.json" 2>/dev/null; then
+                (cd "$src_dir" && npm install --ignore-scripts --loglevel=error 2>&1) || true
+            fi
+            if ! (cd "$src_dir" && tree-sitter generate 2>&1); then
+                echo "  ERROR    $lang: generation failed"
+                failed=$((failed + 1))
+                continue
+            fi
+        fi
+
+        if [ ! -f "$parser_dir/parser.c" ]; then
+            echo "  SKIP     $lang (no parser.c)"
+            continue
+        fi
+
+        echo "  BUILD    $lang"
+
+        # Compile parser.c
+        local obj_files=()
+        if ! $cc -fPIC -O2 -I"$parser_dir" -c -o "$build_dir/$lang.parser.o" "$parser_dir/parser.c" 2>/dev/null; then
+            echo "  ERROR    $lang: parser compilation failed"
+            failed=$((failed + 1))
+            continue
+        fi
+        obj_files+=("$build_dir/$lang.parser.o")
+
+        # Compile scanner if present
+        if [ -f "$parser_dir/scanner.c" ]; then
+            if ! $cc -fPIC -O2 -I"$parser_dir" -c -o "$build_dir/$lang.scanner.o" "$parser_dir/scanner.c" 2>/dev/null; then
+                echo "  ERROR    $lang: scanner compilation failed"
+                rm -f "${obj_files[@]}"
+                failed=$((failed + 1))
+                continue
+            fi
+            obj_files+=("$build_dir/$lang.scanner.o")
+        elif [ -f "$parser_dir/scanner.cc" ]; then
+            local cxx="${CXX:-g++}"
+            if ! $cxx -fPIC -O2 -I"$parser_dir" -c -o "$build_dir/$lang.scanner.o" "$parser_dir/scanner.cc" 2>/dev/null; then
+                echo "  ERROR    $lang: scanner compilation failed"
+                rm -f "${obj_files[@]}"
+                failed=$((failed + 1))
+                continue
+            fi
+            obj_files+=("$build_dir/$lang.scanner.o")
+        fi
+
+        # Link shared library
+        if ! $cc $so_flags -o "$build_dir/$lang.$ext" "${obj_files[@]}" 2>/dev/null; then
+            echo "  ERROR    $lang: linking failed"
+            rm -f "${obj_files[@]}"
+            failed=$((failed + 1))
+            continue
+        fi
+
+        rm -f "${obj_files[@]}"
+        built=$((built + 1))
+    done
+
+    echo "Built $built/${#grammars[@]} grammars ($failed failed)"
+
+    # Validate
+    if $do_validate && [ $built -gt 0 ]; then
+        echo ''
+        echo 'Validating queries...'
+        build_validate "$repo_root" "$build_dir" "${grammars[@]}"
+    fi
+
+    # Install
+    if $do_install && [ $built -gt 0 ]; then
+        echo ''
+        echo "Installing to $prefix..."
+        local share_dir="$prefix/share/mc/syntax-ts"
+        local lib_dir="$libdir/mc/ts-grammars"
+        mkdir -p "$lib_dir"
+
+        for lang in "${grammars[@]}"; do
+            if [ ! -f "$build_dir/$lang.$ext" ]; then
+                continue
+            fi
+            local dest_dir="$share_dir/$lang"
+            mkdir -p "$dest_dir"
+            cp "$build_dir/$lang.$ext" "$lib_dir/$lang.$ext"
+            cp "$repo_root/grammars/$lang/config.ini" "$dest_dir/"
+            cp "$repo_root/grammars/$lang/highlights.scm" "$dest_dir/"
+            if [ -f "$repo_root/grammars/$lang/injections.scm" ]; then
+                cp "$repo_root/grammars/$lang/injections.scm" "$dest_dir/"
+            fi
+            echo 'dev' > "$dest_dir/.version"
+            echo "  $lang"
+        done
+        echo 'Done.'
+    fi
+
+    [ $failed -gt 0 ] && return 1
+    return 0
+}
+
+# Compile and run the C validator
+build_validate() {
+    local repo_root=$1
+    local build_dir=$2
+    shift 2
+
+    local ext
+    ext=$(so_ext)
+    local cc="${CC:-gcc}"
+    local validator_dir
+    validator_dir=$(mktemp -d)
+    trap 'rm -rf "${validator_dir:?}"' RETURN
+
+    cat > "$validator_dir/validate.c" << 'VEOF'
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dlfcn.h>
+#include <tree_sitter/api.h>
+
+int main(int argc, char **argv) {
+    if (argc < 4) {
+        fprintf(stderr, "Usage: validate <so_file> <symbol_name> <scm_file> [...]\n");
+        return 1;
+    }
+
+    const char *so_file = argv[1];
+    const char *symbol_name = argv[2];
+    int errors = 0;
+
+    void *handle = dlopen(so_file, RTLD_LAZY);
+    if (!handle) {
+        fprintf(stderr, "ERROR: cannot load %s: %s\n", so_file, dlerror());
+        return 1;
+    }
+
+    typedef const TSLanguage *(*LangFunc)(void);
+    LangFunc lang_func = (LangFunc)dlsym(handle, symbol_name);
+    if (!lang_func) {
+        fprintf(stderr, "ERROR: symbol '%s' not found in %s\n", symbol_name, so_file);
+        dlclose(handle);
+        return 1;
+    }
+
+    const TSLanguage *language = lang_func();
+
+    for (int i = 3; i < argc; i++) {
+        FILE *f = fopen(argv[i], "r");
+        if (!f) {
+            fprintf(stderr, "ERROR: cannot open %s\n", argv[i]);
+            errors++;
+            continue;
+        }
+
+        fseek(f, 0, SEEK_END);
+        long len = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        char *source = malloc(len + 1);
+        fread(source, 1, len, f);
+        source[len] = '\0';
+        fclose(f);
+
+        uint32_t error_offset;
+        TSQueryError error_type;
+        TSQuery *query = ts_query_new(language, source, len, &error_offset, &error_type);
+
+        if (!query) {
+            const char *error_names[] = {
+                "None", "Syntax", "NodeType", "Field", "Capture", "Structure", "Language"
+            };
+            const char *ename = (error_type < 7) ? error_names[error_type] : "Unknown";
+            fprintf(stderr, "  FAIL     %s (offset %u: %s)\n", argv[i], error_offset, ename);
+            errors++;
+        } else {
+            ts_query_delete(query);
+        }
+
+        free(source);
+    }
+
+    dlclose(handle);
+    return errors > 0 ? 1 : 0;
+}
+VEOF
+
+    if ! $cc -o "$validator_dir/validate" "$validator_dir/validate.c" -ltree-sitter -ldl 2>/dev/null; then
+        echo 'ERROR: failed to compile validator (is tree-sitter-dev installed?)' >&2
+        return 1
+    fi
+
+    local validated=0
+    local vfailed=0
+
+    for lang in "$@"; do
+        local so_file="$build_dir/$lang.$ext"
+        [ -f "$so_file" ] || continue
+
+        local grammar_dir="$repo_root/grammars/$lang"
+        local scm_files=()
+        for f in "$grammar_dir"/highlights.scm "$grammar_dir"/injections.scm; do
+            [ -f "$f" ] && scm_files+=("$f")
+        done
+        [ ${#scm_files[@]} -eq 0 ] && continue
+
+        # Get symbol name from config.ini
+        local symbol="tree_sitter_$lang"
+        if [ -f "$grammar_dir/config.ini" ]; then
+            local sym
+            sym=$(sed -n '/^\[grammar\]/,/^\[/{s/^symbol=//p}' "$grammar_dir/config.ini" | head -1)
+            [ -n "$sym" ] && symbol="tree_sitter_$sym"
+        fi
+
+        if "$validator_dir/validate" "$so_file" "$symbol" "${scm_files[@]}"; then
+            echo "  OK       $lang"
+            validated=$((validated + 1))
+        else
+            vfailed=$((vfailed + 1))
+        fi
+    done
+
+    echo "Validated $validated grammars ($vfailed failed)"
+}
+
+# --- Install command ---
+
+cmd_install() {
+    local prefix="$DEFAULT_PREFIX"
+    local libdir=""
+    local version=""
+    local arch=""
+    local no_cache=false
+    local install_all=false
+    local grammars=()
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --help|-h)  usage_install; exit 0 ;;
+            --dir)      prefix=$2; shift ;;
+            --dir=*)    prefix=${1#--dir=} ;;
+            --libdir)   libdir=$2; shift ;;
+            --libdir=*) libdir=${1#--libdir=} ;;
+            --version)  version=$2; shift ;;
+            --version=*) version=${1#--version=} ;;
+            --arch)     arch=$2; shift ;;
+            --arch=*)   arch=${1#--arch=} ;;
+            --no-cache) no_cache=true ;;
+            --all)      install_all=true ;;
+            -*)         echo "ERROR: unknown option: $1" >&2; exit 1 ;;
+            *)          grammars+=("$1") ;;
+        esac
+        shift
+    done
+
+    [ -z "$libdir" ] && libdir="$prefix/lib"
+
+    if ! $install_all && [ ${#grammars[@]} -eq 0 ]; then
+        echo 'ERROR: specify grammar names or --all' >&2
+        exit 1
+    fi
+
+    local tarball_path
+    tarball_path=$(download_bundle "$version" "$no_cache" "$arch")
+
+    install_from_tarball "$tarball_path" "$prefix" "$libdir" "$install_all" "${grammars[@]}"
+}
+
+# --- Update command ---
+
+cmd_update() {
+    local prefix="$DEFAULT_PREFIX"
+    local libdir=""
+    local version=""
+    local arch=""
+    local no_cache=false
+    local update_all=false
+    local grammars=()
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --help|-h)  usage_update; exit 0 ;;
+            --dir)      prefix=$2; shift ;;
+            --dir=*)    prefix=${1#--dir=} ;;
+            --libdir)   libdir=$2; shift ;;
+            --libdir=*) libdir=${1#--libdir=} ;;
+            --version)  version=$2; shift ;;
+            --version=*) version=${1#--version=} ;;
+            --arch)     arch=$2; shift ;;
+            --arch=*)   arch=${1#--arch=} ;;
+            --no-cache) no_cache=true ;;
+            --all)      update_all=true ;;
+            -*)         echo "ERROR: unknown option: $1" >&2; exit 1 ;;
+            *)          grammars+=("$1") ;;
+        esac
+        shift
+    done
+
+    [ -z "$libdir" ] && libdir="$prefix/lib"
+
+    if ! $update_all && [ ${#grammars[@]} -eq 0 ]; then
+        echo 'ERROR: specify grammar names or --all' >&2
+        exit 1
+    fi
+
+    # If --all, find installed grammars
+    if $update_all; then
+        local share_dir="$prefix/share/mc/syntax-ts"
+        if [ -d "$share_dir" ]; then
+            for dir in "$share_dir"/*/; do
+                [ -d "$dir" ] || continue
+                local lang
+                lang=$(basename "$dir")
+                grammars+=("$lang")
+            done
+        fi
+        if [ ${#grammars[@]} -eq 0 ]; then
+            echo 'No installed grammars found to update'
+            exit 0
+        fi
+    fi
+
+    local tarball_path
+    tarball_path=$(download_bundle "$version" "$no_cache" "$arch")
+
+    install_from_tarball "$tarball_path" "$prefix" "$libdir" false "${grammars[@]}"
+}
+
+# --- List command ---
+
+cmd_list() {
+    local verbose=false
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --help|-h)    usage_list; exit 0 ;;
+            --verbose|-v) verbose=true ;;
+            *) echo "ERROR: unknown option: $1" >&2; exit 1 ;;
+        esac
+        shift
+    done
+
+    local ext
+    ext=$(so_ext)
+
+    # Detect system prefix from mc binary
+    local sys_prefix=""
+    if command -v mc >/dev/null 2>&1; then
+        local mc_path
+        mc_path=$(command -v mc)
+        sys_prefix=$(dirname "$(dirname "$mc_path")")
+    fi
+
+    local local_share="$DEFAULT_PREFIX/share/mc/syntax-ts"
+    local local_lib="$DEFAULT_PREFIX/lib/mc/ts-grammars"
+    local sys_share="${sys_prefix:+$sys_prefix/share/mc/syntax-ts}"
+    local sys_lib="${sys_prefix:+$sys_prefix/lib/mc/ts-grammars}"
+
+    # Collect all grammar names from both locations
+    local all_grammars=()
+    local seen=()
+
+    for dir in "$local_share" "$sys_share"; do
+        [ -n "$dir" ] && [ -d "$dir" ] || continue
+        for d in "$dir"/*/; do
+            [ -d "$d" ] || continue
+            local lang
+            lang=$(basename "$d")
+            # Skip if already seen
+            local found=false
+            for s in "${seen[@]:-}"; do
+                [ "$s" = "$lang" ] && found=true && break
+            done
+            $found && continue
+            seen+=("$lang")
+            all_grammars+=("$lang")
+        done
+    done
+
+    if [ ${#all_grammars[@]} -eq 0 ]; then
+        echo 'No grammars installed'
+        return 0
+    fi
+
+    if $verbose; then
+        printf '%-15s %-14s %-8s %s\n' 'Grammar' 'Version' 'Scope' 'Paths'
+        printf '%-15s %-14s %-8s %s\n' '-------' '-------' '-----' '-----'
+    else
+        printf '%-15s %-14s %s\n' 'Grammar' 'Version' 'Scope'
+        printf '%-15s %-14s %s\n' '-------' '-------' '-----'
+    fi
+
+    for lang in $(echo "${all_grammars[@]}" | tr ' ' '\n' | sort); do
+        local has_local_share=false
+        local has_local_lib=false
+        local has_sys_share=false
+        local has_sys_lib=false
+        local ver='unknown'
+
+        [ -d "$local_share/$lang" ] && has_local_share=true
+        [ -f "$local_lib/$lang.$ext" ] && has_local_lib=true
+        [ -n "$sys_share" ] && [ -d "$sys_share/$lang" ] && has_sys_share=true
+        [ -n "$sys_lib" ] && [ -f "$sys_lib/$lang.$ext" ] && has_sys_lib=true
+
+        # Read version from .version file (prefer local)
+        if $has_local_share && [ -f "$local_share/$lang/.version" ]; then
+            ver=$(cat "$local_share/$lang/.version")
+        elif $has_sys_share && [ -f "$sys_share/$lang/.version" ]; then
+            ver=$(cat "$sys_share/$lang/.version")
+        fi
+
+        # Determine scope
+        local scope
+        if ($has_local_share || $has_local_lib) && ($has_sys_share || $has_sys_lib); then
+            scope='both'
+        elif $has_local_share || $has_local_lib; then
+            scope='local'
+        else
+            scope='system'
+        fi
+
+        if $verbose; then
+            # Determine display paths
+            local query_dir='-'
+            local lib_path='-'
+            if $has_local_share; then
+                query_dir="$local_share/$lang/"
+            elif $has_sys_share; then
+                query_dir="$sys_share/$lang/"
+            fi
+            if $has_local_lib; then
+                lib_path="$local_lib/"
+            elif $has_sys_lib; then
+                lib_path="$sys_lib/"
+            fi
+
+            # Shorten home directory
+            query_dir=${query_dir/$HOME/\~}
+            lib_path=${lib_path/$HOME/\~}
+
+            printf '%-15s %-14s %-8s %s  %s\n' "$lang" "$ver" "$scope" "$query_dir" "$lib_path"
+        else
+            printf '%-15s %-14s %s\n' "$lang" "$ver" "$scope"
+        fi
+    done
+}
+
+# --- Available command ---
+
+cmd_available() {
+    local version=""
+    local arch=""
+    local no_cache=false
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --help|-h)   usage_available; exit 0 ;;
+            --version)   version=$2; shift ;;
+            --version=*) version=${1#--version=} ;;
+            --arch)      arch=$2; shift ;;
+            --arch=*)    arch=${1#--arch=} ;;
+            --no-cache)  no_cache=true ;;
+            -*)          echo "ERROR: unknown option: $1" >&2; exit 1 ;;
+            *)           echo "ERROR: unexpected argument: $1" >&2; exit 1 ;;
+        esac
+        shift
+    done
+
+    local tarball_path
+    tarball_path=$(download_bundle "$version" "$no_cache" "$arch")
+
+    local ext
+    ext=$(so_ext)
+
+    # Extract tarball to temp dir
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    tar xzf "$tarball_path" -C "$tmpdir"
+
+    # Find the extracted directory
+    local extracted
+    extracted=$(find "$tmpdir" -maxdepth 1 -mindepth 1 -type d | head -1)
+    if [ -z "$extracted" ]; then
+        echo 'ERROR: tarball appears empty' >&2
+        rm -rf "${tmpdir:?}"
+        exit 1
+    fi
+
+    # Read bundle version
+    local bundle_ver='unknown'
+    if [ -f "$extracted/VERSION" ]; then
+        bundle_ver=$(cat "$extracted/VERSION")
+    fi
+
+    echo "Release: $bundle_ver"
+    echo ''
+
+    # Collect installed grammar versions
+    local local_share="$DEFAULT_PREFIX/share/mc/syntax-ts"
+
+    printf '%-20s %-14s %s\n' 'Grammar' 'Available' 'Installed'
+    printf '%-20s %-14s %s\n' '-------' '---------' '---------'
+
+    for dir in "$extracted"/*/; do
+        [ -d "$dir" ] || continue
+        local lang
+        lang=$(basename "$dir")
+
+        # Check if installed locally
+        local installed_ver='-'
+        if [ -f "$local_share/$lang/.version" ]; then
+            installed_ver=$(cat "$local_share/$lang/.version")
+        elif [ -d "$local_share/$lang" ]; then
+            installed_ver='unknown'
+        fi
+
+        printf '%-20s %-14s %s\n' "$lang" "$bundle_ver" "$installed_ver"
+    done
+
+    rm -rf "${tmpdir:?}"
+}
+
+# --- Uninstall command ---
+
+cmd_uninstall() {
+    local prefix="$DEFAULT_PREFIX"
+    local libdir=""
+    local uninstall_all=false
+    local grammars=()
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --help|-h)  usage_uninstall; exit 0 ;;
+            --dir)      prefix=$2; shift ;;
+            --dir=*)    prefix=${1#--dir=} ;;
+            --libdir)   libdir=$2; shift ;;
+            --libdir=*) libdir=${1#--libdir=} ;;
+            --all)      uninstall_all=true ;;
+            -*)         echo "ERROR: unknown option: $1" >&2; exit 1 ;;
+            *)          grammars+=("$1") ;;
+        esac
+        shift
+    done
+
+    [ -z "$libdir" ] && libdir="$prefix/lib"
+
+    if ! $uninstall_all && [ ${#grammars[@]} -eq 0 ]; then
+        echo 'ERROR: specify grammar names or --all' >&2
+        exit 1
+    fi
+
+    local share_dir="$prefix/share/mc/syntax-ts"
+    local lib_dir="$libdir/mc/ts-grammars"
+    local ext
+    ext=$(so_ext)
+
+    # If --all, collect installed grammars
+    if $uninstall_all; then
+        if [ -d "$share_dir" ]; then
+            for dir in "$share_dir"/*/; do
+                [ -d "$dir" ] || continue
+                grammars+=("$(basename "$dir")")
+            done
+        fi
+    fi
+
+    if [ ${#grammars[@]} -eq 0 ]; then
+        echo 'No grammars to uninstall'
+        return 0
+    fi
+
+    for lang in "${grammars[@]}"; do
+        local removed=false
+
+        if [ -d "$share_dir/$lang" ]; then
+            rm -rf "${share_dir:?}/${lang:?}"
+            removed=true
+        fi
+
+        if [ -f "$lib_dir/$lang.$ext" ]; then
+            rm -f "$lib_dir/$lang.$ext"
+            removed=true
+        fi
+
+        if $removed; then
+            echo "  Removed $lang"
+        else
+            echo "  $lang not found in $prefix"
+        fi
+    done
+
+    # Clean up empty directories
+    rmdir "$share_dir" 2>/dev/null || true
+    rmdir "$lib_dir" 2>/dev/null || true
+
+    echo 'Done.'
+}
+
+# --- Helpers ---
+
+# Download a release bundle tarball, using cache.
+# Prints the path to the tarball.
+download_bundle() {
+    local version=$1
+    local no_cache=$2
+    local arch=${3:-}
+
+    local platform
+    if [ -n "$arch" ]; then
+        platform="$arch"
+    else
+        platform=$(detect_platform)
+    fi
+    local tarball_name="mc-ts-grammars-$platform.tar.gz"
+
+    # Determine version to download
+    if [ -z "$version" ]; then
+        echo 'Fetching latest release...' >&2
+        version=$(gh release list --repo "$REPO_URL" --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || true)
+        if [ -z "$version" ]; then
+            # Fallback: use GitHub API directly
+            version=$(curl -sL "$REPO_URL/releases/latest" -o /dev/null -w '%{url_effective}' | sed 's|.*/||')
+        fi
+        if [ -z "$version" ]; then
+            echo 'ERROR: could not determine latest release version' >&2
+            exit 1
+        fi
+        echo "Latest version: $version" >&2
+    fi
+
+    local cache_path="$CACHE_DIR/$version/$tarball_name"
+
+    # Check cache
+    if [ "$no_cache" != "true" ] && [ -f "$cache_path" ]; then
+        echo "Using cached bundle: $cache_path" >&2
+        echo "$cache_path"
+        return 0
+    fi
+
+    # Download
+    local download_url="$REPO_URL/releases/download/$version/$tarball_name"
+    echo "Downloading $download_url ..." >&2
+
+    mkdir -p "$CACHE_DIR/$version"
+    if ! curl -sL --fail -o "$cache_path" "$download_url"; then
+        echo "ERROR: failed to download $download_url" >&2
+        rm -f "$cache_path"
+        exit 1
+    fi
+
+    echo "$cache_path"
+}
+
+# Install grammars from a release tarball.
+install_from_tarball() {
+    local tarball_path=$1
+    local prefix=$2
+    local libdir=$3
+    local install_all=$4
+    shift 4
+    local grammars=("$@")
+
+    local share_dir="$prefix/share/mc/syntax-ts"
+    local lib_dir="$libdir/mc/ts-grammars"
+    local ext
+    ext=$(so_ext)
+
+    # Extract tarball to temp dir
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    tar xzf "$tarball_path" -C "$tmpdir"
+
+    # Find the extracted directory (tarball contains a top-level dir)
+    local extracted
+    extracted=$(find "$tmpdir" -maxdepth 1 -mindepth 1 -type d | head -1)
+    if [ -z "$extracted" ]; then
+        echo 'ERROR: tarball appears empty' >&2
+        exit 1
+    fi
+
+    # Read version from VERSION file
+    local version='unknown'
+    if [ -f "$extracted/VERSION" ]; then
+        version=$(cat "$extracted/VERSION")
+    fi
+
+    # If --all, install everything in the tarball
+    if [ "$install_all" = "true" ]; then
+        grammars=()
+        for dir in "$extracted"/*/; do
+            [ -d "$dir" ] || continue
+            grammars+=("$(basename "$dir")")
+        done
+    fi
+
+    local installed=0
+
+    for lang in "${grammars[@]}"; do
+        local src="$extracted/$lang"
+        if [ ! -d "$src" ]; then
+            echo "  SKIP     $lang (not in release bundle)"
+            continue
+        fi
+
+        # Install config and query files
+        local dest="$share_dir/$lang"
+        mkdir -p "$dest"
+        cp "$src/config.ini" "$dest/" 2>/dev/null || true
+        cp "$src/highlights.scm" "$dest/" 2>/dev/null || true
+        cp "$src/injections.scm" "$dest/" 2>/dev/null || true
+        echo "$version" > "$dest/.version"
+
+        # Install shared library
+        mkdir -p "$lib_dir"
+        cp "$src/$lang.$ext" "$lib_dir/$lang.$ext" 2>/dev/null || true
+
+        echo "  $lang ($version)"
+        installed=$((installed + 1))
+    done
+
+    rm -rf "${tmpdir:?}"
+    echo "Installed $installed grammar(s)"
+}
+
+# --- Main ---
+
+if [ $# -eq 0 ]; then
+    usage
+    exit 1
+fi
+
+command=$1
+shift
+
+case "$command" in
+    build)     cmd_build "$@" ;;
+    install)   cmd_install "$@" ;;
+    update)    cmd_update "$@" ;;
+    list)      cmd_list "$@" ;;
+    available) cmd_available "$@" ;;
+    uninstall) cmd_uninstall "$@" ;;
+    help|-h|--help) usage ;;
+    *)
+        echo "ERROR: unknown command: $command" >&2
+        usage >&2
+        exit 1
+        ;;
+esac

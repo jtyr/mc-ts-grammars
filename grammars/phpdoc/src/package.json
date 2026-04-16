@@ -1,0 +1,63 @@
+{
+  "name": "tree-sitter-phpdoc",
+  "version": "0.1.0",
+  "description": "PHPDoc grammar for tree-sitter",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "generate": "./node_modules/.bin/tree-sitter generate",
+    "test": "if [ $(stat -f %m ./grammar.js) -gt $(stat -f %m ./src/grammar.json) -o $(stat -f %m ./src/scanner.c) -gt $(stat -f %m ./src/parser.c) ]; then echo Regenerating...; ./node_modules/.bin/tree-sitter generate; fi && ./node_modules/.bin/tree-sitter test",
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi --strip",
+    "format": "./node_modules/.bin/prettier --write grammar.js .github/workflows/ci.yml",
+    "format-check": "npm run format -- --check"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/claytonrcarter/tree-sitter-phpdoc.git"
+  },
+  "keywords": [
+    "parser",
+    "phpdoc"
+  ],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ],
+  "author": "John Nguyen",
+  "contributors": [
+    "Clayton Carter <claytonrcarter@gmail.com>"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/claytonrcarter/tree-sitter-phpdoc/issues"
+  },
+  "homepage": "https://github.com/claytonrcarter/tree-sitter-phpdoc#readme",
+  "devDependencies": {
+    "prebuildify": "^6.0.0",
+    "prettier": "^3.3.3",
+    "tree-sitter-cli": "^0.22.6",
+    "tree-sitter-php": "^0.23.12"
+  },
+  "dependencies": {
+    "node-addon-api": "^7.1.0",
+    "node-gyp-build": "^4.8.0"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.21.0"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "tree-sitter": [
+    {
+      "scope": "comment.block.documentation.phpdoc.php"
+    }
+  ]
+}

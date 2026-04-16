@@ -1,0 +1,28 @@
+name: Check Release
+description: Check whether a new release should be created
+
+inputs:
+  tag:
+    description: Tag from push event (optional, overrides auto-detection)
+    required: false
+
+outputs:
+  shouldRelease:
+    description: Whether a release should be created
+    value: ${{ steps.check.outputs.shouldRelease }}
+  tag:
+    description: Release tag (YYYY.MM.DD)
+    value: ${{ steps.check.outputs.tag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check for new commits since last release
+      id: check
+      shell: bash
+      run: |
+        output=$($GITHUB_ACTION_PATH/scripts/check-release.sh ${{ inputs.tag }})
+        should_release=$(echo "$output" | tail -2 | head -1)
+        tag=$(echo "$output" | tail -1)
+        echo "shouldRelease=$should_release" >> "$GITHUB_OUTPUT"
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"

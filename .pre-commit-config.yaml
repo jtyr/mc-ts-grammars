@@ -1,0 +1,59 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+        name: Fix end of files
+        exclude: ^grammars/[^/]+/src/
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        args:
+          - --markdown-linebreak-ext=md,markdown
+        exclude: ^grammars/[^/]+/src/
+      - id: mixed-line-ending
+        name: Check mixed line endings
+        args:
+          - --fix=lf
+        exclude: ^grammars/[^/]+/src/
+      - id: check-json
+        name: Check JSON files
+        exclude: ^grammars/[^/]+/src/
+      - id: check-yaml
+        name: Check YAML files
+        args:
+          - --allow-multiple-documents
+        exclude: ^grammars/([^/]+/src|yaml/examples)/
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        name: Lint YAML files
+        args:
+          - --strict
+        exclude: ^grammars/([^/]+/src|yaml/examples)/
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.43.0
+    hooks:
+      - id: markdownlint
+        name: Lint Markdown files
+        exclude: ^grammars/([^/]+/src|markdown/examples)/
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+        name: Lint shell scripts
+        exclude: ^grammars/[^/]+/src/
+
+  - repo: local
+    hooks:
+      - id: grammars-md
+        name: Check GRAMMARS.md is up to date
+        entry: scripts/generate-grammars-md.sh
+        args:
+          - --autofix
+        language: script
+        files: ^grammars\.yaml$
+        pass_filenames: false

@@ -1,0 +1,68 @@
+{
+  "name": "tree-sitter-t32",
+  "version": "7.2.6",
+  "description": "Lauterbach TRACE32® script language grammar for Tree-sitter",
+  "author": "Christoph Sax <c_sax@mailbox.org>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://codeberg.org/xasc/tree-sitter-t32/"
+  },
+  "keywords": [
+    "incremental",
+    "parsing",
+    "tree-sitter",
+    "trace32",
+    "t32",
+    "lauterbach",
+    "practice"
+  ],
+  "files": [
+    "binding.gyp",
+    "bindings/node",
+    "CHANGELOG.md",
+    "grammar.js",
+    "LICENSES/",
+    "package.json",
+    "package.json.license",
+    "prebuilds/",
+    "queries",
+    "README.md",
+    "REUSE.toml",
+    "src/",
+    "tree-sitter.json",
+    "tree-sitter-t32.wasm"
+  ],
+  "scripts": {
+    "build": "tree-sitter generate",
+    "build-wasm": "tree-sitter build --wasm",
+    "parse": "tree-sitter parse",
+    "tags": "tree-sitter tags",
+    "test": "tree-sitter test",
+    "test-bindings-node": "node --test bindings/node/binding_test.js",
+    "highlight": "tree-sitter highlight",
+    "playground": "tree-sitter playground",
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi"
+  },
+  "devDependencies": {
+    "prebuildify": "^6.0.1",
+    "tree-sitter-cli": "^0.26.8"
+  },
+  "packageManager": "yarn@4.13.0",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "node-addon-api": "^8.7.0",
+    "node-gyp": "^12.2.0",
+    "node-gyp-build": "^4.8.4"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.25.0"
+  }
+}

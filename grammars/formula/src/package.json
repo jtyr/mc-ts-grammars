@@ -1,0 +1,35 @@
+{
+  "name": "tree-sitter-formula",
+  "version": "1.0.0",
+  "description": "Tree-sitter grammar for formula",
+  "main": "bindings/node",
+  "author": "Ben Siraphob",
+  "license": "MIT",
+  "dependencies": {
+    "nan": "^2.15.0",
+    "node-gyp": "^8.4.1"
+  },
+  "scripts": {
+    "build": "tree-sitter generate && node-gyp build",
+    "test": "tree-sitter test",
+    "install": "node-gyp rebuild",
+    "generate": "tree-sitter generate",
+    "parse": "tree-sitter parse",
+    "build-wasm": "tree-sitter build-wasm",
+    "playground": "tree-sitter playground"
+  },
+  "tree-sitter": [
+    {
+      "file-types": [
+        "4ml"
+      ],
+      "highlights": [
+        "queries/highlights.scm"
+      ],
+      "scope": "source.4ml"
+    }
+  ],
+  "devDependencies": {
+    "tree-sitter-cli": "^0.20.4"
+  }
+}

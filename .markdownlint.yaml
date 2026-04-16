@@ -1,0 +1,8 @@
+# Ignore line length
+MD013: false
+# Ignore duplicate headings
+MD024: false
+# Ignore table column style (auto-generated tables)
+MD060: false
+# Spaces inside code span elements
+MD038: false

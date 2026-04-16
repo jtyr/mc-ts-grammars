@@ -1,0 +1,47 @@
+{
+  "name": "tree-sitter-liquidsoap",
+  "version": "1.2.2",
+  "description": "Tree sitter tools for the liquidsoap language",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "test": "./tests/run.sh",
+    "install": "node-gyp-build",
+    "generate": "tree-sitter generate",
+    "prebuildify": "prebuildify --napi --strip"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-addon-api": "^7.1.0",
+    "node-gyp-build": "^4.8.0"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.25.0"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.25.6",
+    "prebuildify": "^6.0.0"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.liq",
+      "file-types": [
+        "liq"
+      ]
+    }
+  ],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ]
+}

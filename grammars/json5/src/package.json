@@ -1,0 +1,21 @@
+{
+  "name": "tree-sitter-json5",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for json5",
+  "scripts": {
+    "compile": "npx tsc && npx tree-sitter generate",
+    "test": "npm run compile && npx tree-sitter test",
+    "parse": "npx tree-sitter parse"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "nan": "^2.15.0",
+    "tree-sitter-cli": "^0.25"
+  },
+  "main": "bindings/node"
+}

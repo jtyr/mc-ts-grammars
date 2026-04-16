@@ -1,0 +1,38 @@
+{
+  "name": "tree-sitter-snakemake",
+  "version": "2.1.0",
+  "description": "snakemake grammar for tree-sitter, based on tree-sitter-python",
+  "repository": "https://github.com/osthomas/tree-sitter-python",
+  "license": "MIT",
+  "author": "Oliver Thomas",
+  "keywords": [
+    "incremental",
+    "parsing",
+    "tree-sitter",
+    "snakemake"
+  ],
+  "files": [
+    "grammar.js",
+    "tree-sitter.json",
+    "queries/*",
+    "src/**"
+  ],
+  "dependencies": {
+    "tree-sitter-python": "^0.25.0"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.25.9"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.25.0"
+  },
+  "peerDependenciesMeta": {
+    "tree-sitter": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "test": "tree-sitter test",
+    "build": "tree-sitter generate"
+  }
+}

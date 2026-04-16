@@ -1,0 +1,51 @@
+{
+  "name": "tree-sitter-asciidoc",
+  "version": "0.7.0",
+  "description": "asciidoc grammar for tree-sitter",
+  "repository": "github:cathaysia/tree-sitter-asciidoc",
+  "license": "Apache-2.0",
+  "author": "Loongtao Zhang <loongtao.zhang@outlook.com>",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "keywords": [
+    "incremental",
+    "parsing",
+    "tree-sitter",
+    "c++"
+  ],
+  "scripts": {
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi --strip",
+    "generate": "tree-sitter generate",
+    "test": "pnpm generate && tree-sitter test"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.3.0",
+    "node-gyp-build": "^4.8.4"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.21.0"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "prebuildify": "^6.0.1"
+  },
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ],
+  "tree-sitter": [
+    {
+      "scope": "source.asciidoc",
+      "injection-regex": "^asciidoc$"
+    }
+  ]
+}

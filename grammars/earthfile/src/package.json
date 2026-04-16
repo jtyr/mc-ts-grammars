@@ -1,0 +1,51 @@
+{
+  "name": "tree-sitter-earthfile",
+  "version": "0.6.0",
+  "description": "Earthfile tree-sitter grammar",
+  "author": "Gaëtan Lehmann <gaetan.lehmann@gmail.com>",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi --strip"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@biomejs/biome": "^1.7.3",
+    "node-addon-api": "^8.5.0",
+    "node-gyp-build": "^4.8.2"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.25.0"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "prebuildify": "^6.0.0",
+    "tree-sitter-cli": "^0.25.10"
+  },
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ],
+  "repository": "https://github.com/glehmann/tree-sitter-earthfile",
+  "tree-sitter": [
+    {
+      "scope": "source.earthfile",
+      "file-types": [
+        "Earthfile"
+      ],
+      "injection-regex": "earthfile",
+      "injections": "queries/injections.scm",
+      "highlights": "queries/highlights.scm"
+    }
+  ]
+}

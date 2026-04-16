@@ -1,0 +1,150 @@
+name: PR - Build and Validate
+
+on:
+  pull_request:
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: pre-commit/action@v3.0.1
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+        with:
+          extra_args: --from-ref origin/main --to-ref HEAD
+
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      languages: ${{ steps.detect.outputs.languages }}
+      hasChanges: ${{ steps.detect.outputs.hasChanges }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed grammars
+        id: detect
+        uses: ./.github/actions/detect-changes
+        with:
+          baseSha: ${{ github.event.pull_request.base.sha }}
+
+  generate:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.hasChanges == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Generate parsers
+        uses: ./.github/actions/generate-grammar
+        with:
+          languages: ${{ needs.detect-changes.outputs.languages }}
+          cacheParsers: "true"
+          cacheKeyPrefix: pr-${{ github.event.pull_request.number }}
+
+      - name: Upload generated sources
+        uses: actions/upload-artifact@v7
+        with:
+          name: generated-sources
+          path: grammars/*/src/src/
+          retention-days: 1
+
+  build:
+    needs:
+      - detect-changes
+      - generate
+    if: needs.detect-changes.outputs.hasChanges == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x86_64-linux
+            runner: ubuntu-latest
+            cc: gcc
+          - platform: aarch64-linux
+            runner: ubuntu-latest
+            cc: aarch64-linux-gnu-gcc
+          - platform: aarch64-macos
+            runner: macos-latest
+            cc: clang
+          - platform: x86_64-macos
+            runner: macos-latest
+            cc: clang -arch x86_64
+          - platform: x86_64-windows
+            runner: windows-latest
+            cc: gcc
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download generated sources
+        uses: actions/download-artifact@v8
+        with:
+          name: generated-sources
+          path: grammars/
+
+      - name: Install cross-compiler
+        if: matrix.platform == 'aarch64-linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Build changed grammars
+        uses: ./.github/actions/build-grammar
+        with:
+          languages: ${{ needs.detect-changes.outputs.languages }}
+          cc: ${{ matrix.cc }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ matrix.platform }}
+          path: build/
+
+  validate:
+    needs:
+      - detect-changes
+      - build
+    if: needs.detect-changes.outputs.hasChanges == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download Linux x86_64 build
+        uses: actions/download-artifact@v8
+        with:
+          name: build-x86_64-linux
+          path: build/
+
+      - name: Validate query files
+        uses: ./.github/actions/validate-grammar
+        with:
+          languages: ${{ needs.detect-changes.outputs.languages }}
+          buildDir: build
+
+  auto-approve:
+    permissions:
+      pull-requests: write
+    if: >-
+      always() &&
+      github.event.pull_request.user.login == 'mc-ts-grammars-updater[bot]' &&
+      needs.lint.result == 'success' &&
+      (needs.validate.result == 'success' || needs.validate.result == 'skipped')
+    needs:
+      - lint
+      - validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve bot PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr review ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --approve

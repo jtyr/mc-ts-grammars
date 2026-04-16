@@ -1,0 +1,31 @@
+name: Detect Changed Grammars
+description: Detect which grammars changed between two git refs
+
+inputs:
+  baseSha:
+    description: Base commit SHA to compare against
+    required: true
+
+outputs:
+  languages:
+    description: Space-separated list of changed language names
+    value: ${{ steps.detect.outputs.languages }}
+  hasChanges:
+    description: Whether any grammars changed
+    value: ${{ steps.detect.outputs.hasChanges }}
+
+runs:
+  using: composite
+  steps:
+    - name: Detect changed grammars
+      id: detect
+      shell: bash
+      run: |
+        languages=$($GITHUB_ACTION_PATH/scripts/detect-changes.sh \
+          ${{ inputs.baseSha }} | tail -1)
+        if [ -n "$languages" ]; then
+          echo "languages=$languages" >> "$GITHUB_OUTPUT"
+          echo "hasChanges=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "hasChanges=false" >> "$GITHUB_OUTPUT"
+        fi

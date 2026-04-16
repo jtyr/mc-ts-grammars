@@ -1,0 +1,25 @@
+name: Check Grammar Updates
+description: Check upstream repositories for newer grammar versions
+
+outputs:
+  updated:
+    description: Space-separated list of updated language names
+    value: ${{ steps.check.outputs.updated }}
+  hasUpdates:
+    description: Whether any updates were found
+    value: ${{ steps.check.outputs.hasUpdates }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check for upstream updates
+      id: check
+      shell: bash
+      run: |
+        updated=$($GITHUB_ACTION_PATH/scripts/check-updates.sh | tail -1)
+        if [ -n "$updated" ]; then
+          echo "updated=$updated" >> "$GITHUB_OUTPUT"
+          echo "hasUpdates=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "hasUpdates=false" >> "$GITHUB_OUTPUT"
+        fi

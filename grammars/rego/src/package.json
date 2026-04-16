@@ -1,0 +1,37 @@
+{
+  "name": "tree-sitter-rego",
+  "version": "1.0.0",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "license": "MIT",
+  "dependencies": {
+    "node-gyp-build": "^4.8.0"
+  },
+  "scripts": {
+    "install": "node-gyp-build",
+    "generate": "tree-sitter generate",
+    "build": "tree-sitter generate && node-gyp configure && node-gyp build",
+    "test": "tree-sitter test",
+    "lint": "eslint grammar.js",
+    "lint:fix": "eslint grammar.js --fix",
+    "prestart": "tree-sitter build --wasm",
+    "start": "tree-sitter playground"
+  },
+  "files": [
+    "grammar.js",
+    "tree-sitter.json",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**",
+    "*.wasm"
+  ],
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "eslint-config-treesitter": "^1.0.2",
+    "nan": "^2.22.0",
+    "node-gyp": "^12.1.0",
+    "tree-sitter-cli": "^0.25.10"
+  }
+}

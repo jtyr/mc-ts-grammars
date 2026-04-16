@@ -1,0 +1,19 @@
+{
+  "name": "tree-sitter-ledger",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bindings/node",
+  "scripts": {
+    "generate": "./node_modules/.bin/tree-sitter generate",
+    "test": "if [ $(stat -f %m ./grammar.js) -gt $(stat -f %m ./src/grammar.json) ]; then echo Regenerating...; ./node_modules/.bin/tree-sitter generate; fi && ./node_modules/.bin/tree-sitter test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "nan": "^2.14.2",
+    "node-addon-api": "^8.2.2"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.25.10"
+  }
+}

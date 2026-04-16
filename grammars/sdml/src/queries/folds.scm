@@ -1,0 +1,31 @@
+[
+ (datatype_def)
+ (dimension_def)
+ (entity_def)
+ (enum_def)
+ (event_def)
+ (property_def)
+ (rdf_def)
+ (structure_def)
+ (type_class_def)
+ (union_def)
+ ;; ----------------
+ (annotation_only_body)
+ (dimension_body)
+ (entity_body)
+ (enum_body)
+ (event_body)
+ (structure_body)
+ (type_class_body)
+ (union_body)
+ (datatype_type_restrictions)
+ ;; ----------------
+ (formal_constraint)
+ (sentence_with_environment)
+ (function_body)
+ (constraint_sentence)
+ (sequence_builder)
+ ;; ----------------
+ (sequence_of_values)
+ (sequence_of_predicate_values)
+ ] @fold

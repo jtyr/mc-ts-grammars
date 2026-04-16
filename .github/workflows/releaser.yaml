@@ -1,0 +1,180 @@
+name: Release
+
+on:
+  schedule:
+    # Every Sunday at 06:00 UTC
+    - cron: 0 6 * * 0
+  push:
+    tags:
+      - "[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]"
+      - "[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]+*"
+
+permissions:
+  contents: write
+
+jobs:
+  check-changes:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    outputs:
+      shouldRelease: ${{ steps.check.outputs.shouldRelease }}
+      tag: ${{ steps.check.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check for new commits since last release
+        id: check
+        uses: ./.github/actions/check-release
+
+  generate:
+    needs: check-changes
+    if: >-
+      always() &&
+      (github.event_name == 'push' || needs.check-changes.outputs.shouldRelease == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Generate parsers
+        uses: ./.github/actions/generate-grammar
+        with:
+          languages: all
+          cacheParsers: "true"
+          cacheKeyPrefix: release
+
+      - name: Upload generated sources
+        uses: actions/upload-artifact@v7
+        with:
+          name: generated-sources
+          path: grammars/*/src/src/
+          retention-days: 1
+
+  build:
+    needs:
+      - check-changes
+      - generate
+    if: >-
+      always() &&
+      needs.generate.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: x86_64-linux
+            runner: ubuntu-latest
+            cc: gcc
+          - platform: aarch64-linux
+            runner: ubuntu-latest
+            cc: aarch64-linux-gnu-gcc
+          - platform: aarch64-macos
+            runner: macos-latest
+            cc: clang
+          - platform: x86_64-macos
+            runner: macos-latest
+            cc: clang -arch x86_64
+          - platform: x86_64-windows
+            runner: windows-latest
+            cc: gcc
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download generated sources
+        uses: actions/download-artifact@v8
+        with:
+          name: generated-sources
+          path: grammars/
+
+      - name: Install cross-compiler
+        if: matrix.platform == 'aarch64-linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Build release grammars
+        uses: ./.github/actions/build-grammar
+        with:
+          languages: release
+          cc: ${{ matrix.cc }}
+          strip: "true"
+
+      - name: Package release
+        uses: ./.github/actions/package-release
+        with:
+          platform: ${{ matrix.platform }}
+          buildDir: build
+          tag: ${{ github.event_name == 'push' && github.ref_name || needs.check-changes.outputs.tag }}
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.platform }}
+          path: release/*.tar.gz
+
+      - name: Upload checksum
+        uses: actions/upload-artifact@v7
+        with:
+          name: checksum-${{ matrix.platform }}
+          path: release/mc-ts-grammars.sha256
+
+  validate:
+    needs: build
+    if: always() && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download Linux x86_64 build
+        uses: actions/download-artifact@v8
+        with:
+          name: release-x86_64-linux
+          path: release/
+
+      - name: Extract shared libraries for validation
+        uses: ./.github/actions/extract-tarball
+        with:
+          tarball: release/mc-ts-grammars-x86_64-linux.tar.gz
+          outputDir: build
+
+      - name: Validate query files
+        uses: ./.github/actions/validate-grammar
+        with:
+          languages: all
+          buildDir: build
+
+  release:
+    needs:
+      - check-changes
+      - build
+      - validate
+    if: always() && needs.build.result == 'success' && needs.validate.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download all release tarballs
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: release/
+          merge-multiple: true
+
+      - name: Download all checksums
+        uses: actions/download-artifact@v8
+        with:
+          pattern: checksum-*
+          path: /tmp/checksums/
+
+      - name: Merge checksums
+        run: cat /tmp/checksums/*/mc-ts-grammars.sha256 > release/mc-ts-grammars.sha256
+
+      - name: Create release
+        uses: ./.github/actions/create-release
+        with:
+          tag: ${{ github.event_name == 'push' && github.ref_name || needs.check-changes.outputs.tag }}
+          releaseDir: release
+          token: ${{ secrets.GITHUB_TOKEN }}

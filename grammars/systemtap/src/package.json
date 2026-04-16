@@ -1,0 +1,72 @@
+{
+  "name": "tree-sitter-systemtap",
+  "version": "0.2.0",
+  "description": "SystemTap grammar for tree-sitter",
+  "keywords": [
+    "incremental",
+    "parsing",
+    "tree-sitter",
+    "systemtap"
+  ],
+  "files": [
+    "bindings/node/*",
+    "prebuilds/**",
+    "queries/*",
+    "src/**",
+    "binding.gyp",
+    "grammar.js"
+  ],
+  "bugs": {
+    "url": "https://github.com/ok-ryoko/tree-sitter-systemtap/issues"
+  },
+  "license": "MIT",
+  "author": "OK Ryoko",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ok-ryoko/tree-sitter-systemtap"
+  },
+  "scripts": {
+    "build": "tree-sitter generate",
+    "fmt": "prettier --write .",
+    "fmt-check": "prettier --check . && eslint-config-prettier grammar.js.",
+    "install": "node-gyp-build",
+    "lint": "eslint .",
+    "prebuildify": "prebuildify --napi --strip",
+    "prepare": "husky install",
+    "test": "tree-sitter test"
+  },
+  "dependencies": {
+    "node-addon-api": "~8.1.0",
+    "node-gyp-build": "~4.8.1"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.21.0"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "eslint": "~8.57.0",
+    "eslint-config-prettier": "~8.10.0",
+    "husky": "~8.0.3",
+    "prebuildify": "~6.0.1",
+    "prettier": "~2.8.8",
+    "tree-sitter-cli": "~0.22.6"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.systemtap",
+      "file-types": [
+        "stp",
+        "stpm"
+      ],
+      "highlights": [
+        "queries/highlights.scm"
+      ]
+    }
+  ]
+}

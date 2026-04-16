@@ -1,0 +1,22 @@
+{
+  "name": "tree-sitter-satysfi",
+  "version": "0.0.1",
+  "description": "SATySFi grammar for tree-sitter",
+  "main": "bindings/node",
+  "scripts": {
+    "test": "tree-sitter test"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "nan": "^2.15.0"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.20.0"
+  },
+  "tree-sitter": [{
+    "scope": "source.satysfi",
+    "file-types": ["saty", "satyh", "satyg"],
+    "injection-regex": "satysfi"
+  }]
+}

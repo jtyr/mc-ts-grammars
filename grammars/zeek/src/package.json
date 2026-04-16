@@ -1,0 +1,59 @@
+{
+  "name": "tree-sitter-zeek",
+  "version": "0.2.12",
+  "description": "Zeek grammar for tree-sitter",
+  "author": "The Zeek Team",
+  "license": "BSD-3-Clause",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "keywords": [
+    "Zeek",
+    "parsing",
+    "incremental"
+  ],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeek/tree-sitter-zeek.git"
+  },
+  "dependencies": {
+    "node-addon-api": "^7.1.0",
+    "node-gyp-build": "^4.8.0"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.22.4"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.26.8",
+    "prebuildify": "^6.0.0"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.zeek",
+      "file-types": [
+        "zeek"
+      ],
+      "highlights": [
+        "queries/highlights.scm"
+      ]
+    }
+  ],
+  "scripts": {
+    "install": "node-gyp-build",
+    "prestart": "tree-sitter build --wasm",
+    "start": "tree-sitter playground",
+    "test": "node --test bindings/node/*_test.js"
+  }
+}

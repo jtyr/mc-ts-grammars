@@ -1,0 +1,51 @@
+{
+  "name": "tree-sitter-prisma",
+  "version": "1.6.0",
+  "description": "Prisma Grammar with Tree Sitter",
+  "keywords": [
+    "tree-sitter",
+    "prisma",
+    "grammar"
+  ],
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "homepage": "https://github.com/victorhqc/tree-sitter-prisma#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/victorhqc/tree-sitter-prisma.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Victor Quiroz Castro",
+    "email": "git@victorhqc.com"
+  },
+  "contributors": [
+    {
+      "name": "Ricardo Madriz",
+      "email": "richin13@gmail.com"
+    }
+  ],
+  "dependencies": {
+    "node-addon-api": "^8.3.1",
+    "node-gyp-build": "^4.8.4"
+  },
+  "devDependencies": {
+    "prebuildify": "^6.0.1",
+    "tree-sitter-cli": "^0.25.10"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.25.0"
+  },
+  "peerDependenciesMeta": {
+    "tree-sitter": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "install": "node-gyp-build",
+    "lint": "eslint grammar.js",
+    "prestart": "tree-sitter build --wasm",
+    "start": "tree-sitter playground",
+    "test": "node --test bindings/node/*_test.js"
+  }
+}

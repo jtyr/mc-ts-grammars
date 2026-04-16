@@ -1,0 +1,47 @@
+{
+  "name": "tree-sitter-bazelrc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "test": "tree-sitter generate && tree-sitter test",
+    "highlight": "tree-sitter generate && tree-sitter highlight examples/bob.bazelrc",
+    "parse": "tree-sitter generate && tree-sitter parse examples/bob.bazelrc",
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi --strip"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "node-addon-api": "^7.1.0",
+    "node-gyp-build": "^4.8.0"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.21.0"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.bazelrc",
+      "file-types": [
+        "bazelrc"
+      ]
+    }
+  ],
+  "devDependencies": {
+    "prebuildify": "^6.0.0"
+  },
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ]
+}
