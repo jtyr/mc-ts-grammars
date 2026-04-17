@@ -24,6 +24,7 @@ fi
 
 tag=$1
 release_dir=$2
+REPO_URL="https://github.com/${GITHUB_REPOSITORY:-jtyr/mc-ts-grammars}"
 
 latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo '')
 
@@ -45,6 +46,14 @@ latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo '')
     fi
 
     echo ''
+    echo '## Installation'
+    echo ''
+    echo '```bash'
+    echo "curl -LO $REPO_URL/releases/download/$tag/mc-ts-grammar"
+    echo 'chmod +x mc-ts-grammar'
+    echo "./mc-ts-grammar install --all --version $tag"
+    echo '```'
+    echo ''
     echo '## Platforms'
     echo ''
     for f in "$release_dir"/*.tar.gz; do
@@ -55,6 +64,11 @@ latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo '')
 
 echo 'Release notes:'
 cat "$release_dir/release_notes.md"
+
+# Copy installer to release dir
+SCRIPT_DIR=$(dirname "$0")
+REPO_ROOT=$(realpath "$SCRIPT_DIR/../../../..")
+cp "$REPO_ROOT/scripts/mc-ts-grammar" "$release_dir/mc-ts-grammar"
 
 if $DRY_RUN; then
     echo ''
@@ -68,6 +82,7 @@ gh release create "$tag" \
     --title "$tag" \
     --notes-file "$release_dir/release_notes.md" \
     "$release_dir"/*.tar.gz \
-    "$release_dir/mc-ts-grammars.sha256"
+    "$release_dir/mc-ts-grammars.sha256" \
+    "$release_dir/mc-ts-grammar"
 
 echo "Release $tag created."
