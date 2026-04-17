@@ -89,14 +89,16 @@ EOF
 
 usage_build() {
     cat <<EOF
-Usage: $PROG build [--install] [--validate] [--dir PATH] [--libdir PATH]
+Usage: $PROG build [OPTIONS] [PATH...]
 
-Build grammars from source. Must be run from within a cloned copy of the
-mc-ts-grammars repository. Requires a C compiler and the tree-sitter CLI.
+Build grammars from source. Each PATH is a grammar directory containing
+config.ini, highlights.scm, and src/grammar.js. If no PATH is given,
+the current directory is used.
 
 Options:
-  --install       Install after building
-  --validate      Validate queries against built grammars
+  --install         Install after building
+  --validate        Validate queries against built grammars
+  --build-dir PATH  Output directory for built .so files (default: temp dir)
 EOF
     usage_global_options
 }
@@ -175,49 +177,54 @@ EOF
 cmd_build() {
     local prefix="$DEFAULT_PREFIX"
     local libdir=""
+    local build_dir=""
     local do_install=false
     local do_validate=false
+    local grammar_dirs=()
 
     while [ $# -gt 0 ]; do
         case "$1" in
-            --help|-h)  usage_build; exit 0 ;;
-            --dir)      prefix=$2; shift ;;
-            --dir=*)    prefix=${1#--dir=} ;;
-            --libdir)   libdir=$2; shift ;;
-            --libdir=*) libdir=${1#--libdir=} ;;
-            --install)  do_install=true ;;
-            --validate) do_validate=true ;;
-            *) echo "ERROR: unknown option: $1" >&2; exit 1 ;;
+            --help|-h)      usage_build; exit 0 ;;
+            --dir)          prefix=$2; shift ;;
+            --dir=*)        prefix=${1#--dir=} ;;
+            --libdir)       libdir=$2; shift ;;
+            --libdir=*)     libdir=${1#--libdir=} ;;
+            --build-dir)    build_dir=$2; shift ;;
+            --build-dir=*)  build_dir=${1#--build-dir=} ;;
+            --install)      do_install=true ;;
+            --validate)     do_validate=true ;;
+            -*)             echo "ERROR: unknown option: $1" >&2; exit 1 ;;
+            *)              grammar_dirs+=("$1") ;;
         esac
         shift
     done
 
     [ -z "$libdir" ] && libdir="$prefix/lib"
 
-    # Must be run from within the repo
-    local repo_root
-    repo_root=$(git rev-parse --show-toplevel 2>/dev/null || true)
-    if [ -z "$repo_root" ] || [ ! -f "$repo_root/grammars.yaml" ]; then
-        echo 'ERROR: must be run from within the mc-ts-grammars repository' >&2
-        exit 1
+    # Default to current directory if no paths given
+    if [ ${#grammar_dirs[@]} -eq 0 ]; then
+        grammar_dirs=(".")
     fi
 
-    # Find grammars with config.ini + highlights.scm
+    # Validate grammar directories
     local grammars=()
-    for dir in "$repo_root"/grammars/*/; do
-        local lang
-        lang=$(basename "$dir")
-        if [ -f "$dir/config.ini" ] && [ -f "$dir/highlights.scm" ]; then
-            grammars+=("$lang")
+    local grammar_paths=()
+    for dir in "${grammar_dirs[@]}"; do
+        # Remove trailing slash
+        dir=${dir%/}
+
+        if [ ! -f "$dir/config.ini" ] || [ ! -f "$dir/highlights.scm" ]; then
+            echo "ERROR: $dir is not a grammar directory (missing config.ini or highlights.scm)" >&2
+            exit 1
         fi
+
+        local lang
+        lang=$(basename "$(realpath "$dir")")
+        grammars+=("$lang")
+        grammar_paths+=("$(realpath "$dir")")
     done
 
-    if [ ${#grammars[@]} -eq 0 ]; then
-        echo 'No grammars with config.ini + highlights.scm found'
-        exit 1
-    fi
-
-    echo "Building ${#grammars[@]} grammars..."
+    echo "Building ${#grammars[@]} grammar(s)..."
 
     # Check for compiler and tree-sitter CLI
     local cc="${CC:-gcc}"
@@ -231,7 +238,12 @@ cmd_build() {
         exit 1
     fi
 
-    local build_dir="$repo_root/build"
+    # Set up build directory
+    local tmp_build=false
+    if [ -z "$build_dir" ]; then
+        build_dir=$(mktemp -d)
+        tmp_build=true
+    fi
     mkdir -p "$build_dir"
 
     local ext
@@ -244,9 +256,12 @@ cmd_build() {
 
     local built=0
     local failed=0
+    local i
 
-    for lang in "${grammars[@]}"; do
-        local src_dir="$repo_root/grammars/$lang/src"
+    for i in "${!grammars[@]}"; do
+        local lang="${grammars[$i]}"
+        local grammar_dir="${grammar_paths[$i]}"
+        local src_dir="$grammar_dir/src"
         local parser_dir="$src_dir/src"
 
         # Generate parser if needed
@@ -311,13 +326,13 @@ cmd_build() {
         built=$((built + 1))
     done
 
-    echo "Built $built/${#grammars[@]} grammars ($failed failed)"
+    echo "Built $built/${#grammars[@]} ($failed failed)"
 
     # Validate
     if $do_validate && [ $built -gt 0 ]; then
         echo ''
         echo 'Validating queries...'
-        build_validate "$repo_root" "$build_dir" "${grammars[@]}"
+        build_validate_dirs "$build_dir" "${grammar_paths[@]}"
     fi
 
     # Install
@@ -328,17 +343,21 @@ cmd_build() {
         local lib_dir="$libdir/mc/ts-grammars"
         mkdir -p "$lib_dir"
 
-        for lang in "${grammars[@]}"; do
+        for i in "${!grammars[@]}"; do
+            local lang="${grammars[$i]}"
+            local grammar_dir="${grammar_paths[$i]}"
+
             if [ ! -f "$build_dir/$lang.$ext" ]; then
                 continue
             fi
+
             local dest_dir="$share_dir/$lang"
             mkdir -p "$dest_dir"
             cp "$build_dir/$lang.$ext" "$lib_dir/$lang.$ext"
-            cp "$repo_root/grammars/$lang/config.ini" "$dest_dir/"
-            cp "$repo_root/grammars/$lang/highlights.scm" "$dest_dir/"
-            if [ -f "$repo_root/grammars/$lang/injections.scm" ]; then
-                cp "$repo_root/grammars/$lang/injections.scm" "$dest_dir/"
+            cp "$grammar_dir/config.ini" "$dest_dir/"
+            cp "$grammar_dir/highlights.scm" "$dest_dir/"
+            if [ -f "$grammar_dir/injections.scm" ]; then
+                cp "$grammar_dir/injections.scm" "$dest_dir/"
             fi
             echo 'dev' > "$dest_dir/.version"
             echo "  $lang"
@@ -346,15 +365,20 @@ cmd_build() {
         echo 'Done.'
     fi
 
+    # Clean up temp build dir
+    if $tmp_build; then
+        rm -rf "${build_dir:?}"
+    fi
+
     [ $failed -gt 0 ] && return 1
     return 0
 }
 
-# Compile and run the C validator
-build_validate() {
-    local repo_root=$1
-    local build_dir=$2
-    shift 2
+# Compile and run the C validator.
+# Usage: build_validate_dirs <build_dir> <grammar_dir> [<grammar_dir> ...]
+build_validate_dirs() {
+    local build_dir=$1
+    shift
 
     local ext
     ext=$(so_ext)
@@ -444,11 +468,12 @@ VEOF
     local validated=0
     local vfailed=0
 
-    for lang in "$@"; do
+    for grammar_dir in "$@"; do
+        local lang
+        lang=$(basename "$grammar_dir")
         local so_file="$build_dir/$lang.$ext"
         [ -f "$so_file" ] || continue
 
-        local grammar_dir="$repo_root/grammars/$lang"
         local scm_files=()
         for f in "$grammar_dir"/highlights.scm "$grammar_dir"/injections.scm; do
             [ -f "$f" ] && scm_files+=("$f")
@@ -471,7 +496,7 @@ VEOF
         fi
     done
 
-    echo "Validated $validated grammars ($vfailed failed)"
+    echo "Validated $validated grammar(s) ($vfailed failed)"
 }
 
 # --- Install command ---
@@ -989,7 +1014,7 @@ case "$command" in
     list)      cmd_list "$@" ;;
     available) cmd_available "$@" ;;
     uninstall) cmd_uninstall "$@" ;;
-    help|-h|--help) usage ;;
+    -h|--help) usage ;;
     *)
         echo "ERROR: unknown command: $command" >&2
         usage >&2

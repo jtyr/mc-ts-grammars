@@ -11,31 +11,13 @@ setup() {
     mkdir -p "$HOME"
     export TEST_SHARE="$TEST_PREFIX/share/mc/syntax-ts"
     export TEST_LIB="$TEST_PREFIX/lib/mc/ts-grammars"
+    # Point cache to test dir so tests don't pollute real cache
+    export XDG_CACHE_HOME="$TEST_PREFIX/cache"
+    mkdir -p "$XDG_CACHE_HOME"
 }
 
 teardown() {
     rm -rf "$TEST_PREFIX"
-}
-
-# Create a minimal fake grammar directory in the repo for testing
-create_fake_grammar() {
-    local lang=$1
-    local grammar_dir="$REPO_ROOT/grammars/$lang"
-
-    mkdir -p "$grammar_dir"
-
-    cat > "$grammar_dir/config.ini" << EOF
-[grammar]
-extensions=.${lang}
-display-name=Test $lang
-
-[colors]
-keyword=yellow;
-EOF
-
-    cat > "$grammar_dir/highlights.scm" << EOF
-(identifier) @keyword
-EOF
 }
 
 # Create a fake installed grammar
@@ -61,4 +43,50 @@ EOF
     echo '(identifier) @keyword' > "$share_dir/highlights.scm"
     echo "$version" > "$share_dir/.version"
     touch "$lib_dir/$lang.so"
+}
+
+# Create a fake release bundle tarball in the test cache.
+# Usage: create_fake_bundle <version> <lang1> [<lang2> ...]
+create_fake_bundle() {
+    local version=$1
+    shift
+    local langs=("$@")
+
+    local platform
+    case "$(uname -s)" in
+        Darwin)
+            case "$(uname -m)" in
+                arm64) platform='aarch64-macos' ;;
+                *)     platform='x86_64-macos' ;;
+            esac
+            ;;
+        *) platform='x86_64-linux' ;;
+    esac
+
+    local tarball_name="mc-ts-grammars-$version-$platform"
+    local staging="$TEST_PREFIX/staging/$tarball_name"
+    mkdir -p "$staging"
+
+    for lang in "${langs[@]}"; do
+        mkdir -p "$staging/$lang"
+
+        cat > "$staging/$lang/config.ini" << EOF
+[grammar]
+extensions=.${lang}
+display-name=Test $lang
+
+[colors]
+keyword=yellow;
+EOF
+
+        echo '(identifier) @keyword' > "$staging/$lang/highlights.scm"
+        touch "$staging/$lang/$lang.so"
+    done
+
+    echo "$version" > "$staging/VERSION"
+
+    local cache_dir="$XDG_CACHE_HOME/mc-ts-grammar"
+    mkdir -p "$cache_dir"
+    (cd "$TEST_PREFIX/staging" && tar czf "$cache_dir/$tarball_name.tar.gz" "$tarball_name")
+    rm -rf "$TEST_PREFIX/staging"
 }

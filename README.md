@@ -20,41 +20,54 @@ default (similar to Neovim, Helix, and Emacs). This project provides:
 
 ## Quick start
 
-Install all grammars from the latest release:
+Download the installer from the
+[latest release](https://github.com/jtyr/mc-ts-grammars/releases/latest):
 
 ```bash
-mc-ts-grammar install --all
+curl -LO https://github.com/jtyr/mc-ts-grammars/releases/latest/download/mc-ts-grammar
+chmod +x mc-ts-grammar
+```
+
+Install all grammars:
+
+```bash
+./mc-ts-grammar install --all
 ```
 
 Or install specific grammars:
 
 ```bash
-mc-ts-grammar install python bash yaml markdown
+./mc-ts-grammar install python bash yaml markdown
+```
+
+Optionally move the installer to a directory in your `PATH`:
+
+```bash
+mv mc-ts-grammar ~/.local/bin/
 ```
 
 ## Installer
 
 The `mc-ts-grammar` tool manages grammar installation and removal.
 
-### Commands
-
 ```text
-mc-ts-grammar build [--install] [--validate] [--dir PATH] [--libdir PATH]
-mc-ts-grammar install NAME...|--all [--version VER] [--arch ARCH] [--no-cache] [--dir PATH] [--libdir PATH]
-mc-ts-grammar update NAME...|--all [--version VER] [--arch ARCH] [--no-cache] [--dir PATH] [--libdir PATH]
-mc-ts-grammar list
-mc-ts-grammar uninstall NAME...|--all [--dir PATH] [--libdir PATH]
+Usage: mc-ts-grammar <command> [options]
+
+Commands:
+  build      Build grammars from source (run from cloned repo)
+  install    Install grammars from pre-built release bundles
+  update     Update installed grammars to latest release
+  list       List installed grammars
+  available  List grammars available in a release bundle
+  uninstall  Remove installed grammars
+
+Global options:
+  --dir PATH      Install prefix (default: ~/.local)
+  --libdir PATH   Library install path (default: <prefix>/lib)
+  --help, -h      Show this help message
+
+Run 'mc-ts-grammar <command> --help' for command-specific options.
 ```
-
-### Common options
-
-- `--dir PATH` - install prefix (default: `~/.local`)
-- `--libdir PATH` - library install path (default: `<prefix>/lib`)
-- `--version VER` - pin to a specific release version
-- `--arch ARCH` - target platform (default: auto-detect).
-  Values: `x86_64-linux`, `aarch64-linux`, `aarch64-macos`,
-  `x86_64-macos`, `x86_64-windows`
-- `--no-cache` - force re-download of the release bundle
 
 ### install
 
@@ -106,16 +119,31 @@ mc-ts-grammar build --install --validate
 
 ### list
 
-List installed grammars with version and location information.
+List installed grammars with version and scope information.
 
 ```bash
 mc-ts-grammar list
 ```
 
 ```text
-Grammar     Version      Scope    Paths
-python      2026.04.14   local    ~/.local/share/mc/syntax-ts/python/  ~/.local/lib/mc/ts-grammars/
-bash        2026.04.14   system   /usr/share/mc/syntax-ts/bash/        /usr/lib/mc/ts-grammars/
+Grammar         Version        Scope
+python          2026.04.17     local
+bash            2026.04.17     system
+```
+
+Use `--verbose` to show installation paths.
+
+### available
+
+List grammars available in a release bundle and show which are
+already installed.
+
+```bash
+# Show latest release
+mc-ts-grammar available
+
+# Show a specific release
+mc-ts-grammar available --version 2026.04.17
 ```
 
 ### uninstall
@@ -249,6 +277,15 @@ Files:
   /usr/lib/mc/ts-grammars/python.so
   /usr/share/mc/syntax-ts/python/config.ini
   /usr/share/mc/syntax-ts/python/highlights.scm
+```
+
+## Running tests
+
+The installer has a test suite using
+[bats](https://github.com/bats-core/bats-core):
+
+```bash
+bats tests/installer.bats
 ```
 
 ## License
