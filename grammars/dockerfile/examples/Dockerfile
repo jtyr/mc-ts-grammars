@@ -4,7 +4,7 @@
 # FROM with image name, tag, digest, and alias
 FROM ubuntu:22.04 AS base
 FROM node:18-alpine AS builder
-FROM python@sha256:abcdef1234567890 AS runner
+FROM python@sha256:63fdc2bca05b142ef64d05e8f9dbc4e8bf9f51294824db5c3d8b10f419fe1bdd AS runner
 
 # ARG before and after FROM
 ARG VERSION=1.0
