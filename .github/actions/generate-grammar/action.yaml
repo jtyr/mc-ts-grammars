@@ -1,0 +1,58 @@
+name: Generate Grammar
+description: Generate parser.c from grammar.js using tree-sitter CLI
+
+inputs:
+  languages:
+    description: Space-separated list of language names to generate (or "all")
+    required: true
+  cacheParsers:
+    description: Cache generated parser.c files between runs
+    required: false
+    default: "false"
+  cacheKeyPrefix:
+    description: Prefix for the parser cache key (e.g. "pr-123" or "release")
+    required: false
+    default: default
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+
+    - name: Cache npm packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: npm-${{ hashFiles('grammars/*/src/package.json') }}
+        restore-keys: |
+          npm-
+
+    - name: Install tree-sitter CLI
+      shell: bash
+      run: $GITHUB_ACTION_PATH/scripts/install-tree-sitter-cli.sh
+
+    - name: Restore parser cache
+      if: inputs.cacheParsers == 'true'
+      uses: actions/cache@v4
+      with:
+        path: .parser-cache
+        key: parsers-${{ inputs.cacheKeyPrefix }}-${{ hashFiles('grammars/*/src/grammar.js', 'grammars/*/src/src/scanner.c', 'grammars/*/src/src/scanner.cc', 'grammars/*/src/package.json') }}
+        restore-keys: |
+          parsers-${{ inputs.cacheKeyPrefix }}-
+
+    - name: Generate parsers
+      shell: bash
+      run: |
+        args=""
+        if [ "${{ inputs.languages }}" = "all" ]; then
+          args="--all"
+        else
+          args="${{ inputs.languages }}"
+        fi
+        if [ "${{ inputs.cacheParsers }}" = "true" ]; then
+          args="--cache-dir=.parser-cache $args"
+        fi
+        $GITHUB_ACTION_PATH/scripts/generate.sh $args

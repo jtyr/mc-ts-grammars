@@ -1,0 +1,30 @@
+{
+  "name": "tree-sitter-sourcepawn",
+  "version": "0.7.8",
+  "description": "SourcePawn grammar for node-tree-sitter",
+  "main": "bindings/node",
+  "keywords": [
+    "parser",
+    "sourcepawn",
+    "sourcemod",
+    "ast",
+    "tree-sitter"
+  ],
+  "scripts": {
+    "build": "tree-sitter generate; node-gyp build",
+    "generate": "tree-sitter generate",
+    "test": "tree-sitter test"
+  },
+  "author": "Nils Helmig",
+  "license": "MIT",
+  "repository": "https://github.com/nilshelmig/tree-sitter-sourcepawn",
+  "bugs": {
+    "url": "https://github.com/nilshelmig/tree-sitter-sourcepawn/issues"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.24.7"
+  },
+  "dependencies": {
+    "nan": "^2.14.2"
+  }
+}

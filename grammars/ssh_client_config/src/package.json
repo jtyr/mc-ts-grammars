@@ -1,0 +1,62 @@
+{
+  "name": "tree-sitter-ssh-client-config",
+  "version": "9999.99.99",
+  "description": "tree-sitter grammar for SSH client configuration files",
+  "keywords": [
+    "parser",
+    "lexer",
+    "ssh",
+    "client",
+    "config"
+  ],
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "init": "tree-sitter init-config",
+    "generate": "tree-sitter generate",
+    "test": "tree-sitter test",
+    "parse": "tree-sitter parse",
+    "examples": "tree-sitter parse 'examples/*' --quiet --stat",
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi --strip"
+  },
+  "homepage": "https://github.com/metio/tree-sitter-ssh-client-config",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/metio/tree-sitter-ssh-client-config.git"
+  },
+  "author": {
+    "name": "Sebastian Hoß",
+    "email": "seb@xn--ho-hia.de",
+    "url": "https://seb.xn--ho-hia.de/"
+  },
+  "contributors": [],
+  "license": "CC0-1.0",
+  "dependencies": {
+    "node-addon-api": "^8.3.0",
+    "node-gyp-build": "^4.8.4"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.22.4"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "0.26.7",
+    "prebuildify": "^6.0.1"
+  },
+  "files": [
+    "/bindings/node/",
+    "/queries/",
+    "/src/",
+    "/binding.gyp",
+    "/grammar.js",
+    "/LICENSE",
+    "/README.md",
+    "/package.json",
+    "/package-lock.json"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "name": "tree-sitter-kcl",
+  "version": "0.1.0",
+  "description": "A tree-sitter grammar for KCL",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "install": "node-gyp-build",
+    "prestart": "tree-sitter build --wasm",
+    "start": "tree-sitter playground",
+    "test": "node --test bindings/node/*_test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kcl-lang/tree-sitter-kcl.git"
+  },
+  "keywords": [
+    "tree-sitter",
+    "kcl"
+  ],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**",
+    "*.wasm"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/kcl-lang/tree-sitter-kcl/issues"
+  },
+  "homepage": "https://github.com/kcl-lang/tree-sitter-kcl#readme",
+  "dependencies": {
+    "node-addon-api": "^8.0.0",
+    "node-gyp-build": "^4.8.1"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.22.4"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "prebuildify": "^6.0.1",
+    "tree-sitter-cli": "^0.24.7"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.kcl",
+      "injection-regex": "^kcl$"
+    }
+  ]
+}

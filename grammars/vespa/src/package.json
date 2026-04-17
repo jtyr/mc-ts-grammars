@@ -1,0 +1,22 @@
+{
+  "name": "tree-sitter-vespa",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bindings/node",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "nan": "^2.17.0"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.vespa",
+      "file-types": [
+        "sd"
+      ]
+    }
+  ],
+  "devDependencies": {
+    "tree-sitter-cli": "^0.20.7"
+  }
+}

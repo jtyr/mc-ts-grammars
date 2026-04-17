@@ -1,0 +1,29 @@
+name: Package Release
+description: Create release tarballs with grammars and config files
+
+inputs:
+  platform:
+    description: Target platform (e.g. x86_64-linux)
+    required: true
+  buildDir:
+    description: Directory containing built shared libraries
+    required: true
+  tag:
+    description: Release tag for VERSION file
+    required: true
+  outputDir:
+    description: Output directory for tarball
+    required: false
+    default: release
+
+runs:
+  using: composite
+  steps:
+    - name: Package release tarball
+      shell: bash
+      run: |
+        $GITHUB_ACTION_PATH/scripts/package.sh \
+          --platform=${{ inputs.platform }} \
+          --build-dir=${{ inputs.buildDir }} \
+          --tag=${{ inputs.tag }} \
+          --output=${{ inputs.outputDir }}

@@ -1,0 +1,48 @@
+{
+  "name": "tree-sitter-mlir",
+  "description": "Tree sitter grammar for MLIR",
+  "version": "0.0.1",
+  "author": "Ramkumar Ramachandra",
+  "license": "Apache-2.0",
+  "main": "grammar.js",
+  "types": "bindings/node",
+  "scripts": {
+    "compile": "tree-sitter generate",
+    "update-tests": "tree-sitter test --update",
+    "test": "tree-sitter test",
+    "bench": "node bench.mjs",
+    "prebuildify": "prebuildify --napi --strip",
+    "install": "node-gyp-build"
+  },
+  "keywords": [
+    "tree-sitter",
+    "lexer",
+    "parser",
+    "grammar"
+  ],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ],
+  "dependencies": {
+    "node-addon-api": "^8.4.0",
+    "node-gyp-build": "^4.8.4"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.22.4"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "glob": "^13.0.0",
+    "tree-sitter-cli": "^0.26.0",
+    "prebuildify": "^6.0.1"
+  }
+}

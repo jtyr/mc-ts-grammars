@@ -1,0 +1,23 @@
+{
+  "name": "tree-sitter-scilab",
+  "version": "1.0.0",
+  "description": "SCILAB tree-sitter parser",
+  "main": "bindings/node",
+  "author": "Nicolas Graves",
+  "license": "MIT",
+  "dependencies": {
+    "nan": "^2.17.0"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.20.8"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.scilab",
+      "file-types": [
+          "sci",
+          "sce"
+      ]
+    }
+  ]
+}

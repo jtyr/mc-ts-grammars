@@ -1,0 +1,61 @@
+{
+  "name": "tree-sitter-beancount",
+  "version": "2.5.1",
+  "description": "a tree-sitter parser for the beancount syntax",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "build": "tree-sitter generate",
+    "test": "tree-sitter test",
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi --strip"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://bryall@github.com/bryall/tree-sitter-beancount.git"
+  },
+  "keywords": [
+    "tree-sitter",
+    "beancount"
+  ],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ],
+  "author": "Brian Ryall",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bryall/tree-sitter-beancount/issues"
+  },
+  "homepage": "https://github.com/bryall/tree-sitter-beancount#readme",
+  "dependencies": {
+    "node-addon-api": "^8.7.0",
+    "node-gyp-build": "^4.8.0",
+    "tar-fs": "^3.1.2"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.25.0"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "prebuildify": "^6.0.0",
+    "tree-sitter-cli": "^0.26.7"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.beancount",
+      "injection-regex": "^beancount$"
+    }
+  ]
+}

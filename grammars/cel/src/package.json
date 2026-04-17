@@ -1,0 +1,28 @@
+{
+  "name": "tree-sitter-cel",
+  "version": "0.0.1",
+  "description": "Common Expression Language (CEL) grammar for tree-sitter",
+  "main": "bindings/node/index.js",
+  "types": "bindings/node/index.d.ts",
+  "scripts": {
+    "install": "node-gyp-build",
+    "test": "node --test bindings/node/binding_test.js"
+  },
+  "author": "Buf Technologies, Inc.",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "node-addon-api": "^8.2.2",
+    "node-gyp-build": "^4.8.4"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.25.0"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.25.0"
+  },
+  "peerDependenciesMeta": {
+    "tree-sitter": {
+      "optional": true
+    }
+  }
+}

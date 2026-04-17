@@ -1,0 +1,5060 @@
+# Tree-sitter grammar registry
+
+- language: ada
+  url: https://github.com/briot/tree-sitter-ada
+  branch: master
+  ref: 6b58259a08b1a22ba0247a7ce30be384db618da6
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasFolds: true
+    abi: 14
+
+- language: ada
+  url: https://github.com/TamaMcGlinn/tree-sitter-ada
+  ref: 11b6ab9afaae072d38211b5ac2a438467b0137e3
+  enabled: false
+  note: Disabled in favour of https://github.com/briot/tree-sitter-ada
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: agda
+  url: https://github.com/tree-sitter/tree-sitter-agda
+  branch: master
+  ref: e8d47a6987effe34d5595baf321d82d3519a8527
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: angular
+  url: https://github.com/dlvandenberg/tree-sitter-angular
+  ref: v0.8.3
+  extraFiles:
+    - html.tag.h
+    - tag.h
+    - html.scanner.c
+  metadata:
+    hasParser: true
+    hasScanner: true
+    gitTags: true
+    abi: 15
+
+- language: angular
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/angular
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: apex
+  name: soql
+  url: https://github.com/aheber/tree-sitter-sfapex
+  ref: 3597575a429766dd7ecce9f5bb97f6fec4419d5d
+  path: soql
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: apex
+  url: https://github.com/jsuarez-chipiron/tree-sitter-apex
+  ref: 8861b02a3dde407d6755cb19f400d101936ce3fd
+  enabled: false
+  note: Disabled in favour of https://github.com/aheber/tree-sitter-sfapex
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: apex
+  url: https://github.com/Ziemniakoss/tree-sitter-apex
+  ref: d8d76edfcbc3c86485a246acfccbdc725d133b48
+  enabled: false
+  note: Disabled in favour of https://github.com/aheber/tree-sitter-sfapex
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: arduino
+  url: https://github.com/tree-sitter-grammars/tree-sitter-arduino
+  branch: master
+  ref: 11dd46c9ae25135c473c0003a133bb06a484af0c
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasTags: true
+    abi: 15
+
+- language: asciidoc
+  url: https://github.com/cathaysia/tree-sitter-asciidoc
+  branch: master
+  ref: 27685d3d1fcec9ea658681d2c997f109a2c2f080
+  path: tree-sitter-asciidoc
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: asm
+  url: https://github.com/RubixDev/tree-sitter-asm
+  ref: 839741fef4dab5128952334624905c82b40c7133
+  release: true
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: asm
+  url: https://github.com/rush-rs/tree-sitter-asm
+  ref: 839741fef4dab5128952334624905c82b40c7133
+  enabled: false
+  note: Disabled in favour of https://github.com/RubixDev/tree-sitter-asm
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: asm
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/asm
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: astro
+  url: https://github.com/virchau13/tree-sitter-astro
+  branch: master
+  ref: 213f6e6973d9b456c6e50e86f19f66877e7ef0ee
+  extraFiles:
+    - tag.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: authzed
+  url: https://github.com/mleonidas/tree-sitter-authzed
+  ref: 83e5c26a8687eb4688fe91d690c735cc3d21ad81
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: awk
+  url: https://github.com/Beaglefoot/tree-sitter-awk
+  ref: v0.7.2
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 14
+
+- language: bash
+  url: https://github.com/tree-sitter/tree-sitter-bash
+  ref: v0.25.1
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: bass
+  url: https://github.com/vito/tree-sitter-bass
+  ref: 28dc7059722be090d04cd751aed915b2fee2f89a
+  metadata:
+    hasParser: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: bass
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/bass
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: bazelrc
+  url: https://github.com/zaucy/tree-sitter-bazelrc
+  ref: 3cea80b67f53178518e2c5f5011b51a4f8f6c0a5
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: beancount
+  url: https://github.com/polarmutex/tree-sitter-beancount
+  branch: master
+  ref: 9db1ad0d5047e5e7f12db50741aba1c32716779a
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: beancount
+  url: https://github.com/yagebu/tree-sitter-beancount
+  ref: f2756d2f50218437d2854fb591f951877235f29b
+  enabled: false
+  note: Disabled in favour of https://github.com/polarmutex/tree-sitter-beancount
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: beancount
+  url: https://github.com/zwpaper/tree-sitter-beancount
+  ref: c184999166c75edefef0936ff7e533698403d016
+  enabled: false
+  note: Disabled in favour of https://github.com/polarmutex/tree-sitter-beancount
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: beancount
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/beancount
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+
+- language: bibtex
+  url: https://github.com/latex-lsp/tree-sitter-bibtex
+  branch: master
+  ref: 8d04ed27b3bc7929f14b7df9236797dab9f3fa66
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    abi: 15
+
+- language: bicep
+  url: https://github.com/tree-sitter-grammars/tree-sitter-bicep
+  ref: v1.1.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: bison
+  url: https://gitlab.com/btuin2/tree-sitter-bison
+  branch: master
+  ref: 0681f9d1d21bbccdc44ab5241426409b4313f9b5
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasInjections: true
+    abi: 14
+
+- language: bitbake
+  url: https://github.com/tree-sitter-grammars/tree-sitter-bitbake
+  branch: master
+  ref: a5d04fdb5a69a02b8fa8eb5525a60dfb5309b73b
+  enabled: false
+  note: Upstream highlights.scm references non-existent node type (interpolation) at pinned ref
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: blueprint
+  url: https://gitlab.com/gabmus/tree-sitter-blueprint.git
+  branch: master
+  ref: 355ef84ef8a958ac822117b652cf4d49bac16c79
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: bp
+  url: https://github.com/ambroisie/tree-sitter-bp
+  ref: v0.7.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 15
+
+- language: brightscript
+  url: https://github.com/ajdelcimmuto/tree-sitter-brightscript
+  ref: 253fdfaa23814cb46c2d5fc19049fa0f2f62c6da
+  ignoreFiles:
+    - queries/highlights.scm
+  note: highlights.scm references non-existent node types
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: c
+  url: https://github.com/tree-sitter/tree-sitter-c
+  branch: master
+  ref: ae19b676b13bdcc13b7665397e6d9b14975473dd
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasTags: true
+    abi: 15
+
+- language: c3
+  url: https://github.com/c3lang/tree-sitter-c3
+  ref: 78e2ae9cff29ef8ca6666006abe80f1236d42996
+  enabled: false
+  note: Disabled in favour of https://github.com/zweimach/tree-sitter-c3
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: c3
+  url: https://github.com/zweimach/tree-sitter-c3
+  ref: 20211339830745a9bce045587c84449c20dea202
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: c_sharp
+  url: https://github.com/tree-sitter/tree-sitter-c-sharp
+  branch: master
+  ref: 88366631d598ce6595ec655ce1591b315cffb14c
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasTags: true
+    abi: 15
+
+- language: caddy
+  url: https://github.com/opa-oz/tree-sitter-caddy
+  ref: 9b3fde99d3d74345b85b655a6d8065e004fbe26f
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: cairo
+  url: https://github.com/JoranHonig/tree-sitter-cairo
+  ref: 127f38a6c03d009ccf5798cf0eaad7d5df982445
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-cairo
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    abi: 14
+
+- language: cairo
+  url: https://github.com/tree-sitter-grammars/tree-sitter-cairo
+  branch: master
+  ref: 6238f609bea233040fe927858156dee5515a0745
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: capnp
+  url: https://github.com/tree-sitter-grammars/tree-sitter-capnp
+  branch: master
+  ref: 7b0883c03e5edd34ef7bcf703194204299d7099f
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: cedar
+  url: https://github.com/chrnorm/tree-sitter-cedar
+  ref: 5092204de4521a8d5a71bbf14adf2e1ded45b723
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: cel
+  url: https://github.com/bufbuild/tree-sitter-cel
+  ref: fd2e8efaa07e71e46dcc1d5c4c85556a742d8c36
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: cfengine
+  url: https://github.com/olehermanse/tree-sitter-cfengine
+  ref: 04607817eea5b0f05b35de517a2453e8e23c971b
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: chatito
+  url: https://github.com/tree-sitter-grammars/tree-sitter-chatito
+  branch: master
+  ref: c0ed82c665b732395073f635c74c300f09530a7f
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasTags: true
+    abi: 15
+
+- language: chuck
+  url: https://github.com/tymbalodeon/tree-sitter-chuck
+  branch: trunk
+  ref: 68fb7bdba480915d87177feaa5593a666c0bb602
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: circom
+  url: https://github.com/Decurity/tree-sitter-circom
+  ref: 02150524228b1e6afef96949f2d6b7cc0aaf999e
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    abi: 14
+
+- language: clojure
+  url: https://github.com/sogaiu/tree-sitter-clojure
+  branch: master
+  ref: e43eff80d17cf34852dcd92ca5e6986d23a7040f
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: cmake
+  url: https://github.com/uyha/tree-sitter-cmake
+  branch: master
+  ref: c7b2a71e7f8ecb167fad4c97227c838439280175
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: cobol
+  url: https://github.com/Neppord/tree-sitter-cobol
+  ref: 52944017f04362633baed93a62d068866641fdd0
+  generate: true
+  enabled: false
+  note: Disabled in favour of https://github.com/yutaro-sakamoto/tree-sitter-cobol
+  metadata:
+    hasHighlights: true
+
+- language: cobol
+  name: COBOL
+  url: https://github.com/yutaro-sakamoto/tree-sitter-cobol
+  ref: e99dbdc3d800d5fa2796476efd60af91f6b43d93
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: comment
+  url: https://github.com/stsewd/tree-sitter-comment
+  branch: master
+  ref: 66272d2b6c73fb61157541b69dd0a7ce7b42a5ad
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: comment
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/comment
+  metadata:
+    hasHighlights: true
+
+- language: commonlisp
+  url: https://github.com/theHamsta/tree-sitter-commonlisp
+  branch: master
+  ref: 32323509b3d9fe96607d151c2da2c9009eb13a2f
+  release: true
+  metadata:
+    hasParser: true
+    hasTags: true
+    abi: 14
+
+- language: commonlisp
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/commonlisp
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+
+- language: context
+  url: https://github.com/pmazaitis/tree-sitter-context_en
+  ref: 7ee6e0024056ec759769de480890d7f22da926f9
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 14
+
+- language: cooklang
+  url: https://github.com/addcninblue/tree-sitter-cooklang
+  branch: master
+  ref: 4ebe237c1cf64cf3826fc249e9ec0988fe07e58e
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: cooklang
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/cooklang
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: corn
+  url: https://github.com/jakestanger/tree-sitter-corn
+  branch: master
+  ref: 464654742cbfd3a3de560aba120998f1d5dfa844
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: cpon
+  url: https://github.com/tree-sitter-grammars/tree-sitter-cpon
+  branch: master
+  ref: 594289eadfec719198e560f9d7fd243c4db678d5
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: cpp
+  url: https://github.com/tree-sitter/tree-sitter-cpp
+  branch: master
+  ref: 8b5b49eb196bec7040441bee33b2c9a4838d6967
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasTags: true
+    abi: 15
+
+- language: cql
+  name: cgsql
+  url: https://github.com/ricomariani/tree-sitter-cgsql
+  ref: a52fd004e5977b886b931a54b1bdcbd91101d862
+  generate: true
+  enabled: false
+  note: Disabled in favour of https://github.com/shotover/tree-sitter-cql
+  metadata:
+    hasHighlights: true
+
+- language: cql
+  url: https://github.com/shotover/tree-sitter-cql
+  ref: d3abd9ff1f4f449c18381c6d87c5becb7b2b5762
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: crystal
+  url: https://github.com/keidax/tree-sitter-crystal
+  ref: 51ad1411de9414b4600227553bb70953c352a627
+  extraFiles:
+    - unicode.c
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: crystal
+  url: https://github.com/will/tree-sitter-crystal
+  ref: 15597b307b18028b04d288561f9c29794621562b
+  enabled: false
+  note: Disabled in favour of https://github.com/keidax/tree-sitter-crystal
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: css
+  url: https://github.com/tree-sitter/tree-sitter-css
+  ref: v0.25.0
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: csv
+  url: https://github.com/tree-sitter-grammars/tree-sitter-csv
+  branch: master
+  ref: f6bf6e35eb0b95fbadea4bb39cb9709507fcb181
+  path: csv
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: cuda
+  url: https://github.com/tree-sitter-grammars/tree-sitter-cuda
+  ref: v0.21.1
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: cue
+  url: https://github.com/eonpatapon/tree-sitter-cue
+  ref: a9e713c2fa2da69de03ceb799807043420ca7c4b
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: cylc
+  url: https://github.com/elliotfontaine/tree-sitter-cylc
+  ref: 6d1d81137112299324b526477ce1db989ab58fb8
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: d
+  url: https://github.com/gdamore/tree-sitter-d
+  ref: fb028c8f14f4188286c2eef143f105def6fbf24f
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasIndents: true
+    hasTags: true
+    abi: 14
+
+- language: dart
+  url: https://github.com/UserNobody14/tree-sitter-dart
+  branch: master
+  ref: 0fc19c3a57b1109802af41d2b8f60d8835c5da3a
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasTags: true
+    abi: 15
+
+- language: desktop
+  url: https://github.com/ValdezFOmar/tree-sitter-desktop
+  branch: master
+  ref: 954da7259e0f6c3bb4f811fddce11eb5ac94d9f6
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: desktop
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/desktop
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+
+- language: devicetree
+  url: https://github.com/joelspadin/tree-sitter-devicetree
+  ref: v0.15.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: dhall
+  url: https://github.com/jbellerb/tree-sitter-dhall
+  branch: master
+  ref: 62013259b26ac210d5de1abf64cf1b047ef88000
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: diff
+  url: https://github.com/the-mikedavis/tree-sitter-diff
+  ref: v0.1.0
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-diff
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: diff
+  url: https://github.com/tree-sitter-grammars/tree-sitter-diff
+  ref: v0.1.0
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: diff
+  url: https://github.com/vigoux/tree-sitter-diff
+  ref: 53bd9a3cd6e40a64f59d13dc73754c5473a1e2df
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-diff
+  metadata:
+    hasParser: true
+    abi: 12
+
+- language: disassembly
+  url: https://github.com/ColinKennedy/tree-sitter-disassembly
+  ref: 1.3.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 14
+
+- language: djot
+  url: https://github.com/treeman/tree-sitter-djot
+  branch: master
+  ref: 74fac1f53c6d52aeac104b6874e5506be6d0cfe6
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: dockerfile
+  url: https://github.com/camdencheek/tree-sitter-dockerfile
+  ref: 971acdd908568b4531b0ba28a445bf0bb720aba5
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: dot
+  url: https://github.com/rydesun/tree-sitter-dot
+  ref: 80327abbba6f47530edeb0df9f11bd5d5c93c14d
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 13
+
+- language: doxygen
+  url: https://github.com/tree-sitter-grammars/tree-sitter-doxygen
+  branch: master
+  ref: ccd998f378c3f9345ea4eeb223f56d7b84d16687
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasIndents: true
+    abi: 14
+
+- language: drools
+  url: https://github.com/iByteABit256/tree-sitter-drools
+  ref: v0.1.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: dtd
+  name: xml
+  url: https://github.com/tree-sitter-grammars/tree-sitter-xml
+  branch: master
+  ref: 5000ae8f22d11fbe93939b05c1e37cf21117162d
+  path: xml
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: earthfile
+  url: https://github.com/glehmann/tree-sitter-earthfile
+  branch: stable
+  ref: 5baef88717ad0156fd29a8b12d0d8245bb1096a8
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: ebnf
+  url: https://github.com/RubixDev/ebnf
+  ref: 8e635b0b723c620774dfb8abf382a7f531894b40
+  path: crates/tree-sitter-ebnf
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: editorconfig
+  url: https://github.com/ValdezFOmar/tree-sitter-editorconfig
+  ref: bfd74395e393f56ba58db953458b346f02d6f7b2
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: editorconfig
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/editorconfig
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+
+- language: eds
+  url: https://github.com/uyha/tree-sitter-eds
+  ref: 26d529e6cfecde391a03c21d1474eb51e0285805
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: eds
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/eds
+  metadata:
+    hasHighlights: true
+    hasFolds: true
+
+- language: eex
+  url: https://github.com/connorlay/tree-sitter-eex
+  ref: v0.1.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    gitTags: true
+    abi: 13
+
+- language: elisp
+  url: https://github.com/tpeacock19/tree-sitter-elisp
+  ref: d0993592cb8c8ec85bad7aab1044a2fcb124e75b
+  ignoreFiles:
+    - queries/highlights.scm
+  note: highlights.scm references non-existent node types
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasTags: true
+    abi: 13
+
+- language: elisp
+  url: https://github.com/Wilfred/tree-sitter-elisp
+  ref: 29b4e49275f4a947ce17c8533bc20a1f97768c70
+  enabled: false
+  note: Disabled in favour of https://github.com/tpeacock19/tree-sitter-elisp
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasTags: true
+    abi: 15
+
+- language: elixir
+  url: https://github.com/elixir-lang/tree-sitter-elixir
+  ref: 7937d3b4d65fa574163cfa59394515d3c1cf16f4
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasTags: true
+    abi: 14
+
+- language: elm
+  url: https://github.com/elm-tooling/tree-sitter-elm
+  ref: 6d9511c28181db66daee4e883f811f6251220943
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasTags: true
+    abi: 15
+
+- language: elsa
+  url: https://github.com/glapa-grossklag/tree-sitter-elsa
+  ref: v1.1.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: elvish
+  url: https://github.com/elves/tree-sitter-elvish
+  ref: 5e7210d945425b77f82cbaebc5af4dd3e1ad40f5
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: embedded_template
+  url: https://github.com/tree-sitter/tree-sitter-embedded-template
+  branch: master
+  ref: 3499d85f0a0d937c507a4a65368f2f63772786e1
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: enforce
+  url: https://github.com/simonvic/tree-sitter-enforce
+  ref: eb2796871d966264cdb041b797416ef1757c8b4f
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    hasTags: true
+    abi: 15
+
+- language: erlang
+  url: https://github.com/AbstractMachinesLab/tree-sitter-erlang
+  ref: 3a9c769444f08bbccce03845270efac0c641c5e7
+  enabled: false
+  note: Disabled in favour of https://github.com/WhatsApp/tree-sitter-erlang
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: erlang
+  url: https://github.com/the-mikedavis/tree-sitter-erlang
+  ref: d85b18e76962d6a3ba131bc5b514d77558e82762
+  enabled: false
+  note: Disabled in favour of https://github.com/WhatsApp/tree-sitter-erlang
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: erlang
+  url: https://github.com/WhatsApp/tree-sitter-erlang
+  ref: 1d78195c4fbb1fc027eb3e4220427f1eb8bfc89e
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: eventrule
+  url: https://github.com/3p3r/tree-sitter-eventrule
+  ref: v1.8.0
+  generate: true
+  enabled: false
+  note: Requires node dependency tree-sitter-json for generation
+  metadata:
+    hasHighlights: true
+    gitTags: true
+
+- language: facility
+  url: https://github.com/FacilityApi/tree-sitter-facility
+  branch: master
+  ref: e4bfd3e960de9f4b4648acb1c92e9b95b47d8cfb
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: faust
+  url: https://github.com/khiner/tree-sitter-faust
+  ref: 122dd101919289ea809bad643712fcb483a1bed0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 15
+
+- language: fennel
+  url: https://github.com/alexmozaidze/tree-sitter-fennel
+  ref: 3f0f6b24d599e92460b969aabc4f4c5a914d15a0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: fennel
+  url: https://github.com/sogaiu/tree-sitter-fennel
+  ref: 39dd5774534db65957a964d48d3c3953a3085d29
+  enabled: false
+  note: Disabled in favour of https://github.com/alexmozaidze/tree-sitter-fennel
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: fennel
+  url: https://github.com/TravonteD/tree-sitter-fennel
+  ref: 36eb796a84b4f57bdf159d0a99267260d4960c89
+  enabled: false
+  note: Disabled in favour of https://github.com/alexmozaidze/tree-sitter-fennel
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: fennel
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/fennel
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+
+- language: fidl
+  url: https://github.com/google/tree-sitter-fidl
+  ref: 0a8910f293268e27ff554357c229ba172b0eaed2
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    abi: 14
+
+- language: firrtl
+  url: https://github.com/tree-sitter-grammars/tree-sitter-firrtl
+  branch: master
+  ref: 8503d3a0fe0f9e427863cb0055699ff2d29ae5f5
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: fish
+  url: https://github.com/ram02z/tree-sitter-fish
+  ref: 3.7.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 14
+
+- language: fluentbit
+  url: https://github.com/sh-cho/tree-sitter-fluentbit
+  ref: b79a0d7380a81d0028d9ac19f93cc844ceac74ef
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: foam
+  url: https://github.com/FoamScience/tree-sitter-foam
+  branch: master
+  ref: 472c24f11a547820327fb1be565bcfff98ea96a4
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: formula
+  url: https://github.com/siraben/tree-sitter-formula
+  branch: master
+  ref: 351159cf66f0e7f8d86fa06fc44ab3c2055082df
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasTags: true
+    abi: 13
+
+- language: forth
+  url: https://github.com/AlexanderBrevig/tree-sitter-forth
+  ref: 360ef13f8c609ec6d2e80782af69958b84e36cd0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: fortran
+  url: https://github.com/stadelmanma/tree-sitter-fortran
+  branch: master
+  ref: be30d90dc7dfa4080b9c4abed3f400c9163a88df
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: fsh
+  url: https://github.com/mgramigna/tree-sitter-fsh
+  ref: fad2e175099a45efbc98f000cc196d3674cc45e0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: fsharp
+  url: https://github.com/ionide/tree-sitter-fsharp
+  ref: 0.2.2
+  path: fsharp
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasIndents: true
+    hasTags: true
+    gitTags: true
+    abi: 15
+
+- language: func
+  url: https://github.com/akifoq/tree-sitter-func
+  ref: dffbbd70bc14bfc26e4d9130aefc36133b6ff11a
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-func
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 13
+
+- language: func
+  url: https://github.com/tree-sitter-grammars/tree-sitter-func
+  branch: master
+  ref: f780ca55e65e7d7360d0229331763e16c452fc98
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: fusion
+  url: https://gitlab.com/jirgn/tree-sitter-fusion.git
+  ref: v1.1.2
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 13
+
+- language: gap
+  url: https://github.com/gap-system/tree-sitter-gap
+  branch: master
+  ref: ed2480d42281586932920527823b307bc45052b8
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasFolds: true
+    hasTags: true
+    abi: 15
+
+- language: gdscript
+  url: https://github.com/PrestonKnopp/tree-sitter-gdscript
+  branch: master
+  ref: 89e66b6bdc002ab976283f277cbb48b780c5d0e9
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: gdshader
+  url: https://github.com/airblast-dev/tree-sitter-gdshader
+  ref: v0.4.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    gitTags: true
+    abi: 15
+
+- language: gdshader
+  url: https://github.com/GodOfAvacyn/tree-sitter-gdshader
+  ref: 14e834063e136fa69b6d91f711f4f1981acf424b
+  enabled: false
+  note: Disabled in favour of https://github.com/airblast-dev/tree-sitter-gdshader
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: gemtext
+  url: https://github.com/pebbe/tree-sitter-gemtext
+  branch: master
+  ref: 5b5a96a17889bd8aab5c413bda9e7d29391a5a1c
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: git_commit
+  url: https://github.com/the-mikedavis/tree-sitter-git-commit
+  ref: 5a50da19b3841ac51e9d483cd9c856a85232233d
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: git_config
+  url: https://github.com/the-mikedavis/tree-sitter-git-config
+  ref: 0fbc9f99d5a28865f9de8427fb0672d66f9d83a5
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: git_rebase
+  url: https://github.com/the-mikedavis/tree-sitter-git-rebase
+  ref: 760ba8e34e7a68294ffb9c495e1388e030366188
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: gitattributes
+  url: https://github.com/tree-sitter-grammars/tree-sitter-gitattributes
+  branch: master
+  ref: 1b7af09d45b579f9f288453b95ad555f1f431645
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: gitignore
+  url: https://github.com/shunsambongi/tree-sitter-gitignore
+  ref: f4685bf11ac466dd278449bcfe5fd014e94aa504
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: gitignore
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/gitignore
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: gleam
+  url: https://github.com/gleam-lang/tree-sitter-gleam
+  ref: 0153f8b875cd02034b553f3a84a2f5ee67a80364
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasTags: true
+    abi: 15
+
+- language: glimmer
+  url: https://github.com/ember-tooling/tree-sitter-glimmer
+  ref: v1.6.0-tree-sitter-glimmer
+  metadata:
+    hasParser: true
+    hasScanner: true
+    gitTags: true
+    abi: 15
+
+- language: glimmer
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/glimmer
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: glimmer_javascript
+  url: https://github.com/NullVoxPopuli/tree-sitter-glimmer-javascript
+  ref: 5cc865a2a0a77cbfaf5062c8fcf2a9919bd54f87
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: glimmer_javascript
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/glimmer_javascript
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: glimmer_typescript
+  url: https://github.com/NullVoxPopuli/tree-sitter-glimmer-typescript
+  ref: 12d98944c1d5077b957cbdb90d663a7c4d50118c
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasLocals: true
+    hasTags: true
+    abi: 14
+
+- language: glimmer_typescript
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/glimmer_typescript
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: glsl
+  url: https://github.com/tree-sitter-grammars/tree-sitter-glsl
+  branch: master
+  ref: 24a6c8ef698e4480fecf8340d771fbcb5de8fbb4
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: gn
+  url: https://github.com/tree-sitter-grammars/tree-sitter-gn
+  ref: stable
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: gnuplot
+  url: https://github.com/dpezto/tree-sitter-gnuplot
+  ref: 8923c1e38b9634a688a6c0dce7c18c8ffb823e79
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 14
+
+- language: go
+  url: https://github.com/tree-sitter/tree-sitter-go
+  branch: master
+  ref: 2346a3ab1bb3857b48b29d779a1ef9799a248cd7
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasTags: true
+    abi: 15
+
+- language: goctl
+  url: https://github.com/chaozwn/tree-sitter-goctl
+  ref: 49c43532689fe1f53e8b9e009d0521cab02c432b
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: goctl
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/goctl
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: godot_resource
+  url: https://github.com/PrestonKnopp/tree-sitter-godot-resource
+  branch: master
+  ref: 302c1895f54bf74d53a08572f7b26a6614209adc
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: godot_resource
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/godot_resource
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+
+- language: gomod
+  url: https://github.com/camdencheek/tree-sitter-go-mod
+  ref: 2e886870578eeba1927a2dc4bd2e2b3f598c5f9a
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: gosum
+  url: https://github.com/tree-sitter-grammars/tree-sitter-go-sum
+  branch: master
+  ref: 27816eb6b7315746ae9fcf711e4e1396dc1cf237
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: gotmpl
+  url: https://github.com/ngalaiko/tree-sitter-go-template
+  branch: master
+  ref: aa71f63de226c5592dfbfc1f29949522d7c95fac
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: gotmpl
+  url: https://github.com/zellio/tree-sitter-gotmpl
+  ref: 5c91dafb003f4a63ff37853c958fc622fbf436e6
+  enabled: false
+  note: Less mature alternative (1 star, single commit, May 2025); ngalaiko variant preferred for community adoption and active maintenance
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: gowork
+  url: https://github.com/omertuc/tree-sitter-go-work
+  ref: 949a8a470559543857a62102c84700d291fc984c
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 13
+
+- language: gpg
+  url: https://github.com/tree-sitter-grammars/tree-sitter-gpg-config
+  branch: master
+  ref: 4024eb268c59204280f8ac71ef146b8ff5e737f6
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: graphql
+  url: https://github.com/bkegley/tree-sitter-graphql
+  branch: master
+  ref: 5e66e961eee421786bdda8495ed1db045e06b5fe
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: graphql
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/graphql
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasIndents: true
+
+- language: groovy
+  url: https://github.com/Decodetalkers/tree-sitter-groovy
+  ref: 679459be70d7fbac175fb19f668948d57b3825ef
+  generate: true
+  enabled: false
+  note: Disabled in favour of https://github.com/murtaza64/tree-sitter-groovy
+
+- language: groovy
+  url: https://github.com/murtaza64/tree-sitter-groovy
+  ref: 781d9cd1b482a70a6b27091e5c9e14bbcab3b768
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: groq
+  url: https://github.com/ajrussellaudio/tree-sitter-groq
+  ref: 1fa1ab0eb391a270957e8ad8c731b492e3645649
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: gstlaunch
+  url: https://github.com/theHamsta/tree-sitter-gstlaunch
+  branch: master
+  ref: 549aef253fd38a53995cda1bf55c501174372bf7
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: gstlaunch
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/gstlaunch
+  metadata:
+    hasHighlights: true
+
+- language: hack
+  url: https://github.com/slackhq/tree-sitter-hack
+  ref: 1a7ded90288189746c54861ac144ede97df95081
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 13
+
+- language: hare
+  url: https://github.com/tree-sitter-grammars/tree-sitter-hare
+  branch: master
+  ref: eed7ddf6a66b596906aa8ca3d40521b8278adc6f
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: haskell
+  url: https://github.com/tree-sitter/tree-sitter-haskell
+  branch: master
+  ref: 0975ef72fc3c47b530309ca93937d7d143523628
+  release: true
+  extraFiles:
+    - unicode.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 14
+
+- language: haskell_persistent
+  url: https://github.com/MercuryTechnologies/tree-sitter-haskell-persistent
+  branch: master
+  ref: 577259b4068b2c281c9ebf94c109bd50a74d5857
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: haskell_persistent
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/haskell_persistent
+  metadata:
+    hasHighlights: true
+    hasFolds: true
+
+- language: haxe
+  url: https://github.com/vantreeseba/tree-sitter-haxe
+  ref: a55f3e2cf1e4449200fd089a80d3af642bcf5f94
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasTags: true
+    abi: 14
+
+- language: hcl
+  url: https://github.com/tree-sitter-grammars/tree-sitter-hcl
+  ref: 64ad62785d442eb4d45df3a1764962dafd5bc98b
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: hcl
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/hcl
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: heex
+  url: https://github.com/connorlay/tree-sitter-heex
+  ref: 5842537f734d7c12685bf27d6005313e3e5a47a0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: helma
+  url: https://github.com/kevinkeckeis/tree-sitter-helma
+  ref: db3ede53e9a29631fbf0835483caecef9b39d1fd
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: hjson
+  url: https://github.com/winston0410/tree-sitter-hjson
+  branch: master
+  ref: 02fa3b79b3ff9a296066da6277adfc3f26cbc9e0
+  enabled: false
+  note: Incompatible with current tree-sitter CLI, requires tree-sitter-jsonc npm package which is not on npm registry
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 13
+
+- language: hlsl
+  url: https://github.com/tree-sitter-grammars/tree-sitter-hlsl
+  ref: v0.2.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    gitTags: true
+    abi: 14
+
+- language: hlsl
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/hlsl
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: hlsplaylist
+  url: https://github.com/Freed-Wu/tree-sitter-hlsplaylist
+  ref: 0.0.5
+  metadata:
+    hasParser: true
+    gitTags: true
+    abi: 14
+
+- language: hlsplaylist
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/hlsplaylist
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: hocon
+  url: https://github.com/antosha417/tree-sitter-hocon
+  branch: master
+  ref: c390f10519ae69fdb03b3e5764f5592fb6924bcc
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: hoon
+  url: https://github.com/urbit-pilled/tree-sitter-hoon
+  branch: master
+  ref: 1545137aadcc63660c47db9ad98d02fa602655d0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: html
+  url: https://github.com/tree-sitter/tree-sitter-html
+  branch: master
+  ref: 73a3947324f6efddf9e17c0ea58d454843590cc0
+  release: true
+  extraFiles:
+    - tag.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: html_blade
+  name: blade
+  url: https://github.com/EmranMR/tree-sitter-blade
+  ref: b9436b7b936907aff730de0dac1b99d7c632cc86
+  extraFiles:
+    - tag.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: htmldjango
+  url: https://github.com/interdependence/tree-sitter-htmldjango
+  ref: 3a643167ad9afac5d61e092f08ff5b054576fadf
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: http
+  url: https://github.com/PasiSalenius/tree-sitter-http
+  ref: f8fdc74ae8041e0bf38a5e7f0918f7eb543e34b5
+  enabled: false
+  note: Disabled in favour of https://github.com/rest-nvim/tree-sitter-http
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: http
+  url: https://github.com/rest-nvim/tree-sitter-http
+  ref: db8b4398de90b6d0b6c780aba96aaa2cd8e9202c
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: hurl
+  url: https://github.com/pfeiferj/tree-sitter-hurl
+  ref: v1.7.0
+  ignoreFiles:
+    - queries/highlights.scm
+  note: highlights.scm references non-existent field names
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: hyprlang
+  url: https://github.com/tree-sitter-grammars/tree-sitter-hyprlang
+  branch: master
+  ref: cecd6b748107d9da1f7b4ca03ef95f1f71d93b8f
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: hyprlang
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/hyprlang
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: idl
+  url: https://github.com/cathaysia/tree-sitter-idl
+  branch: master
+  ref: fb65762a13538b397e41a5fc1e9564c9df841410
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasIndents: true
+    abi: 15
+
+- language: idris
+  url: https://github.com/kayhide/tree-sitter-idris
+  ref: c56a25cf57c68ff929356db25505c1cc4c7820f6
+  extraFiles:
+    - unicode.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 14
+
+- language: idris2
+  url: https://github.com/gwerbin/tree-sitter-idris2
+  branch: master
+  ref: a307cead536c1ba8143541a3df0a72a1f858efa4
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: iex
+  url: https://github.com/elixir-lang/tree-sitter-iex
+  ref: 39f20bb51f502e32058684e893c0c0b00bb2332c
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 13
+
+- language: ini
+  url: https://github.com/justinmk/tree-sitter-ini
+  branch: master
+  ref: e4018b5176132b4f3c5d6e61cea383f42288d0f5
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasFolds: true
+    abi: 15
+
+- language: inko
+  url: https://github.com/inko-lang/tree-sitter-inko
+  ref: v0.5.1
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    gitTags: true
+    abi: 15
+
+- language: ispc
+  url: https://github.com/tree-sitter-grammars/tree-sitter-ispc
+  branch: master
+  ref: 9b2f9aec2106b94b4e099fe75e73ebd8ae707c04
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: jack
+  url: https://github.com/nverno/tree-sitter-jack
+  branch: master
+  ref: 1a617413ea92c237bff4cbe7fa67eb3bf4425596
+  enabled: false
+  note: Incompatible with current tree-sitter CLI, generation fails
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: jakt
+  url: https://github.com/demizer/tree-sitter-jakt
+  ref: e67a5de093cab9eb79be721bf39bc9115193534a
+  enabled: false
+  note: Incompatible with current tree-sitter CLI, undefined rule field_identifier
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: janet
+  url: https://github.com/GrayJack/tree-sitter-janet
+  ref: v0.1.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    gitTags: true
+    abi: 15
+
+- language: janet_simple
+  url: https://github.com/sogaiu/tree-sitter-janet-simple
+  branch: master
+  ref: 3c1bdcfff374138da03a1db25c75efce623910fe
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: java
+  url: https://github.com/tree-sitter/tree-sitter-java
+  branch: master
+  ref: e10607b45ff745f5f876bfa3e94fbcc6b44bdc11
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasTags: true
+    abi: 14
+
+- language: javadoc
+  url: https://github.com/rmuir/tree-sitter-javadoc
+  ref: 11ec3cd9d2a6a8f9a451249043e852d3581c856f
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: javascript
+  url: https://github.com/tree-sitter/tree-sitter-javascript
+  branch: master
+  ref: 58404d8cf191d69f2674a8fd507bd5776f46cb11
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasTags: true
+    abi: 15
+
+- language: jinja2
+  url: https://github.com/dbt-labs/tree-sitter-jinja2
+  ref: a82ed374f4cb58a1358dd6b26a7157bde1bca3b7
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: jpp
+  url: https://github.com/nitreojs/tree-sitter-jpp
+  branch: lord
+  ref: 21284b6f1ea0ee84f10fd80d11a2b765578eafbe
+  enabled: false
+  note: Incompatible with current tree-sitter CLI, unsupported regex flags
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: jq
+  url: https://github.com/flurie/tree-sitter-jq
+  ref: c204e36d2c3c6fce1f57950b12cabcc24e5cc4d9
+  enabled: false
+  note: Disabled in favour of https://github.com/nverno/tree-sitter-jq
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: jq
+  url: https://github.com/nverno/tree-sitter-jq
+  branch: master
+  ref: 1e139eba1fd3a9c34a36f0f0f47ed8b73c9b4636
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: jsdoc
+  url: https://github.com/tree-sitter/tree-sitter-jsdoc
+  ref: v0.25.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: json
+  url: https://github.com/tree-sitter/tree-sitter-json
+  branch: master
+  ref: 001c28d7a29832b06b0e831ec77845553c89b56d
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: json5
+  url: https://github.com/Joakker/tree-sitter-json5
+  branch: master
+  ref: aa630ef48903ab99e406a8acd2e2933077cc34e1
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: jsonc
+  url: https://gitlab.com/WhyNotHugo/tree-sitter-jsonc
+  ref: f7890ba894d885d1b2b721cfae759b07d53c8886
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: jsonnet
+  url: https://github.com/sourcegraph/tree-sitter-jsonnet
+  ref: ddd075f1939aed8147b7aa67f042eda3fce22790
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasFolds: true
+    abi: 14
+
+- language: julia
+  url: https://github.com/tree-sitter/tree-sitter-julia
+  ref: v0.25.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    gitTags: true
+    abi: 15
+
+- language: just
+  url: https://github.com/IndianBoy42/tree-sitter-just
+  ref: 5685543a6e64f66335e25518c9ae8ffa1dae3d01
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: just
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/just
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: kcl
+  url: https://github.com/kcl-lang/tree-sitter-kcl
+  ref: b0b2eb38009e04035a6e266c7e11e541f3caab7c
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: kconfig
+  url: https://github.com/tree-sitter-grammars/tree-sitter-kconfig
+  branch: master
+  ref: 9ac99fe4c0c27a35dc6f757cef534c646e944881
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: kdl
+  url: https://github.com/spaarmann/tree-sitter-kdl
+  ref: 4b91896648099d3c5a25fdaf80dfd0af8adc7da4
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-kdl
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: kdl
+  url: https://github.com/tree-sitter-grammars/tree-sitter-kdl
+  branch: master
+  ref: b37e3d58e5c5cf8d739b315d6114e02d42e66664
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: koka
+  url: https://github.com/mtoohey31/tree-sitter-koka
+  ref: 6dce132911ac375ac1a3591c868c47a2a84b30aa
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasIndents: true
+    abi: 14
+
+- language: kotlin
+  url: https://github.com/fwcd/tree-sitter-kotlin
+  ref: a1760ba7178fe76515e7cfe7577deae2335fa57d
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-kotlin
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasTags: true
+    abi: 14
+
+- language: kotlin
+  url: https://github.com/tree-sitter-grammars/tree-sitter-kotlin
+  branch: master
+  ref: 3dea6dfa9c0129deb7c4315afbda806c85c41667
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: koto
+  url: https://github.com/koto-lang/tree-sitter-koto
+  ref: f8b3f62c0eed185dca1559789e78759d4bee60e5
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    abi: 14
+
+- language: kusto
+  url: https://github.com/Willem-J-an/tree-sitter-kusto
+  branch: master
+  ref: 8353a1296607d6ba33db7c7e312226e5fc83e8ce
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: lalrpop
+  url: https://github.com/traxys/tree-sitter-lalrpop
+  branch: master
+  ref: 27b0f7bb55b4cabd8f01a933d9ee6a49dbfc2192
+  extraFiles:
+    - scanner_table.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 15
+
+- language: latex
+  url: https://github.com/latex-lsp/tree-sitter-latex
+  ref: v0.6.0
+  release: true
+  generate: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    gitTags: true
+    abi: 15
+
+- language: latex
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/latex
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+
+- language: lean
+  url: https://github.com/Julian/tree-sitter-lean
+  ref: efe6b87145608d12f5996bd7f0cf6095a0e82261
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 13
+
+- language: ledger
+  url: https://github.com/cbarrete/tree-sitter-ledger
+  branch: master
+  ref: 22a1ab8195c1f6e808679f803007756fe7638c6f
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: ledger
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/ledger
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: leo
+  url: https://github.com/r001/tree-sitter-leo
+  ref: 6bc5564917edacd070afc4d33cf5e2e677831ea9
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: lilypond
+  url: https://github.com/tristanperalta/tree-sitter-lilypond
+  ref: 0bb6c9475e45bd45bcd6143b8a11fba61bdff85d
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: linkerscript
+  url: https://github.com/tree-sitter-grammars/tree-sitter-linkerscript
+  ref: stable
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: liquid
+  url: https://github.com/hankthetank27/tree-sitter-liquid
+  ref: e45dbac8c5fa95b1f0e00e7e0c04bc8855823391
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: liquid
+  url: https://github.com/Shopify/tree-sitter-liquid
+  ref: bbf1a82cce8b87810a9537bbe63f91eb9957d384
+  enabled: false
+  note: Disabled in favour of https://github.com/hankthetank27/tree-sitter-liquid
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: liquidsoap
+  url: https://github.com/savonet/tree-sitter-liquidsoap
+  ref: v1.2.2
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    gitTags: true
+    abi: 15
+
+- language: llvm
+  url: https://github.com/benwilliamgraham/tree-sitter-llvm
+  ref: 2914786ae6774d4c4e25a230f4afe16aa68fe1c1
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: lua
+  url: https://github.com/Azganoth/tree-sitter-lua
+  ref: v2.1.3
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-lua
+  metadata:
+    hasParser: true
+    hasScanner: true
+    gitTags: true
+    abi: 13
+
+- language: lua
+  name: nlua
+  url: https://github.com/tjdevries/tree-sitter-lua
+  ref: 4932594a24f04e4ccf046919bc354272841b0077
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-lua
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: lua
+  url: https://github.com/tree-sitter-grammars/tree-sitter-lua
+  ref: v0.5.0
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasTags: true
+    gitTags: true
+    abi: 15
+
+- language: luadoc
+  url: https://github.com/tree-sitter-grammars/tree-sitter-luadoc
+  branch: master
+  ref: 873612aadd3f684dd4e631bdf42ea8990c57634e
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: luap
+  url: https://github.com/tree-sitter-grammars/tree-sitter-luap
+  branch: master
+  ref: c134aaec6acf4fa95fe4aa0dc9aba3eacdbbe55a
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: luau
+  url: https://github.com/polychromatist/tree-sitter-luau
+  ref: 71b03e66b2c8dd04e0133c9b998a54a58f239ca4
+  extraFiles:
+    - luauts_pcg_hash_table.h
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-luau
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: luau
+  url: https://github.com/tree-sitter-grammars/tree-sitter-luau
+  ref: v1.2.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: m68k
+  url: https://github.com/grahambates/tree-sitter-m68k
+  ref: v0.3.2
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasFolds: true
+    gitTags: true
+    abi: 14
+
+- language: magik
+  url: https://github.com/krn-robin/tree-sitter-magik
+  ref: 7f821c17c1b109ecd4f7559bb5ebb7eff5315cbc
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: mail
+  url: https://github.com/stevenxxiu/tree-sitter-mail
+  branch: master
+  ref: 8d2905d06a15586652c3a73387b4170424201e1a
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: make
+  url: https://github.com/alemuller/tree-sitter-make
+  ref: a4b9187417d6be349ee5fd4b6e77b4172c6827dd
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-make
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 13
+
+- language: make
+  url: https://github.com/tree-sitter-grammars/tree-sitter-make
+  ref: 70613f3d812cbabbd7f38d104d60a409c4008b43
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    abi: 15
+
+- language: mandbconfig
+  url: https://github.com/TornaxO7/tree-sitter-man-db-config
+  ref: d6eb82027c355e70f8186a47d17e6afd97fc7c81
+  generate: true
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: markdown
+  url: https://github.com/tree-sitter-grammars/tree-sitter-markdown
+  ref: v0.5.3
+  release: true
+  path: tree-sitter-markdown
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    gitTags: true
+    abi: 15
+
+- language: markdown_inline
+  url: https://github.com/tree-sitter-grammars/tree-sitter-markdown
+  ref: v0.5.3
+  release: true
+  path: tree-sitter-markdown-inline
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    gitTags: true
+    abi: 15
+
+- language: matlab
+  url: https://github.com/acristoffers/tree-sitter-matlab
+  ref: c2390a59016f74e7d5f75ef09510768b4f30217e
+  enabled: false
+  note: Disabled in favour of https://github.com/mstanciu552/tree-sitter-matlab
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: matlab
+  url: https://github.com/mstanciu552/tree-sitter-matlab
+  ref: dd95e1fc1b5514aa3a882d5fb8ddbf4683e953f0
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 14
+
+- language: menhir
+  url: https://github.com/Kerl13/tree-sitter-menhir
+  ref: v0.4.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    gitTags: true
+    abi: 13
+
+- language: menhir
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/menhir
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: mermaid
+  url: https://github.com/monaqa/tree-sitter-mermaid
+  branch: master
+  ref: 90ae195b31933ceb9d079abfa8a3ad0a36fee4cc
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: meson
+  url: https://github.com/Decodetalkers/tree-sitter-meson
+  ref: c84f3540624b81fc44067030afce2ff78d6ede05
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-meson
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasFolds: true
+    abi: 15
+
+- language: meson
+  url: https://github.com/tree-sitter-grammars/tree-sitter-meson
+  branch: master
+  ref: c84f3540624b81fc44067030afce2ff78d6ede05
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasFolds: true
+    abi: 15
+
+- language: mlir
+  url: https://github.com/artagnon/tree-sitter-mlir
+  branch: master
+  ref: 38b1ab3044ec62c0c24c90de4bf5fb947561f390
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    abi: 15
+
+- language: modelica
+  url: https://github.com/modelicahub/tree-sitter-modelica
+  ref: cf20fb1e68401d1c18825b82802101b3ad1d3f3b
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: monkey
+  url: https://github.com/jamestrew/tree-sitter-monkey
+  branch: master
+  ref: 9a71b0cd2cb1254c47624ae2a0b2110db329dbaa
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: move
+  url: https://github.com/tree-sitter-grammars/tree-sitter-move
+  branch: saving
+  ref: b8ca25518749be10562455fd081a3dab30b93b8b
+  enabled: false
+  note: Incompatible with current tree-sitter CLI, generation fails
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: muttrc
+  url: https://github.com/neomutt/tree-sitter-muttrc
+  ref: 0.0.6
+  release: true
+  metadata:
+    hasParser: true
+    gitTags: true
+    abi: 14
+
+- language: muttrc
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/muttrc
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: nasm
+  url: https://github.com/naclsn/tree-sitter-nasm
+  ref: d1b3638d017f2a8585e26dcfc66fe1df94185e30
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: nginx
+  url: https://github.com/opa-oz/tree-sitter-nginx
+  ref: v1.0.1
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    gitTags: true
+    abi: 15
+
+- language: nginx
+  url: https://gitlab.com/joncoole/tree-sitter-nginx
+  ref: f6d13cf6281b25f2ce342a49a41a10a0381e00f0
+  enabled: false
+  note: Disabled in favour of https://github.com/opa-oz/tree-sitter-nginx
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    abi: 14
+
+- language: nickel
+  url: https://github.com/nickel-lang/tree-sitter-nickel
+  ref: b5b6cc3bc7b9ea19f78fed264190685419cd17a8
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: nim
+  url: https://github.com/alaviss/tree-sitter-nim
+  ref: 3878440d9398515ae053c6f6024986e69868bb74
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: nim_format_string
+  url: https://github.com/aMOPel/tree-sitter-nim-format-string
+  branch: master
+  ref: d45f75022d147cda056e98bfba68222c9c8eca3a
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: nim_format_string
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/nim_format_string
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: nix
+  url: https://github.com/nix-community/tree-sitter-nix
+  branch: master
+  ref: eabf96807ea4ab6d6c7f09b671a88cd483542840
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasTags: true
+    abi: 13
+
+- language: noir
+  url: https://github.com/hhamud/tree-sitter-noir
+  ref: 89cc4dbbfbc4ab3fadf75bf8f5c54d6a5f8ce682
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: nois
+  url: https://github.com/nois-lang/tree-sitter-nois
+  branch: master
+  ref: 0e9c9e962177dc0a17d6bd79ff14330334466800
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: norg_meta
+  url: https://github.com/nvim-neorg/tree-sitter-norg-meta
+  ref: v0.1.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+
+- language: nqc
+  url: https://github.com/tree-sitter-grammars/tree-sitter-nqc
+  ref: stable
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: nu
+  url: https://github.com/fdncred/tree-sitter-nu
+  ref: 4c149627cc592560f77ead1c384e27ec85926407
+  enabled: false
+  note: Disabled in favour of https://github.com/LhKipp/tree-sitter-nu
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: nu
+  url: https://github.com/LhKipp/tree-sitter-nu
+  ref: 4f66444b92ba3e80d73b055ccbd04a2f7d9e1608
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    abi: 14
+
+- language: nu
+  url: https://github.com/nushell/tree-sitter-nu
+  ref: f4793e3809bb84e78dee260b47085d8203a58d88
+  enabled: false
+  note: Disabled in favour of https://github.com/LhKipp/tree-sitter-nu
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: objc
+  url: https://github.com/jiyee/tree-sitter-objc
+  ref: afec0de5a32d5894070b67932d6ff09e4f7c5879
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-objc
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 13
+
+- language: objc
+  url: https://github.com/tree-sitter-grammars/tree-sitter-objc
+  branch: master
+  ref: 181a81b8f23a2d593e7ab4259981f50122909fda
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: objdump
+  url: https://github.com/ColinKennedy/tree-sitter-objdump
+  branch: master
+  ref: 28d3b2e25a0b1881d1b47ed1924ca276c7003d45
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: ocaml
+  url: https://github.com/tree-sitter/tree-sitter-ocaml
+  branch: master
+  ref: 5a979b3ec7f1fe990b8e8c4412294a0cf7228e45
+  release: true
+  path: grammars/ocaml
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    abi: 15
+
+- language: ocamllex
+  url: https://github.com/atom-ocaml/tree-sitter-ocamllex
+  branch: master
+  ref: v0.25.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    gitTags: true
+    abi: 15
+
+- language: odin
+  url: https://github.com/MineBill/tree-sitter-odin
+  ref: 0660febd1e0afc97f9bb5050510b3c220dc9b2f9
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-odin
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: odin
+  url: https://github.com/tree-sitter-grammars/tree-sitter-odin
+  branch: master
+  ref: d2ca8efb4487e156a60d5bd6db2598b872629403
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: ohm
+  url: https://github.com/novusnota/tree-sitter-ohm
+  ref: a1de3e748a185a335b446613aaeff1eb10e83cdf
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasTags: true
+    abi: 14
+
+- language: openscad
+  url: https://github.com/bollian/tree-sitter-openscad
+  branch: master
+  ref: bb1e12023e59489c0892af0c0c9a5b323af69df6
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasIndents: true
+    abi: 14
+
+- language: org
+  url: https://github.com/milisims/tree-sitter-org
+  ref: 64cfbc213f5a83da17632c95382a5a0a2f3357c1
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: p4
+  url: https://github.com/ace-design/tree-sitter-p4
+  ref: 9ff2d7b498fffbb7b311f30d5f3f4a9068302aea
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: pascal
+  url: https://github.com/Isopod/tree-sitter-pascal
+  ref: v0.10.2
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    gitTags: true
+    abi: 14
+
+- language: passwd
+  url: https://github.com/ath3/tree-sitter-passwd
+  ref: 20239395eacdc2e0923a7e5683ad3605aee7b716
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: passwd
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/passwd
+  metadata:
+    hasHighlights: true
+
+- language: pem
+  url: https://github.com/tree-sitter-grammars/tree-sitter-pem
+  branch: master
+  ref: e525b177a229b1154fd81bc0691f943028d9e685
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: perl
+  url: https://github.com/tree-sitter-perl/tree-sitter-perl
+  branch: master
+  ref: 8917c6e94b30f30670f008979309e2cbfc54400f
+  release: true
+  generate: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    abi: 15
+
+- language: pgn
+  url: https://github.com/rolandwalker/tree-sitter-pgn
+  branch: master
+  ref: 26122e7d009eb19d0ba7ac31f790610a1528767a
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 15
+
+- language: php
+  url: https://github.com/tree-sitter/tree-sitter-php
+  branch: master
+  ref: 3f2465c217d0a966d41e584b42d75522f2a3149e
+  release: true
+  path: php
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasTags: true
+    abi: 15
+
+- language: phpdoc
+  url: https://github.com/claytonrcarter/tree-sitter-phpdoc
+  ref: v0.1.8
+  metadata:
+    hasParser: true
+    hasScanner: true
+    gitTags: true
+    abi: 14
+
+- language: phpdoc
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/phpdoc
+  metadata:
+    hasHighlights: true
+
+- language: pioasm
+  url: https://github.com/leo60228/tree-sitter-pioasm
+  ref: afece58efdb30440bddd151ef1347fa8d6f744a9
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: pioasm
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/pioasm
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: pkl
+  url: https://github.com/apple/tree-sitter-pkl
+  ref: f5beed1da8e5fc856a1a11e29a929d0b7cdcfe3c
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 15
+
+- language: plantuml
+  url: https://github.com/Decodetalkers/tree_sitter_plantuml
+  ref: c7361a1d481dc1ff6700b14ea1d5efc549b72713
+  generate: true
+  enabled: false
+  note: Disabled in favour of https://github.com/lyndsysimon/tree-sitter-plantuml
+
+- language: plantuml
+  url: https://github.com/lyndsysimon/tree-sitter-plantuml
+  ref: fe25cf8592ea12ad6de00379a444d376ba32c7b5
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: po
+  url: https://github.com/tree-sitter-grammars/tree-sitter-po
+  ref: bd860a0f57f697162bf28e576674be9c1500db5e
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    abi: 14
+
+- language: pod
+  url: https://github.com/tree-sitter-perl/tree-sitter-pod
+  ref: 57c606aa3373ba876d44113d13fe7bdc2c060723
+  generate: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: poe_filter
+  url: https://github.com/tree-sitter-grammars/tree-sitter-poe-filter
+  branch: master
+  ref: 205a7d576984feb38a9fc2d8cfe729617f9e0548
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: pony
+  url: https://github.com/tree-sitter-grammars/tree-sitter-pony
+  branch: master
+  ref: 73ff874ae4c9e9b45462673cbc0a1e350e2522a7
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    hasTags: true
+    abi: 14
+
+- language: powershell
+  url: https://github.com/airbus-cert/tree-sitter-powershell
+  ref: 73800ecc8bddeee8f1079a5a2e0c13c3d00269bb
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 15
+
+- language: printf
+  url: https://github.com/tree-sitter-grammars/tree-sitter-printf
+  ref: v0.5.1
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 14
+
+- language: prisma
+  url: https://github.com/victorhqc/tree-sitter-prisma
+  ref: v1.6.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: problog
+  url: https://codeberg.org/foxy/tree-sitter-prolog
+  ref: d8d415f6a1cf80ca138524bcc395810b176d40fa
+  path: grammars/problog
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: prolog
+  url: https://github.com/Rukiza/tree-sitter-prolog
+  ref: c246cf2bf36590a3cb4de380205376d3c46208e8
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: promela
+  url: https://github.com/siraben/tree-sitter-promela
+  branch: master
+  ref: 91da8f141c3c4c695eb71018c8a7b2e7ea39c167
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 13
+
+- language: promql
+  url: https://github.com/MichaHoffmann/tree-sitter-promql
+  ref: 77625d78eebc3ffc44d114a07b2f348dff3061b0
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: promql
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/promql
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: properties
+  url: https://github.com/tree-sitter-grammars/tree-sitter-properties
+  branch: master
+  ref: 6310671b24d4e04b803577b1c675d765cbd5773b
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasTags: true
+    abi: 14
+
+- language: proto
+  url: https://github.com/coder3101/tree-sitter-proto
+  ref: d65a18ce7c2242801f702770114ad08056c7f8c9
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: proto
+  url: https://github.com/mitchellh/tree-sitter-proto
+  ref: 42d82fa18f8afe59b5fc0b16c207ee4f84cb185f
+  enabled: false
+  note: Disabled in favour of https://github.com/coder3101/tree-sitter-proto
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasFolds: true
+    abi: 13
+
+- language: proto
+  url: https://github.com/treywood/tree-sitter-proto
+  ref: e9f6b43f6844bd2189b50a422d4e2094313f6aa3
+  enabled: false
+  note: Disabled in favour of https://github.com/coder3101/tree-sitter-proto
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasFolds: true
+    abi: 14
+
+- language: prql
+  url: https://github.com/PRQL/tree-sitter-prql
+  ref: 09e158cd3650581c0af4c49c2e5b10c4834c8646
+  enabled: false
+  note: Upstream highlights.scm references non-existent node type (integer) at pinned ref
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: psv
+  url: https://github.com/tree-sitter-grammars/tree-sitter-csv
+  branch: master
+  ref: f6bf6e35eb0b95fbadea4bb39cb9709507fcb181
+  path: psv
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: pug
+  url: https://github.com/zealot128/tree-sitter-pug
+  branch: master
+  ref: 13e9195370172c86a8b88184cc358b23b677cc46
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: puppet
+  url: https://github.com/tree-sitter-grammars/tree-sitter-puppet
+  ref: v1.3.0
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: purescript
+  url: https://github.com/postsolar/tree-sitter-purescript
+  ref: v0.3.0
+  extraFiles:
+    - unicode.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    gitTags: true
+    abi: 15
+
+- language: pymanifest
+  url: https://github.com/tree-sitter-grammars/tree-sitter-pymanifest
+  ref: v0.6.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 14
+
+- language: python
+  url: https://github.com/tree-sitter/tree-sitter-python
+  branch: master
+  ref: 26855eabccb19c6abf499fbc5b8dc7cc9ab8bc64
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasTags: true
+    abi: 15
+
+- language: ql
+  url: https://github.com/tree-sitter/tree-sitter-ql
+  ref: v0.23.1
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasTags: true
+    gitTags: true
+    abi: 14
+
+- language: qmldir
+  url: https://github.com/Decodetalkers/tree-sitter-qmldir
+  branch: master
+  ref: 6b2b5e41734bd6f07ea4c36ac20fb6f14061c841
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: qmljs
+  url: https://github.com/yuja/tree-sitter-qmljs
+  ref: 0.3.0
+  release: true
+  extraFiles:
+    - typescript-scanner.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    gitTags: true
+    abi: 14
+
+- language: query
+  url: https://github.com/tree-sitter-grammars/tree-sitter-query
+  branch: master
+  ref: fc5409c6820dd5e02b0b0a309d3da2bfcde2db17
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: query
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/query
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: r
+  url: https://github.com/r-lib/tree-sitter-r
+  ref: 0e6ef7741712c09dc3ee6e81c42e919820cc65ef
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    abi: 14
+
+- language: racket
+  url: https://github.com/6cdh/tree-sitter-racket
+  ref: v0.24.7-1
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    gitTags: true
+    abi: 14
+
+- language: ralph
+  url: https://github.com/alephium/tree-sitter-ralph
+  branch: master
+  ref: f6d81bf7a4599c77388035439cf5801cd461ff77
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: rasi
+  url: https://github.com/Fymyte/tree-sitter-rasi
+  ref: e735c6881d8b475aaa4ef8f0a2bdfd825b438143
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    abi: 15
+
+- language: razor
+  url: https://github.com/tris203/tree-sitter-razor
+  ref: 1e8ec29b7179329ce7cffcfae2c5347e8a00f7cf
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: razor
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/razor
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+
+- language: rbs
+  url: https://github.com/joker1007/tree-sitter-rbs
+  ref: v0.2.2
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 15
+
+- language: re2c
+  url: https://github.com/tree-sitter-grammars/tree-sitter-re2c
+  branch: master
+  ref: c18a3c2f4b6665e35b7e50d6048ea3cff770c572
+  enabled: false
+  note: Upstream highlights.scm references non-existent node type (linedir) at pinned ref
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: readline
+  url: https://github.com/tree-sitter-grammars/tree-sitter-readline
+  branch: master
+  ref: 6b744c527aebd12e46a5ecb3aebdb8d621a8e83e
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasIndents: true
+    abi: 15
+
+- language: regex
+  url: https://github.com/tree-sitter/tree-sitter-regex
+  ref: v0.25.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: rego
+  url: https://github.com/FallenAngel97/tree-sitter-rego
+  branch: master
+  ref: ddd39af81fe8b0288102a7cb97959dfce723e0f3
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    abi: 15
+
+- language: requirements
+  url: https://github.com/tree-sitter-grammars/tree-sitter-requirements
+  ref: v0.5.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 14
+
+- language: rescript
+  url: https://github.com/rescript-lang/tree-sitter-rescript
+  ref: 43c2f1f35024918d415dc933d4cc534d6419fedf
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 15
+
+- language: rnoweb
+  url: https://github.com/bamonroe/tree-sitter-rnoweb
+  branch: master
+  ref: 1a74dc0ed731ad07db39f063e2c5a6fe528cae7f
+  ignoreFiles:
+    - queries/injections.scm
+  note: injections.scm references non-existent node types
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasInjections: true
+    abi: 13
+
+- language: rnoweb
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/rnoweb
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+
+- language: robot
+  url: https://github.com/Hubro/tree-sitter-robot
+  branch: master
+  ref: b317756ae0fb90ca945f900c77cdd3513d0c0eb4
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: robots
+  name: robots_txt
+  url: https://github.com/opa-oz/tree-sitter-robots-txt
+  ref: v1.0.1
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasInjections: true
+    gitTags: true
+    abi: 15
+
+- language: roc
+  url: https://github.com/faldor20/tree-sitter-roc
+  branch: master
+  ref: edc18052a9d7382ac9f9f5bf413db3a78d5ea12c
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasIndents: true
+    hasTags: true
+    abi: 15
+
+- language: ron
+  url: https://github.com/tree-sitter-grammars/tree-sitter-ron
+  branch: master
+  ref: 78938553b93075e638035f624973083451b29055
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: rst
+  url: https://github.com/stsewd/tree-sitter-rst
+  branch: master
+  ref: 4e562e1598b95b93db4f3f64fe40ddefbc677a15
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: rst
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/rst
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+
+- language: rtf
+  url: https://github.com/GoodNotes/tree-sitter-rtf
+  ref: 3bbc47cb5d991bef4ebab1118459f6c8d5064c54
+  generate: true
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: ruby
+  url: https://github.com/tree-sitter/tree-sitter-ruby
+  branch: master
+  ref: ad907a69da0c8a4f7a943a7fe012712208da6dee
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    abi: 14
+
+- language: runescript
+  url: https://github.com/2004Scape/tree-sitter-runescript
+  ref: cf85bbd5da0c5ad243301d889c7f84d790a4cae4
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: rust
+  url: https://github.com/tree-sitter/tree-sitter-rust
+  branch: master
+  ref: 77a3747266f4d621d0757825e6b11edcbf991ca5
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasTags: true
+    abi: 15
+
+- language: satysfi
+  url: https://github.com/monaqa/tree-sitter-satysfi
+  branch: master
+  ref: 5519c547418ecb31ac7d63e64653aed726b5d1c3
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasIndents: true
+    abi: 14
+
+- language: scala
+  url: https://github.com/tree-sitter/tree-sitter-scala
+  ref: v0.25.0
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasIndents: true
+    hasTags: true
+    gitTags: true
+    abi: 15
+
+- language: scfg
+  url: https://github.com/rockorager/tree-sitter-scfg
+  ref: d850fd470445d73de318a21d734d1e09e29b773c
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: scheme
+  url: https://github.com/6cdh/tree-sitter-scheme
+  ref: c6cb7c7d7a04b3f5d999c28e2e9c0c31b2d50ece
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: scilab
+  url: https://github.com/nicolas-graves/tree-sitter-scilab
+  ref: 0a3e26418cbf7f850b35426a4fd29ce0fa0c8f51
+  generate: true
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: scss
+  url: https://github.com/serenadeai/tree-sitter-scss
+  ref: v1.0.0
+  ignoreFiles:
+    - queries/highlights.scm
+  note: highlights.scm contains malformed query syntax
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 13
+
+- language: sdml
+  url: https://github.com/sdm-lang/tree-sitter-sdml
+  ref: 1b9cebf8fd5a83c36456111c8c0a7a664ce78fb3
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasTags: true
+    abi: 15
+
+- language: sexp
+  url: https://github.com/AbstractMachinesLab/tree-sitter-sexp
+  ref: b46b9f784b3e31bcbc0632f3294f1af6ba049241
+  metadata:
+    hasParser: true
+    abi: 12
+
+- language: slang
+  url: https://github.com/theHamsta/tree-sitter-slang
+  branch: master
+  ref: 1dbcc4abc7b3cdd663eb03d93031167d6ed19f56
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: slang
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/slang
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: slim
+  url: https://github.com/theoo/tree-sitter-slim
+  ref: a06113f5175b805a37d20df0a6f9d722e0ab6cfe
+  ignoreFiles:
+    - queries/textobjects.scm
+  note: textobjects.scm references non-existent node types
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: slint
+  url: https://github.com/slint-ui/slint
+  ref: 5a31f019e195fd75f2e26b3f8c3fda510cf2919b
+  enabled: false
+  note: Disabled in favour of https://github.com/slint-ui/tree-sitter-slint
+
+- language: slint
+  url: https://github.com/slint-ui/tree-sitter-slint
+  branch: master
+  ref: 4d7ad0617c30f865f051bbac04a9826bea29f987
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: slint
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/slint
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: smali
+  url: https://github.com/tree-sitter-grammars/tree-sitter-smali
+  branch: master
+  ref: fdfa6a1febc43c7467aa7e937b87b607956f2346
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: smallbasic
+  url: https://github.com/comom87/tree-sitter-smallbasic
+  ref: 4c732d2407dcf2831bbb4e4d4aebb339b7f11183
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: smalltalk
+  url: https://github.com/tom95/tree-sitter-smalltalk
+  ref: f5d63d37ebb135fd0eb0441a51d5ccdf933c6537
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 13
+
+- language: smithy
+  url: https://github.com/indoorvivants/tree-sitter-smithy
+  ref: ec4fe14586f2b0a1bc65d6db17f8d8acd8a90433
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: sml
+  url: https://github.com/MatthewFluet/tree-sitter-sml
+  ref: fd4b4955bb998262840ab8119885b3edf20ea75a
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 15
+
+- language: snakemake
+  url: https://github.com/osthomas/tree-sitter-snakemake
+  ref: 68010430c3e51c0e84c1ce21c6551df0e2469f51
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: snakemake
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/snakemake
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: solidity
+  url: https://github.com/JoranHonig/tree-sitter-solidity
+  branch: master
+  ref: 048fe686cb1fde267243739b8bdbec8fc3a55272
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    abi: 15
+
+- language: souffle
+  url: https://github.com/langston-barrett/tree-sitter-souffle
+  ref: v0.5.0
+  metadata:
+    hasParser: true
+    gitTags: true
+    abi: 13
+
+- language: sourcepawn
+  url: https://github.com/nilshelmig/tree-sitter-sourcepawn
+  ref: v0.7.8
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasTags: true
+    gitTags: true
+    abi: 14
+
+- language: sparql
+  url: https://github.com/GordianDziwis/tree-sitter-sparql
+  ref: 1ef52d35a73a2a5f2e433ecfd1c751c1360a923b
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: sparql
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/sparql
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: sql
+  url: https://github.com/DerekStride/tree-sitter-sql
+  ref: c2e1e08db1ea20dc23bdb8d228a81a8756e9c450
+  generate: true
+  enabled: false
+  note: Disabled in favour of https://github.com/m-novikov/tree-sitter-sql
+  metadata:
+    hasScanner: true
+    hasHighlights: true
+    hasIndents: true
+
+- language: sql
+  url: https://github.com/m-novikov/tree-sitter-sql
+  ref: 587f30d184b058450be2a2330878210c5f33b3f9
+  release: true
+  skipScanner: true
+  note: Upstream scanner.cc rewritten to scanner.c to avoid C++ dependency
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 13
+
+- language: sql
+  url: https://github.com/tjdevries/tree-sitter-sql
+  ref: c8f50f7660e2e0b72e51eaae68c8f7f9f9a01755
+  enabled: false
+  note: Disabled in favour of https://github.com/m-novikov/tree-sitter-sql
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: sql_bigquery
+  url: https://github.com/takegue/tree-sitter-sql-bigquery
+  ref: c0c4f0ed7b87846cb1be19df5d638ca227a9fe41
+  enabled: false
+  note: Upstream highlights.scm references non-existent string token "_PARTITIONTIME" at pinned ref
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: sqlite
+  url: https://github.com/dhcmrlchtdj/tree-sitter-sqlite
+  ref: 993be0a91c0c90b0cc7799e6ff65922390e2cefe
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: squirrel
+  url: https://github.com/tree-sitter-grammars/tree-sitter-squirrel
+  branch: master
+  ref: 072c969749e66f000dba35a33c387650e203e96e
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: ssh_client_config
+  url: https://github.com/metio/tree-sitter-ssh-client-config
+  ref: 2223c632210c958068f3968f7871aaffbfce3320
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: ssh_config
+  url: https://github.com/tree-sitter-grammars/tree-sitter-ssh-config
+  branch: master
+  ref: 71d2693deadaca8cdc09e38ba41d2f6042da1616
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: stan
+  url: https://github.com/WardBrian/tree-sitter-stan
+  ref: v0.3.1
+  path: grammars/stan
+  queryPath: queries
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    gitTags: true
+    abi: 14
+
+- language: starlark
+  url: https://github.com/tree-sitter-grammars/tree-sitter-starlark
+  ref: v1.3.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: strace
+  url: https://github.com/sigmaSd/tree-sitter-strace
+  branch: master
+  ref: ac874ddfcc08d689fee1f4533789e06d88388f29
+  release: true
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: styled
+  url: https://github.com/mskelton/tree-sitter-styled
+  ref: 319cdcaa0346ba6db668a222d938e5c3569e2a51
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: styled
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/styled
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: supercollider
+  url: https://github.com/madskjeldgaard/tree-sitter-supercollider
+  ref: 2b03ff49dd19b046add072d0861c4d1ca8a384c8
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: surface
+  url: https://github.com/connorlay/tree-sitter-surface
+  ref: f4586b35ac8548667a9aaa4eae44456c1f43d032
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: surface
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/surface
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: svelte
+  url: https://github.com/Himujjal/tree-sitter-svelte
+  ref: 60ea1d673a1a3eeeb597e098d9ada9ed0c79ef4b
+  extraFiles:
+    - allocator.h
+    - ekstring.h
+    - tag.h
+    - uthash.h
+    - vc_vector.h
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-svelte
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    hasTags: true
+    abi: 14
+
+- language: svelte
+  url: https://github.com/tree-sitter-grammars/tree-sitter-svelte
+  branch: master
+  ref: ae5199db47757f785e43a14b332118a5474de1a2
+  extraFiles:
+    - tag.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: sway
+  url: https://github.com/FuelLabs/tree-sitter-sway
+  branch: master
+  ref: 9b7845ce06ecb38b040c3940970b4fd0adc331d1
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasIndents: true
+    abi: 14
+
+- language: swift
+  url: https://github.com/alex-pinkus/tree-sitter-swift
+  ref: da7f9370b70ba31357122c211734db98eb6f6a35
+  release: true
+  generate: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    hasTags: true
+    abi: 15
+
+- language: swift
+  url: https://github.com/tree-sitter/tree-sitter-swift
+  branch: master
+  ref: db675450dcc1478ee128c96ecc61c13272431aab
+  enabled: false
+  note: ABI 10 is below the minimum supported version (13)
+  metadata:
+    hasParser: true
+    abi: 10
+
+- language: sxhkdrc
+  url: https://github.com/RaafatTurki/tree-sitter-sxhkdrc
+  branch: master
+  ref: 440d5f913d9465c9c776a1bd92334d32febcf065
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: sxhkdrc
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/sxhkdrc
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+
+- language: systemrdl
+  url: https://github.com/SystemRDL/tree-sitter-systemrdl
+  branch: master
+  ref: 2c27e329f7724e39f40439e68e22133e285a3e3b
+  generate: true
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: systemtap
+  url: https://github.com/ok-ryoko/tree-sitter-systemtap
+  ref: v0.2.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    gitTags: true
+    abi: 14
+
+- language: systemverilog
+  url: https://github.com/gmlarumbe/tree-sitter-systemverilog
+  branch: master
+  ref: 293928578cb27fbd0005fcc5f09c09a1e8628c89
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: t32
+  url: https://codeberg.org/xasc/tree-sitter-t32
+  ref: v7.2.6
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasTags: true
+    gitTags: true
+    abi: 15
+
+- language: tablegen
+  url: https://github.com/Flakebi/tree-sitter-tablegen
+  ref: 3e9c4822ab5cdcccf4f8aa9dcd42117f736d51d9
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-tablegen
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: tablegen
+  url: https://github.com/tree-sitter-grammars/tree-sitter-tablegen
+  branch: master
+  ref: b1170880c61355aaf38fc06f4af7d3c55abdabc4
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: tact
+  url: https://github.com/tact-lang/tree-sitter-tact
+  ref: a6267c2091ed432c248780cec9f8d42c8766d9ad
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasTags: true
+    abi: 14
+
+- language: tcl
+  url: https://github.com/tree-sitter-grammars/tree-sitter-tcl
+  ref: 8f11ac7206a54ed11210491cee1e0657e2962c47
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: tcl
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/tcl
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: teal
+  url: https://github.com/euclidianAce/tree-sitter-teal
+  ref: v0.1.0
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasFolds: true
+    gitTags: true
+    abi: 15
+
+- language: templ
+  url: https://github.com/vrischmann/tree-sitter-templ
+  branch: master
+  ref: 1c6db04effbcd7773c826bded9783cbc3061bd55
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: templ
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/templ
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+
+- language: tera
+  url: https://github.com/uncenter/tree-sitter-tera
+  ref: 3a38c368e806268daac9923a27e72bcafbbc16bb
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    abi: 15
+
+- language: textproto
+  url: https://github.com/PorterAtGoogle/tree-sitter-textproto
+  ref: 568471b80fd8793d37ed01865d8c2208a9fefd1b
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: thrift
+  url: https://github.com/tree-sitter-grammars/tree-sitter-thrift
+  ref: 68fd0d80943a828d9e6f49c58a74be1e9ca142cf
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: tiger
+  url: https://github.com/ambroisie/tree-sitter-tiger
+  ref: 4a77b2d7a004587646bddc4e854779044b6db459
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    hasTags: true
+    abi: 14
+
+- language: tlaplus
+  url: https://github.com/tlaplus-community/tree-sitter-tlaplus
+  ref: add40814fda369f6efd989977b2c498aaddde984
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    abi: 14
+
+- language: tmux
+  url: https://github.com/Freed-Wu/tree-sitter-tmux
+  ref: 75d1b995b0c23400ac8e49db757a2e0386f9fa8f
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: tmux
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/tmux
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: todotxt
+  url: https://github.com/arnarg/tree-sitter-todotxt
+  ref: 3937c5cd105ec4127448651a21aef45f52d19609
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 13
+
+- language: toml
+  url: https://github.com/ikatyang/tree-sitter-toml
+  ref: 8bd2056818b21860e3d756b5a58c4f6e05fb744e
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-toml
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 13
+
+- language: toml
+  url: https://github.com/tree-sitter-grammars/tree-sitter-toml
+  ref: v0.7.0
+  release: true
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 14
+
+- language: tsq
+  url: https://github.com/the-mikedavis/tree-sitter-tsq
+  ref: 48b5e9f82ae0a4727201626f33a17f69f8e0ff86
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter/tree-sitter-tsq
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: tsq
+  url: https://github.com/tree-sitter/tree-sitter-tsq
+  ref: 49da6de661be6a07cb51018880ebe680324e7b82
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: tsv
+  url: https://github.com/tree-sitter-grammars/tree-sitter-csv
+  branch: master
+  ref: f6bf6e35eb0b95fbadea4bb39cb9709507fcb181
+  path: tsv
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: tsx
+  url: https://github.com/tree-sitter/tree-sitter-typescript
+  branch: master
+  ref: 75b3874edb2dc714fb1fd77a32013d0f8699989f
+  path: tsx
+  queryPath: queries
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    abi: 14
+
+- language: turtle
+  url: https://github.com/GordianDziwis/tree-sitter-turtle
+  ref: 7f789ea7ef765080f71a298fc96b7c957fa24422
+  release: true
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: turtle
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/turtle
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: twig
+  url: https://github.com/gbprod/tree-sitter-twig
+  ref: 7195ee573ab5c3b3bb0e91b042e6f83ac1b11104
+  ignoreFiles:
+    - queries/injections.scm
+  note: injections.scm references node types from a different grammar
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: twig
+  url: https://github.com/kaermorchen/tree-sitter-twig
+  ref: 58be9624ef8cf37b966b6b999e312cf96ffc8f15
+  enabled: false
+  note: Disabled in favour of https://github.com/gbprod/tree-sitter-twig
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 14
+
+- language: typescript
+  url: https://github.com/tree-sitter/tree-sitter-typescript
+  branch: master
+  ref: 75b3874edb2dc714fb1fd77a32013d0f8699989f
+  release: true
+  path: typescript
+  queryPath: queries
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasTags: true
+    abi: 14
+
+- language: typst
+  url: https://github.com/SeniorMars/tree-sitter-typst
+  ref: 2e66ef4b798a26f0b82144143711f3f7a9e8ea35
+  enabled: false
+  note: Incompatible with current tree-sitter CLI, invalid token.immediate usage
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: typst
+  url: https://github.com/uben0/tree-sitter-typst
+  ref: 46cf4ded12ee974a70bf8457263b67ad7ee0379d
+  extraFiles:
+    - unicode.h
+  enabled: false
+  note: Disabled in favour of https://github.com/SeniorMars/tree-sitter-typst
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 14
+
+- language: udev
+  url: https://github.com/tree-sitter-grammars/tree-sitter-udev
+  branch: master
+  ref: 2fcb563a4d56a6b8e8c129252325fc6335e4acbf
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasTags: true
+    abi: 15
+
+- language: ungrammar
+  url: https://github.com/tree-sitter-grammars/tree-sitter-ungrammar
+  ref: debd26fed283d80456ebafa33a06957b0c52e451
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: usd
+  url: https://github.com/ColinKennedy/tree-sitter-usd
+  ref: v0.5.0
+  enabled: false
+  note: Incompatible with current tree-sitter CLI, generation fails
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 14
+
+- language: uxntal
+  url: https://github.com/Jummit/tree-sitter-uxntal
+  ref: 1a44f8d31053096b79c52f10a39da12479edbf64
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-uxntal
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: uxntal
+  url: https://github.com/tree-sitter-grammars/tree-sitter-uxntal
+  branch: master
+  ref: ad9b638b914095320de85d59c49ab271603af048
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: v
+  url: https://github.com/nedpals/tree-sitter-v
+  branch: master
+  ref: fee18d64a51127b32a221a56509f77c942d9923f
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 13
+
+- language: v
+  url: https://github.com/vlang/v-analyzer
+  ref: 095865df4b9ddd21e376d635586c663d5a736f71
+  path: tree_sitter_v
+  enabled: false
+  note: Disabled in favour of https://github.com/nedpals/tree-sitter-v
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 15
+
+- language: v
+  url: https://github.com/vlang/vls
+  ref: 60062d1fc584089ddbfca310921a5f345a500cb0
+  enabled: false
+  note: Disabled in favour of https://github.com/nedpals/tree-sitter-v
+
+- language: vala
+  url: https://github.com/vala-lang/tree-sitter-vala
+  branch: master
+  ref: 97e6db3c8c73b15a9541a458d8e797a07f588ef4
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    abi: 13
+
+- language: vbnet
+  name: tree_sitter_vb_dotnet
+  url: https://github.com/CodeAnt-AI/tree-sitter-vb-dotnet
+  ref: cfca210ce8fdcb5245bd9cd5c47ce0a21a8488d5
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: vcard
+  url: https://github.com/TitouanReal/tree-sitter-vcard
+  ref: 8c0777114ca3dea2872809d75a629eac7013a413
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: vcl
+  url: https://github.com/ntsk/tree-sitter-vcl
+  ref: v0.2.1
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 15
+
+- language: vento
+  url: https://github.com/ventojs/tree-sitter-vento
+  ref: 4569bc1fb81f050ca4ef3ceefdd31cfeb35c4f0a
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    abi: 15
+
+- language: verilog
+  url: https://github.com/gmlarumbe/tree-sitter-verilog
+  ref: cd6e48b27d8bd7b192a8784b0171a39afa06f13d
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter/tree-sitter-verilog
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: verilog
+  url: https://github.com/tree-sitter/tree-sitter-verilog
+  branch: master
+  ref: 227d277b6a1a5e2bf818d6206935722a7503de08
+  release: true
+  metadata:
+    hasParser: true
+    abi: 14
+
+- language: vespa
+  url: https://github.com/bartek/tree-sitter-vespa
+  ref: 618c5b1c9b92daac0b7dd0b41c65158437dbeec5
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    abi: 14
+
+- language: vhdl
+  url: https://github.com/alemuller/tree-sitter-vhdl
+  ref: a3b2d84990527c7f8f4ae219c332c00c33d2d8e5
+  release: true
+  ignoreFiles:
+    - queries/highlights.scm
+  note: highlights.scm references non-existent node types
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 13
+
+- language: vhdl
+  url: https://github.com/jpt13653903/tree-sitter-vhdl
+  ref: c2d9be3d5ab7fb2cae8ad5ae604cd3606a4af0f2
+  extraFiles:
+    - debug_macros.h
+    - TokenTree.h
+    - TokenType.h
+  enabled: false
+  note: Disabled in favour of https://github.com/alemuller/tree-sitter-vhdl
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: vhs
+  url: https://github.com/charmbracelet/tree-sitter-vhs
+  ref: 0c6fae9d2cfc5b217bfd1fe84a7678f5917116db
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: vim
+  url: https://github.com/tree-sitter-grammars/tree-sitter-vim
+  ref: v0.8.1
+  extraFiles:
+    - keywords.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    gitTags: true
+    abi: 15
+
+- language: vim
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/vim
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+
+- language: vimdoc
+  url: https://github.com/neovim/tree-sitter-vimdoc
+  ref: v4.1.0
+  metadata:
+    hasParser: true
+    gitTags: true
+    abi: 15
+
+- language: vimdoc
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/vimdoc
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+
+- language: vrl
+  url: https://github.com/belltoy/tree-sitter-vrl
+  ref: v0.1.1
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    gitTags: true
+    abi: 14
+
+- language: vue
+  url: https://github.com/tree-sitter-grammars/tree-sitter-vue
+  ref: ce8011a414fdf8091f4e4071752efc376f4afb08
+  extraFiles:
+    - tag.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 15
+
+- language: vue
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/vue
+  metadata:
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+
+- language: wast
+  url: https://github.com/wasm-lsp/tree-sitter-wasm
+  ref: 2ca28a9f9d709847bf7a3de0942a84e912f59088
+  path: wat
+  enabled: false
+  note: Incompatible with current tree-sitter CLI, generation fails
+  metadata:
+    hasParser: true
+    abi: 13
+
+- language: wat
+  url: https://github.com/g-plane/tree-sitter-wat
+  ref: e3769473b2d90643d8af500b5cfc2f25a674888a
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasTags: true
+    abi: 15
+
+- language: wgsl
+  url: https://github.com/gpuweb/tree-sitter-wgsl
+  ref: 52e3c620a9c316cc8c1d504dd1908eb8cebe255b
+  generate: true
+  enabled: false
+  note: Disabled in favour of https://github.com/szebniok/tree-sitter-wgsl
+  metadata:
+    hasScanner: true
+    hasHighlights: true
+
+- language: wgsl
+  url: https://github.com/mehmetoguzderin/tree-sitter-wgsl
+  ref: 27ae4db1458d5ea7555300c9e93c6273723d420c
+  enabled: false
+  note: Disabled in favour of https://github.com/szebniok/tree-sitter-wgsl
+  metadata:
+    hasParser: true
+    hasScanner: true
+    abi: 13
+
+- language: wgsl
+  url: https://github.com/szebniok/tree-sitter-wgsl
+  branch: master
+  ref: 40259f3c77ea856841a4e0c4c807705f3e4a2b65
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasFolds: true
+    abi: 13
+
+- language: wgsl_bevy
+  url: https://github.com/tree-sitter-grammars/tree-sitter-wgsl-bevy
+  ref: v0.1.4
+  metadata:
+    hasParser: true
+    hasScanner: true
+    gitTags: true
+    abi: 14
+
+- language: wgsl_bevy
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/wgsl_bevy
+  metadata:
+    hasHighlights: true
+    hasFolds: true
+    hasIndents: true
+
+- language: wing
+  url: https://github.com/winglang/tree-sitter-wing
+  ref: 76e0c25844a66ebc6e866d690fcc5f4e90698947
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasFolds: true
+    abi: 14
+
+- language: wing
+  url: https://github.com/winglang/wing
+  ref: 8fb4c792ce202afb08b3aec9fc61f902d8c7efc6
+  enabled: false
+  note: Disabled in favour of https://github.com/winglang/tree-sitter-wing
+  metadata:
+    hasScanner: true
+
+- language: wit
+  url: https://github.com/bytecodealliance/tree-sitter-wit
+  ref: ae17db1678681a8e75c1ac48107d6efb95343cb3
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    abi: 15
+
+- language: wit
+  url: https://github.com/hh9527/tree-sitter-wit
+  ref: c917790ab9aec50c5fd664cbfad8dd45110cfff3
+  enabled: false
+  note: Disabled in favour of https://github.com/bytecodealliance/tree-sitter-wit
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasIndents: true
+    abi: 14
+
+- language: xcompose
+  url: https://github.com/tree-sitter-grammars/tree-sitter-xcompose
+  ref: v0.4.0
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15
+
+- language: xml
+  url: https://github.com/dorgnarg/tree-sitter-xml
+  ref: 36dd54f701e3b3e030412a854295af971cf74ad1
+  enabled: false
+  note: Disabled in favour of https://github.com/panicinc/tree-sitter-xml
+  metadata:
+    hasParser: true
+    abi: 12
+
+- language: xml
+  url: https://github.com/panicinc/tree-sitter-xml
+  ref: 53dfc22f454c18be9f1852b473044346480666be
+  release: true
+  extraFiles:
+    - tag.h
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 14
+
+- language: xquery
+  url: https://github.com/grantmacken/tree-sitter-xquery
+  ref: 85f15e8f6388981678838407c25f9222a7abe14b
+  enabled: false
+  note: Uses pre-release 'reserved' API incompatible with tree-sitter-cli 0.25+; repo inactive since 2023
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    abi: 14
+
+- language: xresources
+  url: https://github.com/ValdezFOmar/tree-sitter-xresources
+  branch: master
+  ref: 586e9a578f473bf39b17d302d7f33f1777652967
+  metadata:
+    hasParser: true
+    abi: 15
+
+- language: xresources
+  url: https://github.com/nvim-treesitter/nvim-treesitter
+  ref: 2b50ab5ccbcd9e5708deb351308edd738adbf84c
+  path: runtime/queries/xresources
+  metadata:
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+
+- language: yaml
+  url: https://github.com/tree-sitter-grammars/tree-sitter-yaml
+  branch: master
+  ref: 4463985dfccc640f3d6991e3396a2047610cf5f8
+  release: true
+  extraFiles:
+    - schema.core.c
+    - schema.json.c
+    - schema.legacy.c
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    abi: 15
+
+- language: yang
+  url: https://github.com/Hubro/tree-sitter-yang
+  branch: master
+  ref: 2c0e6be8dd4dcb961c345fa35c309ad4f5bd3502
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 13
+
+- language: yuck
+  url: https://github.com/tree-sitter-grammars/tree-sitter-yuck
+  ref: 6c60112b3b3e739fb1ca4a8ea4bea2b6ffe11318
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: zeek
+  url: https://github.com/zeek/tree-sitter-zeek
+  ref: v0.2.12
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    gitTags: true
+    abi: 14
+
+- language: zig
+  url: https://github.com/GrayJack/tree-sitter-zig
+  ref: 8e970cb01c22cf89b8f70231ed4eca8d6fad1d56
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-zig
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: zig
+  url: https://github.com/maxxnino/tree-sitter-zig
+  ref: a80a6e9be81b33b182ce6305ae4ea28e29211bd5
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-zig
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 14
+
+- language: zig
+  url: https://github.com/tree-sitter-grammars/tree-sitter-zig
+  branch: master
+  ref: 6479aa13f32f701c383083d8b28360ebd682fb7d
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
+    abi: 15
+
+- language: zig
+  url: https://github.com/ziglibs/tree-sitter-zig
+  ref: 2866ee6f8b8f67c9b1eca2ca6c88f0a5f1bcc13f
+  generate: true
+  enabled: false
+  note: Disabled in favour of https://github.com/tree-sitter-grammars/tree-sitter-zig
+
+- language: ziggy
+  url: https://github.com/kristoff-it/ziggy
+  ref: 852053b09a5f8f5b79ca880f86ea77fc7da3dd6c
+  path: tree-sitter-ziggy
+  metadata:
+    hasParser: true
+    hasHighlights: true
+    hasIndents: true
+    abi: 14
+
+- language: zsh
+  url: https://github.com/georgeharker/tree-sitter-zsh
+  ref: v0.63.3
+  metadata:
+    hasParser: true
+    hasScanner: true
+    hasHighlights: true
+    gitTags: true
+    abi: 15

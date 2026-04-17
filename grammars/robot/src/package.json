@@ -1,0 +1,46 @@
+{
+  "name": "tree-sitter-robot",
+  "version": "1.3.0",
+  "description": "Tree-sitter parser for Robot Framework files",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "install": "node-gyp-build",
+    "prestart": "tree-sitter build --wasm",
+    "start": "tree-sitter playground",
+    "test": "node --test bindings/node/*_test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hubro/tree-sitter-robot.git"
+  },
+  "keywords": [
+    "incremental",
+    "parsing",
+    "tree-sitter",
+    "robot"
+  ],
+  "author": "Tomas Sandven",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Hubro/tree-sitter-robot/issues"
+  },
+  "homepage": "https://github.com/Hubro/tree-sitter-robot#readme",
+  "files": [
+    "grammar.js",
+    "tree-sitter.json",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**",
+    "*.wasm"
+  ],
+  "dependencies": {
+    "node-addon-api": "^8.2.2",
+    "node-gyp-build": "^4.8.4",
+    "tree-sitter": "^0.25.0",
+    "tree-sitter-cli": "^0.26.6",
+    "prebuildify": "^6.0.1"
+  }
+}

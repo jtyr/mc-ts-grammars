@@ -1,0 +1,29 @@
+name: Validate Grammar
+description: Verify .scm query files compile against their grammar
+
+inputs:
+  languages:
+    description: Space-separated list of language names to validate (or "all")
+    required: true
+  buildDir:
+    description: Directory containing built .so files
+    required: false
+    default: build
+
+runs:
+  using: composite
+  steps:
+    - name: Install tree-sitter library
+      shell: bash
+      run: $GITHUB_ACTION_PATH/scripts/install-tree-sitter.sh
+
+    - name: Validate query files
+      shell: bash
+      run: |
+        args="--build-dir=${{ inputs.buildDir }}"
+        if [ "${{ inputs.languages }}" = "all" ]; then
+          args="$args --all"
+        else
+          args="$args ${{ inputs.languages }}"
+        fi
+        $GITHUB_ACTION_PATH/scripts/validate.sh $args

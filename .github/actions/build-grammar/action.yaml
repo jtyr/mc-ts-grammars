@@ -1,0 +1,40 @@
+name: Build Grammar
+description: Compile tree-sitter grammar shared libraries from source
+
+inputs:
+  languages:
+    description: Space-separated list of language names to build (or "all")
+    required: true
+  cc:
+    description: C compiler to use
+    required: false
+    default: gcc
+  output:
+    description: Output directory for shared libraries
+    required: false
+    default: build
+  strip:
+    description: Strip debug symbols
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Build grammar libraries
+      shell: bash
+      env:
+        CC: ${{ inputs.cc }}
+      run: |
+        args=""
+        if [ "${{ inputs.languages }}" = "all" ]; then
+          args="--all"
+        elif [ "${{ inputs.languages }}" = "release" ]; then
+          args="--release"
+        else
+          args="${{ inputs.languages }}"
+        fi
+        if [ "${{ inputs.strip }}" = "true" ]; then
+          args="--strip $args"
+        fi
+        $GITHUB_ACTION_PATH/scripts/build.sh --output=${{ inputs.output }} $args

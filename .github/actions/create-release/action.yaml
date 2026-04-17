@@ -1,0 +1,24 @@
+name: Create Release
+description: Generate release notes and create a GitHub release
+
+inputs:
+  tag:
+    description: Release tag (e.g. 2026.03.17)
+    required: true
+  releaseDir:
+    description: Directory containing release tarballs
+    required: true
+  token:
+    description: GitHub token for creating releases
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Create release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        $GITHUB_ACTION_PATH/scripts/create-release.sh \
+          ${{ inputs.tag }} ${{ inputs.releaseDir }}

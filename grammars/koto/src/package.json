@@ -1,0 +1,36 @@
+{
+  "name": "tree-sitter-koto",
+  "version": "0.1.0",
+  "description": "Koto grammar for tree-sitter",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "scripts": {
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi --strip"
+  },
+  "keywords": [],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ],
+  "author": "Ian Hobson",
+  "license": "MIT",
+  "dependencies": {
+    "node-addon-api": "^8.2.2",
+    "node-gyp-build": "^4.8.4",
+    "tree-sitter": "^0.22.4"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.25.4",
+    "prebuildify": "^6.0.1"
+  }
+}

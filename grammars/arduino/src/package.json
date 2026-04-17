@@ -1,0 +1,61 @@
+{
+  "name": "tree-sitter-arduino",
+  "version": "0.25.0",
+  "description": "Arduino grammar for tree-sitter",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tree-sitter-grammars/tree-sitter-arduino.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "ObserverOfTime",
+    "email": "chronobserver@disroot.org",
+    "url": "https://observeroftime.github.io/"
+  },
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "keywords": [
+    "incremental",
+    "parsing",
+    "tree-sitter",
+    "arduino"
+  ],
+  "files": [
+    "grammar.js",
+    "tree-sitter.json",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**",
+    "*.wasm"
+  ],
+  "dependencies": {
+    "node-addon-api": "^8.5.0",
+    "node-gyp-build": "^4.8.4",
+    "tree-sitter-cpp": "^0.23.4"
+  },
+  "devDependencies": {
+    "prebuildify": "^6.0.1",
+    "tree-sitter": "^0.25.0",
+    "tree-sitter-cli": "^0.26.7"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.25.0"
+  },
+  "peerDependenciesMeta": {
+    "tree-sitter": {
+      "optional": true
+    }
+  },
+  "overrides": {
+    "tree-sitter": "^0.25.0"
+  },
+  "scripts": {
+    "install": "node-gyp-build",
+    "prestart": "tree-sitter build --wasm",
+    "start": "tree-sitter playground",
+    "test": "node --test bindings/node/*_test.js"
+  }
+}

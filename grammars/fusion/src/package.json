@@ -1,0 +1,47 @@
+{
+  "name": "tree-sitter-fusion",
+  "version": "1.1.2",
+  "author": "Jirgn Mssnr",
+  "license": "MIT",
+  "description": "neos-fusion parser for node-tree-sitter",
+  "keywords": [
+    "tree-sitter",
+    "grammar",
+    "parser",
+    "lexer",
+    "neos",
+    "fusion"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/jirgn/tree-sitter-fusion.git"
+  },
+  "main": "bindings/node",
+  "scripts": {
+    "build": "yarn tree-sitter generate",
+    "test": "yarn tree-sitter test",
+    "playground": "yarn tree-sitter build-wasm && yarn tree-sitter web-ui"
+  },
+  "tree-sitter": [
+    {
+      "scope": "source.neos-fusion",
+      "file-types": [
+        "fusion"
+      ],
+      "highlights": [
+        "queries/highlights.scm"
+      ],
+      "injection-regex": "^fusion$"
+    }
+  ],
+  "dependencies": {
+    "nan": "^2.14.2"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/gitlab": "^7.0.4",
+    "semantic-release": "^18.0.1",
+    "tree-sitter-cli": "^0.20.0"
+  }
+}

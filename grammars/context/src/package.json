@@ -1,0 +1,51 @@
+{
+  "name": "tree-sitter-context",
+  "version": "0.6.1",
+  "description": "ConTeXt grammar for tree-sitter",
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "author": "Paul Mazaitis <paul@mazaitis.org>",
+  "license": "MIT",
+  "dependencies": {
+    "node-addon-api": "^7.1.0",
+    "node-gyp-build": "^4.8.0"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.21.0"
+  },
+  "peerDependenciesMeta": {
+    "tree_sitter": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.20.6",
+    "prebuildify": "^6.0.0"
+  },
+  "scripts": {
+    "test": "tree-sitter test",
+    "install": "node-gyp-build",
+    "prebuildify": "prebuildify --napi --strip"
+  },
+  "tree-sitter": [
+    {
+      "scope": "text.tex.context",
+      "file-types": [
+        "tex",
+        "ctx",
+        "mkiv",
+        "mkxl"
+      ],
+      "content-regex": "/\\start(text|component)/",
+      "injection-regex": "context"
+    }
+  ],
+  "files": [
+    "grammar.js",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**"
+  ]
+}
