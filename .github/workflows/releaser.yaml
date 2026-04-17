@@ -135,7 +135,7 @@ jobs:
       - name: Extract shared libraries for validation
         uses: ./.github/actions/extract-tarball
         with:
-          tarball: release/mc-ts-grammars-x86_64-linux.tar.gz
+          tarball: release/mc-ts-grammars-${{ github.event_name == 'push' && github.ref_name || needs.check-changes.outputs.tag }}-x86_64-linux.tar.gz
           outputDir: build
 
       - name: Validate query files

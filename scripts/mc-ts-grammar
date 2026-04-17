@@ -862,8 +862,6 @@ download_bundle() {
     else
         platform=$(detect_platform)
     fi
-    local tarball_name="mc-ts-grammars-$platform.tar.gz"
-
     # Determine version to download
     if [ -z "$version" ]; then
         echo 'Fetching latest release...' >&2
@@ -879,7 +877,8 @@ download_bundle() {
         echo "Latest version: $version" >&2
     fi
 
-    local cache_path="$CACHE_DIR/$version/$tarball_name"
+    local tarball_name="mc-ts-grammars-$version-$platform.tar.gz"
+    local cache_path="$CACHE_DIR/$tarball_name"
 
     # Check cache
     if [ "$no_cache" != "true" ] && [ -f "$cache_path" ]; then
@@ -892,7 +891,7 @@ download_bundle() {
     local download_url="$REPO_URL/releases/download/$version/$tarball_name"
     echo "Downloading $download_url ..." >&2
 
-    mkdir -p "$CACHE_DIR/$version"
+    mkdir -p "$CACHE_DIR"
     if ! curl -sL --fail -o "$cache_path" "$download_url"; then
         echo "ERROR: failed to download $download_url" >&2
         rm -f "$cache_path"

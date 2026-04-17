@@ -5,10 +5,10 @@
 # Usage: package.sh --platform=PLATFORM --build-dir=DIR --output=DIR --tag=TAG
 #
 # Creates one tarball per platform:
-#   mc-ts-grammars-<platform>.tar.gz
+#   mc-ts-grammars-<tag>-<platform>.tar.gz
 #
 # The tarball contains per-language directories with library and query files:
-#   mc-ts-grammars-<platform>/
+#   mc-ts-grammars-<tag>-<platform>/
 #     python/
 #       python.so
 #       config.ini
@@ -70,7 +70,7 @@ get_release_grammars() {
     ' "$REGISTRY"
 }
 
-tarball_name="mc-ts-grammars-$PLATFORM"
+tarball_name="mc-ts-grammars-$TAG-$PLATFORM"
 staging="$OUTPUT_DIR/$tarball_name"
 
 rm -rf "$staging"
