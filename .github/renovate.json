@@ -3,6 +3,9 @@
   "extends": [
     "helpers:pinGitHubActionDigests"
   ],
+  "ignorePaths": [
+    "grammars/**"
+  ],
   "dependencyDashboard": true,
   "pre-commit": {
     "enabled": true
