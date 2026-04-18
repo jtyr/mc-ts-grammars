@@ -53,7 +53,10 @@ const PREC = {
     BANG: 13, // `!` in Expr
 
     // For remote vs binary :
-    REMOTE: 1,
+    // `:` in remote calls binds tighter than all binary operators,
+    // so REMOTE must be above PREFIX_OP (21) to prevent e.g.
+    // `a | b:c()` being misparsed as `(a | b):c()`.
+    REMOTE: 22,
     BIT_EXPR: 2,
     CALL: 80,
 
@@ -208,6 +211,10 @@ module.exports = grammar({
         [$._macro_def_replacement, $.replacement_guard_and, $.replacement_expr_guard],
         // Fun type vs regular function `fun()` vs `fun() -> ...`
         [$.fun_type, $.expr_args],
+        // `[X, Y || ...]` (multi-template comprehension) vs `[X, Y]` (list)
+        [$.list, $.list_comprehension],
+        // `#{K => V, K2 => V2 || ...}` vs `#{K => V, K2 => V2}`
+        [$.map_comprehension, $.map_expr],
         // Introduced by the exprs choice in the source_file
         [$._expr, $._map_expr_base, $._record_expr_base],
         [$._expr, $._map_expr_base],
@@ -229,7 +236,9 @@ module.exports = grammar({
             $.behaviour_attribute,
             $.export_attribute,
             $.import_attribute,
+            $.import_record_attribute,
             $.export_type_attribute,
+            $.export_record_attribute,
             $.optional_callbacks_attribute,
             $.compile_options_attribute,
             $.feature_attribute,
@@ -339,6 +348,14 @@ module.exports = grammar({
             field("module", $._name), ',',
             '[', sepBy(optional(','), field("funs", $.fa)), ']', ')', '.'),
 
+        import_record_attribute: $ => seq(
+            '-', atom_const('import_record'), '(',
+            field("module", $._name), ',',
+            field("records", $.import_record_names), ')', '.'),
+
+        import_record_names: $ => seq(
+            '[', sepBy(optional(','), field("names", $._name)), ']'),
+
         optional_callbacks_attribute: $ => seq(
             '-', atom_const('optional_callbacks'), '(', '[',
             sepBy(optional(','), field("callbacks", $.fa)),
@@ -358,6 +375,10 @@ module.exports = grammar({
             ')',
             '.'
         ),
+
+        export_record_attribute: $ => seq(
+            '-', atom_const('export_record'), '(',
+            '[', sepBy(optional(','), field("records", $.atom)), ']', ')', '.'),
 
         compile_options_attribute: $ => seq(
             '-',
@@ -448,15 +469,37 @@ module.exports = grammar({
         ),
         type_name: $ => seq(field("name", $._name), field("args", $.var_args)),
 
-        record_decl: $ => seq(
-            '-',
-            atom_const('record'),
-            '(',
-            field("name", $._name),
-            optional(','),
-            $._record_tuple,
-            ')',
-            '.',
+        record_decl: $ => choice(
+            seq(
+                '-',
+                atom_const('record'),
+                '(',
+                field("name", $._name),
+                optional(','),
+                $._record_tuple,
+                ')',
+                '.',
+            ),
+            // Native record declaration: -record #Name{fields}.
+            seq(
+                '-',
+                atom_const('record'),
+                '#',
+                field("name", $._name),
+                $._record_tuple,
+                '.',
+            ),
+            // Native record declaration with parens: -record(#Name{fields}).
+            seq(
+                '-',
+                atom_const('record'),
+                '(',
+                '#',
+                field("name", $._name),
+                $._record_tuple,
+                ')',
+                '.',
+            ),
         ),
 
         spec: $ => seq('-', atom_const('spec'), $._spec_def, '.'),
@@ -635,8 +678,8 @@ module.exports = grammar({
             $.maybe_expr,
         ),
 
-        remote: $ => prec.right(PREC.REMOTE, seq(field("module", $.remote_module), field("fun", $._expr_max))),
-        remote_module: $ => prec(PREC.REMOTE, seq(field("module", $._expr_max), ':')),
+        remote: $ => prec.right(PREC.REMOTE, seq(field("module", $.remote_module), field("fun", $._expr))),
+        remote_module: $ => prec(PREC.REMOTE, seq(field("module", $._expr), ':')),
 
         paren_expr: $ => seq('(', field("expr", $._expr), ')'),
         block_expr: $ => seq('begin', sepBy1(',', field("exprs", $._expr)), 'end'),
@@ -692,7 +735,7 @@ module.exports = grammar({
 
         list_comprehension: $ => seq(
             '[',
-            field("expr", $._expr),
+            sepBy1(',', field("exprs", $._expr)),
             field("lc_exprs", $.lc_exprs),
             ']'
         ),
@@ -705,7 +748,7 @@ module.exports = grammar({
         map_comprehension: $ => seq(
             '#',
             '{',
-            field("expr", $.map_field),
+            sepBy1(',', field("exprs", $.map_field)),
             field("lc_exprs", $.lc_exprs),
             '}',
         ),
@@ -784,6 +827,12 @@ module.exports = grammar({
             $.record_field_expr,
             $.record_update_expr,
             $.record_expr,
+            $.qualified_record_expr,
+            $.qualified_record_field_expr,
+            $.qualified_record_update_expr,
+            $.anon_record_expr,
+            $.anon_record_field_expr,
+            $.anon_record_update_expr,
         ),
 
         record_index_expr: $ => seq(
@@ -811,6 +860,37 @@ module.exports = grammar({
         record_name: $ => seq('#', field("name", $._name)),
 
         record_field_name: $ => seq('.', field("name", $._name)),
+
+        // Native record support (OTP 29)
+        qualified_record_name: $ => seq('#', field("module", $.module), field("name", $._name)),
+
+        qualified_record_expr: $ => seq(field("name", $.qualified_record_name), $._record_tuple),
+
+        qualified_record_update_expr: $ => prec.right(seq(
+            field("expr", $._record_expr_base),
+            field("name", $.qualified_record_name),
+            $._record_tuple,
+        )),
+
+        qualified_record_field_expr: $ => prec.right(seq(
+            field("expr", $._record_expr_base),
+            field("name", $.qualified_record_name),
+            field("field", $.record_field_name),
+        )),
+
+        anon_record_expr: $ => seq(token('#_'), $._record_tuple),
+
+        anon_record_update_expr: $ => prec.right(seq(
+            field("expr", $._record_expr_base),
+            token('#_'),
+            $._record_tuple,
+        )),
+
+        anon_record_field_expr: $ => prec.right(seq(
+            field("expr", $._record_expr_base),
+            token('#_'),
+            field("field", $.record_field_name),
+        )),
 
         _record_expr_base: $ => choice(
             $._expr_max,
@@ -970,6 +1050,8 @@ module.exports = grammar({
             $.map_expr,
             $.record_index_expr,
             $.record_expr,
+            $.qualified_record_expr,
+            $.anon_record_expr,
             $._expr_max,
         ),
 
