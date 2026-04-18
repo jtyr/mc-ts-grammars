@@ -182,11 +182,11 @@ shebangs=python python3
 display-name=Python
 
 [colors]
-comment=brown;
-keyword=yellow;
-string=green;
-function.special=brightred;
-variable.builtin=brightred;
+comment=brown
+keyword=yellow
+string=green
+function.special=brightred
+variable.builtin=brightred;blue
 ```
 
 The `[grammar]` section holds file matching rules, display name, and
@@ -195,7 +195,10 @@ optional fields like `symbol` (override for the
 languages like `gotmpl`).
 
 The `[colors]` section maps tree-sitter capture names to MC terminal
-colors (16 ANSI colors plus MC extras `brown` and `lightgray`).
+colors (16 ANSI colors plus MC extras `brown` and `lightgray`). Each
+value is `<fg>` or `<fg>;<bg>` - the semicolon separates foreground
+from background, and is only needed when setting a background color.
+Use `-` in either position to fall back to the default color.
 
 ## Testing highlighting quality
 
