@@ -35,6 +35,10 @@ jobs:
         with:
           languages: ${{ steps.check.outputs.updated }}
 
+      - name: Reconcile metadata flags
+        if: steps.check.outputs.hasUpdates == 'true'
+        run: scripts/reconcile-metadata.sh ${{ steps.check.outputs.updated }}
+
       - name: Regenerate GRAMMARS.md
         if: steps.check.outputs.hasUpdates == 'true'
         run: scripts/generate-grammars-md.sh

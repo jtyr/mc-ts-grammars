@@ -161,6 +161,26 @@ fetch_entry() {
             cp "$src_root/$f" "$dir/"
         done
 
+    # For parser entries with queryPath set, or monorepo entries with
+    # queries/ at repo root, copy those queries into out_src/queries/
+    # without overwriting any already present.
+    local queries_dir=""
+    if [ -n "$query_path" ]; then
+        queries_dir="$tmpdir/repo/$query_path"
+    elif [ -n "$path" ] && [ -d "$tmpdir/repo/queries" ]; then
+        queries_dir="$tmpdir/repo/queries"
+    fi
+    if [ -n "$queries_dir" ] && [ -d "$queries_dir" ]; then
+        mkdir -p "$out_src/queries"
+        for scm in "$queries_dir"/*.scm; do
+            [ -f "$scm" ] || continue
+            q_name=$(basename "$scm")
+            [ -f "$out_src/queries/$q_name" ] && continue
+            cp "$scm" "$out_src/queries/"
+        done
+        sed -i 's/#lua-match?/#match?/g; s/#vim-match?/#match?/g' "$out_src/queries"/*.scm 2>/dev/null
+    fi
+
     # Copy extra files listed in grammars.yaml
     if [ -n "$extra_files" ]; then
         IFS=',' read -ra extras <<< "$extra_files"

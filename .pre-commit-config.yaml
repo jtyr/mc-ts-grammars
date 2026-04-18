@@ -49,6 +49,14 @@ repos:
 
   - repo: local
     hooks:
+      - id: reconcile-metadata
+        name: Reconcile grammars.yaml metadata with source files
+        entry: scripts/reconcile-metadata.sh
+        args:
+          - --all
+        language: script
+        files: ^(grammars\.yaml|grammars/[^/]+/src/(grammar\.js|src/(parser\.c|scanner\.(c|cc))|queries/[^/]+\.scm))$
+        pass_filenames: false
       - id: grammars-md
         name: Check GRAMMARS.md is up to date
         entry: scripts/generate-grammars-md.sh
