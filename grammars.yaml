@@ -3415,7 +3415,7 @@
 
 - language: razor
   url: https://github.com/tris203/tree-sitter-razor
-  ref: 1e8ec29b7179329ce7cffcfae2c5347e8a00f7cf
+  ref: a57265cc454a060292f869d6b30c10f797adb971
   metadata:
     hasParser: true
     hasScanner: true
@@ -3654,7 +3654,7 @@
 
 - language: scala
   url: https://github.com/tree-sitter/tree-sitter-scala
-  ref: v0.25.0
+  ref: v0.26.0
   release: true
   metadata:
     hasParser: true

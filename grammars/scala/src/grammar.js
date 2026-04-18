@@ -32,6 +32,7 @@ module.exports = grammar({
     $._automatic_semicolon,
     $._indent,
     $._outdent,
+    $._comma_outdent,
     $._simple_string_start,
     $._simple_string_middle,
     $._simple_multiline_string_start,
@@ -80,10 +81,8 @@ module.exports = grammar({
     // In case of: 'extension'  _indent  '{'  'case'  operator_identifier  'if'  operator_identifier  •  '=>'  …
     // we treat `operator_identifier` as `simple_expression`
     [$._simple_expression, $.lambda_expression],
-    // 'package'  package_identifier  '{'  operator_identifier  •  ':'  …
-    [$.self_type, $._simple_expression],
-    // 'package'  package_identifier  '{'  operator_identifier  '=>'  •  'enum'  …
-    [$.self_type, $.lambda_expression],
+    // operator_identifier  •  ':'  …
+    [$._simple_expression, $._single_lambda_param],
     // 'class'  _class_constructor  •  _automatic_semicolon  …
     [$._class_definition],
     // 'class'  operator_identifier  •  _automatic_semicolon  …
@@ -106,12 +105,29 @@ module.exports = grammar({
     // 'if'  parenthesized_expression  •  '{'  …
     [$._if_condition, $._simple_expression],
     [$.block, $._braced_template_body1],
-    [$._simple_expression, $.self_type, $._type_identifier],
     [$._simple_expression, $._type_identifier],
-    [$.lambda_expression, $.self_type, $._type_identifier],
-    [$.lambda_expression, $._type_identifier],
+    // '['  operator_identifier  ':'  '{'  operator_identifier  •  '=>'  …
+    [$._single_lambda_param, $.self_type, $._type_identifier],
+    // '['  operator_identifier  ':'  '{'  operator_identifier  •  '?=>'  …
+    [$._single_lambda_param, $._type_identifier],
+    // '('  operator_identifier  •  ':'  …
+    [$._simple_expression, $._single_lambda_param, $.binding],
+    // 'given'  '{'  operator_identifier  •  ':'  …
+    [$._simple_expression, $._single_lambda_param, $.self_type],
+    // '['  operator_identifier  ':'  '{'  operator_identifier  •  ':'  …
+    [
+      $._simple_expression,
+      $._single_lambda_param,
+      $.self_type,
+      $._type_identifier,
+    ],
+    // 'given'  '{'  operator_identifier  ':'  _type  •  '=>'  …
+    [$._single_lambda_param, $._self_type_ascription],
     [$.binding, $._simple_expression, $._type_identifier],
     [$.class_parameter, $._type_identifier],
+    // '{'  _single_lambda_param  '=>'  expression  •  '}'  …
+    [$._block, $._indentable_expression],
+    [$.match_expression, $._simple_expression],
   ],
 
   word: $ => $._alpha_identifier,
@@ -151,6 +167,7 @@ module.exports = grammar({
     enum_definition: $ =>
       seq(
         repeat($.annotation),
+        optional($.modifiers),
         "enum",
         $._class_constructor,
         field("extend", optional($.extends_clause)),
@@ -227,23 +244,35 @@ module.exports = grammar({
     export_declaration: $ =>
       prec.left(seq("export", sep1(",", $._namespace_expression))),
 
+    /*
+      ImportExpr        ::=  SimpleRef {‘.’ id} ‘.’ ImportSpec
+                          |  SimpleRef ‘as’ id
+      ImportSpec        ::=  NamedSelector
+                          |  WildCardSelector
+                          | ‘{’ ImportSelectors) ‘}’
+      NamedSelector     ::=  id [‘as’ (id | ‘_’)]
+      WildCardSelector  ::=  ‘*’ | ‘given’ [InfixType]
+    */
     _namespace_expression: $ =>
       prec.left(
-        seq(
-          field("path", sep1(".", $._identifier)),
-          optional(
-            seq(
-              ".",
-              choice(
-                $.namespace_wildcard,
-                $.namespace_selectors,
-                // Only allowed in Scala 3
-                // ImportExpr        ::=
-                //    SimpleRef {‘.’ id} ‘.’ ImportSpec |  SimpleRef ‘as’ id
-                $.as_renamed_identifier,
+        choice(
+          seq(
+            field("path", sep1(".", $._identifier)),
+            optional(
+              seq(
+                ".",
+                choice(
+                  $.namespace_wildcard,
+                  $.namespace_selectors,
+                  // Only allowed in Scala 3
+                  // ImportExpr        ::=
+                  //    SimpleRef {‘.’ id} ‘.’ ImportSpec |  SimpleRef ‘as’ id
+                  $.as_renamed_identifier,
+                ),
               ),
             ),
           ),
+          $.as_renamed_identifier,
         ),
       ),
 
@@ -739,7 +768,7 @@ module.exports = grammar({
         seq(
           "extends",
           field("type", $._constructor_applications),
-          optional($.arguments),
+          repeat($.arguments),
         ),
       ),
 
@@ -850,19 +879,31 @@ module.exports = grammar({
     _indentable_expression: $ =>
       prec.right(choice($.indented_block, $.indented_cases, $.expression)),
 
-    block: $ => seq("{", optional($._block), "}"),
+    block: $ =>
+      seq(
+        "{",
+        optional(
+          choice(
+            $._block,
+            alias($._block_lambda_expression, $.lambda_expression),
+          ),
+        ),
+        "}",
+      ),
 
     indented_block: $ =>
       prec.left(
         PREC.control,
-        seq($._indent, $._block, $._outdent, optional($._end_marker)),
+        seq(
+          $._indent,
+          $._block,
+          choice($._outdent, $._comma_outdent),
+          optional($._end_marker),
+        ),
       ),
 
     indented_cases: $ =>
       prec.left(seq($._indent, repeat1($.case_clause), $._outdent)),
-
-    _indented_type_cases: $ =>
-      prec.left(seq($._indent, repeat1($.type_case_clause), $._outdent)),
 
     // ---------------------------------------------------------------
     // Types
@@ -993,7 +1034,16 @@ module.exports = grammar({
       ),
 
     match_type: $ =>
-      prec.left(seq($._infix_type_choice, "match", $._indented_type_cases)),
+      prec.left(
+        seq(
+          $._infix_type_choice,
+          "match",
+          choice(
+            seq($._indent, repeat1($.type_case_clause), $._outdent),
+            seq("{", repeat1($.type_case_clause), "}"),
+          ),
+        ),
+      ),
 
     type_case_clause: $ =>
       prec.left(
@@ -1175,6 +1225,12 @@ module.exports = grammar({
         $.field_expression,
         $.generic_function,
         $.call_expression,
+        alias($._dot_match_expression, $.match_expression),
+      ),
+
+    _single_lambda_param: $ =>
+      prec.right(
+        seq(optional("implicit"), $._identifier, optional(seq(":", $._type))),
       ),
 
     lambda_expression: $ =>
@@ -1183,14 +1239,30 @@ module.exports = grammar({
           optional(seq(field("type_parameters", $.type_parameters), "=>")),
           field(
             "parameters",
-            choice(
-              $.bindings,
-              seq(optional("implicit"), $._identifier),
-              $.wildcard,
-            ),
+            choice($.bindings, $.wildcard, $._single_lambda_param),
           ),
           choice("=>", "?=>"),
           $._indentable_expression,
+        ),
+      ),
+
+    /* Special-case lambda expression to handle lambdas in braces (in $.block), e.g.
+     * { (...) => val a = 1; val b = 2
+     *    3
+     * }
+     *
+     * It exists as a separate rule because grammar generation becomes unacceptably slow
+     * if we include $._block right into $.lambda_expression as a viable option for the lambda body.
+     */
+    _block_lambda_expression: $ =>
+      prec.right(
+        seq(
+          field(
+            "parameters",
+            choice($.bindings, $.wildcard, $._single_lambda_param),
+          ),
+          choice("=>", "?=>"),
+          $._block,
         ),
       ),
 
@@ -1228,12 +1300,28 @@ module.exports = grammar({
 
     /*
      *   MatchClause       ::=  'match' <<< CaseClauses >>>
+     *
+     *   Handles:
+     *     InfixExpr MatchClause
+     *     ‘inline’ InfixExpr MatchClause
+     *     SimpleExpr ‘.’ MatchClause
      */
     match_expression: $ =>
+      choice(
+        seq(
+          optional($.inline_modifier),
+          field("value", $.expression),
+          "match",
+          field("body", choice($.case_block, $.indented_cases)),
+        ),
+        $._dot_match_expression,
+      ),
+
+    _dot_match_expression: $ =>
       seq(
-        optional($.inline_modifier),
-        field("value", $.expression),
-        "match",
+        field("value", $._simple_expression),
+        ".",
+        token.immediate("match"),
         field("body", choice($.case_block, $.indented_cases)),
       ),
 
@@ -1283,10 +1371,10 @@ module.exports = grammar({
         seq("case", $._case_pattern, field("body", optional($._block))),
       ),
 
-    // This is created to capture guard from the right
+    // Dynamic precedence to win over lambda_expression in complex contexts
     _case_pattern: $ =>
-      prec.right(
-        10,
+      prec.dynamic(
+        1,
         seq(field("pattern", $._pattern), optional($.guard), "=>"),
       ),
 
