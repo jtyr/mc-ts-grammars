@@ -31,7 +31,9 @@ const PREC = {
   LOGICAL_OR: 4,
 };
 
-module.exports = grammar({
+const PREPROC_WS = token.immediate(/[\s\t]+/);
+
+export default grammar({
   name: "enforce",
 
   supertypes: $ => [
@@ -65,12 +67,12 @@ module.exports = grammar({
     $.comment_block,
     $.doc_line,
     $.doc_block,
-    $.include,
-    $.define,
-    $.ifdef,
-    $.ifndef,
-    $.else,
-    $.endif
+    $.preproc_include,
+    $.preproc_define,
+    $.preproc_ifdef,
+    $.preproc_ifndef,
+    $.preproc_else,
+    $.preproc_endif
   ],
 
   rules: {
@@ -83,14 +85,20 @@ module.exports = grammar({
       $.typedef,
     )),
 
-    include: $ => seq('#include', $.preproc_const),
-    define: $ => seq('#define', $.preproc_const),
-    ifdef: $ => seq('#ifdef', $.preproc_const),
-    ifndef: $ => seq('#ifndef', $.preproc_const),
-    else: _ => token('#else'),
-    endif: _ => token('#endif'),
+    preproc_include: $ => seq('#include', PREPROC_WS, $.preproc_const),
+    preproc_define: $ => seq('#define', PREPROC_WS, $.preproc_const),
+    preproc_ifdef: $ => seq('#ifdef', PREPROC_WS, $.preproc_const),
+    preproc_ifndef: $ => seq('#ifndef', PREPROC_WS, $.preproc_const),
+    preproc_else: _ => '#else',
+    preproc_endif: _ => '#endif',
 
-    preproc_const: _ => token.immediate(choice(/\s+[^\n#"]+/, /\s+"[^\n"]*"/)),
+    preproc_const: _ => token.immediate(choice(
+      // matches unquoted constant, 1 or more of anything but newlines, double quotes and pound
+      /[^\n#"]+/,
+
+      // matches quoted constant, 0 or more of anything but newlines
+      /"[^\n"]*"/
+    )),
 
     doc_line: _ => token(prec(PREC.DOC, seq(choice('//!', '//?'), /[^\n]*/))),
 
@@ -146,8 +154,15 @@ module.exports = grammar({
     return: $ => seq('return', optional($._expression), ';'),
 
     if: $ => prec.right(seq(
-      'if', '(', $._expression, ')', $.statement,
-      optional(seq('else', $.statement))
+      'if',
+      '(',
+      field("condition", $._expression),
+      ')',
+      field("consequence", $.statement),
+      optional(seq(
+        'else',
+        field("alternative", $.statement)
+      ))
     )),
 
     switch: $ => seq(
@@ -191,7 +206,7 @@ module.exports = grammar({
         $._expression,
         // NOTE: all statements are allowed except for `if` and `typedef`. Eventually filter them out
         $.statement,
-        $._assignment
+        alias($._assignment, $.assignment)
       ))),
       ')',
       field("body", $.statement),
@@ -363,6 +378,7 @@ module.exports = grammar({
       'external',
       'volatile',
       'owned',
+      'notnull',
       'event',
       'protected',
       'private',

@@ -1,7 +1,8 @@
 {
   "name": "tree-sitter-enforce",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Enforce script grammar for treesitter",
+  "type": "module",
   "repository": "github:simonvic/tree-sitter-enforce",
   "license": "MIT",
   "author": {

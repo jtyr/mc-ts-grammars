@@ -72,6 +72,17 @@ const trContent = ($, node) =>
 const aliasMany = (to, tokens) => tokens.map(t => alias(t, to))
 
 
+// Recovery-aware closers: use these instead of bare ')', ']', '}' so the
+// scanner can inject a synthetic close when a statement keyword appears
+// on the next line.  Defined as functions so every call-site shares the
+// same grammar node (no extra states).
+// NOTE: recoverBrace is only used in subscript rules (hash_element,
+// slice, keyval) — NOT in block or anonymous_hash_expression, where
+// block/hash ambiguity via shared _PERLY_BRACE_OPEN makes it unsafe.
+const recoverParen  = ($) => choice(')', alias($._RECOVER_PAREN_CLOSE, ')'))
+const recoverBracket = ($) => choice(']', alias($._RECOVER_BRACKET_CLOSE, ']'))
+const recoverBrace   = ($) => choice('}', alias($._RECOVER_BRACE_CLOSE, '}'))
+
 // little helper just to keep things DRY
 const subExtensions = () => repeat(choice('extended', 'async'))
 
@@ -151,8 +162,11 @@ module.exports = grammar({
     $._no_interp_whitespace_zw,
     /* zero-width high priority token */
     $._NONASSOC,
-    /* synthetic close paren for error recovery */
+    /* synthetic tokens for error recovery */
     $._RECOVER_PAREN_CLOSE,
+    $._RECOVER_BRACKET_CLOSE,
+    $._RECOVER_BRACE_CLOSE,
+    $._RECOVER_ARROW,
     /* error condition must always be last; we don't use this in the grammar */
     $._ERROR
   ],
@@ -429,20 +443,20 @@ module.exports = grammar({
     ),
     array_element_expression: $ => choice(
       // perly.y matches scalar '[' expr ']' here but that would yield a scalar var node
-      seq(field('array', $.container_variable), '[', field('index', $._expr), ']'),
-      prec.left(TERMPREC.ARROW, seq($._term, '->', '[', field('index', $._expr), ']')),
-      seq($.subscripted, '[', field('index', $._expr), ']'),
+      seq(field('array', $.container_variable), '[', field('index', $._expr), recoverBracket($)),
+      prec.left(TERMPREC.ARROW, seq($._term, '->', '[', field('index', $._expr), recoverBracket($))),
+      seq($.subscripted, '[', field('index', $._expr), recoverBracket($)),
     ),
     _hash_key: $ => choice($._brace_autoquoted, $._expr),
     hash_element_expression: $ => choice(
       // perly.y matches scalar '{' expr '}' here but that would yield a scalar var node
-      seq(field('hash', $.container_variable), '{', field('key', $._hash_key), '}'),
-      prec.left(TERMPREC.ARROW, seq($._term, '->', '{', field('key', $._hash_key), '}')),
-      seq($.subscripted, '{', field('key', $._hash_key), '}'),
+      seq(field('hash', $.container_variable), '{', field('key', $._hash_key), recoverBrace($)),
+      prec.left(TERMPREC.ARROW, seq($._term, '->', '{', field('key', $._hash_key), recoverBrace($))),
+      seq($.subscripted, '{', field('key', $._hash_key), recoverBrace($)),
     ),
     coderef_call_expression: $ => choice(
-      prec.left(TERMPREC.ARROW, seq($._term, '->', '(', optional(field('arguments', $._expr)), ')')),
-      seq($.subscripted, '(', optional(field('arguments', $._expr)), ')'),
+      prec.left(TERMPREC.ARROW, seq($._term, '->', '(', optional(field('arguments', $._expr)), recoverParen($))),
+      seq($.subscripted, '(', optional(field('arguments', $._expr)), recoverParen($)),
     ),
     anonymous_slice_expression: $ => choice(
       seq('(', optional(field('list', $._expr)), ')', '[', $._expr, ']'),
@@ -455,21 +469,21 @@ module.exports = grammar({
     ),
     slice_container_variable: $ => seq('@', $._var_indirob),
     slice_expression: $ => choice(
-      seq(field('array', $.slice_container_variable), '[', $._expr, ']'),
-      seq(field('hash', $.slice_container_variable), '{', $._hash_key, '}'),
+      seq(field('array', $.slice_container_variable), '[', $._expr, recoverBracket($)),
+      seq(field('hash', $.slice_container_variable), '{', $._hash_key, recoverBrace($)),
       prec.left(TERMPREC.ARROW,
-        seq(field('arrayref', $._term), '->', '@', '[', $._expr, ']')),
+        seq(field('arrayref', $._term), '->', '@', '[', $._expr, recoverBracket($))),
       prec.left(TERMPREC.ARROW,
-        seq(field('hashref', $._term), '->', '@', '{', $._hash_key, '}')),
+        seq(field('hashref', $._term), '->', '@', '{', $._hash_key, recoverBrace($))),
     ),
     keyval_container_variable: $ => seq($._HASH_PERCENT, $._var_indirob),
     keyval_expression: $ => choice(
-      seq(field('array', $.keyval_container_variable), '[', $._expr, ']'),
-      seq(field('hash', $.keyval_container_variable), '{', $._hash_key, '}'),
+      seq(field('array', $.keyval_container_variable), '[', $._expr, recoverBracket($)),
+      seq(field('hash', $.keyval_container_variable), '{', $._hash_key, recoverBrace($)),
       prec.left(TERMPREC.ARROW,
-        seq(field('arrayref', $._term), '->', '%', '[', $._expr, ']')),
+        seq(field('arrayref', $._term), '->', '%', '[', $._expr, recoverBracket($))),
       prec.left(TERMPREC.ARROW,
-        seq(field('hashref', $._term), '->', '%', '{', $._hash_key, '}')),
+        seq(field('hashref', $._term), '->', '%', '{', $._hash_key, recoverBrace($))),
     ),
 
     _term: $ => choice(
@@ -624,7 +638,7 @@ module.exports = grammar({
     refgen_expression: $ => prec.left(TERMPREC.UMINUS, seq('\\', choice(alias($.amper_sub, $.function), $._term))), // _REFGEN
 
     anonymous_array_expression: $ => seq(
-      '[', optional($._expr), ']'
+      '[', optional($._expr), recoverBracket($)
     ),
 
     // we use the precedence here to ensure that we turn map { q'thingy" => $_ } into a hashref
@@ -787,8 +801,8 @@ module.exports = grammar({
       seq(field('function', alias($.amper_sub, $.function))),
       // the usage of NONASSOC here is to make it that any parse of a paren after a func
       // automatically becomes a non-ambiguous function call
-      seq(field('function', $._unambiguous_function), '(', $._NONASSOC, optional(field('arguments', $._expr)), choice(')', $._RECOVER_PAREN_CLOSE)),
-      seq(field('function', $._unambiguous_function), '(', $._NONASSOC, $.indirect_object, field('arguments', $._expr), choice(')', $._RECOVER_PAREN_CLOSE)),
+      seq(field('function', $._unambiguous_function), '(', $._NONASSOC, optional(field('arguments', $._expr)), recoverParen($)),
+      seq(field('function', $._unambiguous_function), '(', $._NONASSOC, $.indirect_object, field('arguments', $._expr), recoverParen($)),
     ),
     _tricky_indirob_hashref: $ => seq($._PERLY_BRACE_OPEN, $._expr, $._PERLY_SEMICOLON, '}'),
     ambiguous_function_call_expression: $ =>
@@ -811,9 +825,9 @@ module.exports = grammar({
       '->',
       optional('&'),
       field('method', $.method),
-      optseq('(', optional(field('arguments', $._expr)), choice(')', $._RECOVER_PAREN_CLOSE))
+      optseq('(', optional(field('arguments', $._expr)), recoverParen($))
     )),
-    method: $ => choice($._bareword, $.scalar),
+    method: $ => choice($._bareword, $.scalar, $._RECOVER_ARROW),
 
     _variables: $ => choice(
       $.scalar,

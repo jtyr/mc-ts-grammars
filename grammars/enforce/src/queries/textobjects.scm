@@ -17,6 +17,9 @@
 (decl_method
   body: (_) @function.inner) @function.outer
 
+(decl_method
+  ";" @function.inner) @function.outer
+
 (for
   body: (_) @loop.inner) @loop.outer
 
@@ -53,4 +56,3 @@
   (_) @parameter.inner @parameter.outer
   .
   ","? @parameter.outer)
-

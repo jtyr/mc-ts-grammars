@@ -362,15 +362,31 @@ module.exports = grammar({
       $._newline
     ),
 
+    _multiline_lambda_signature: $ => seq(
+      '{',
+      optional($._newline),
+      $._multiline_parameters,
+      '}',
+      '->',
+      field('return_type', $.type),
+    ),
+
+    _lambda_signature: $ => choice(
+      seq(
+        field('parameters', $._parameters),
+        optional(
+          seq(
+            '->',
+            field('return_type', $.type),
+          ),
+        )
+      ),
+      $._multiline_lambda_signature
+    ),
+
     lambda_expr: $ => prec(PREC.call, seq(
       'lambda',
-      field('parameters', $._parameters),
-      optional(
-        seq(
-          '->',
-          field('return_type', $.type),
-        ),
-      ),
+      $._lambda_signature,
       '{',
       field('body', $._suite),
       '}',
@@ -541,6 +557,11 @@ module.exports = grammar({
     dotted_name: $ => prec.left(1, sep1($.identifier, choice('?.', '.',))),
 
     // Patterns
+
+    _multiline_parameters: $ => seq(
+      sep1($.parameter, seq(',', optional($._newline))),
+      optional(','),
+    ),
 
     _parameters: $ => seq(
       commaSep1($.parameter),
