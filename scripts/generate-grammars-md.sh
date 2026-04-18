@@ -91,7 +91,7 @@ lines.append(f'| Total entries | {len(grammars)} |')
 lines.append(f'| Enabled | {len(enabled)} |')
 lines.append(f'| Disabled | {len(disabled)} |')
 lines.append(f'| Unique languages | {len(unique_langs)} |')
-lines.append(f'| With release | {has_release} |')
+lines.append(f'| Releasable | {has_release} |')
 lines.append(f'| With highlights | {has_hl} |')
 lines.append(f'| Queries from [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | {nvim_queries} |')
 
