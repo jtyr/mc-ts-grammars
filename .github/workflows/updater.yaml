@@ -18,7 +18,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3
         with:
-          app-id: ${{ secrets.APP_ID }}
+          app-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -34,6 +34,10 @@ jobs:
         uses: ./.github/actions/fetch-grammar
         with:
           languages: ${{ steps.check.outputs.updated }}
+
+      - name: Regenerate GRAMMARS.md
+        if: steps.check.outputs.hasUpdates == 'true'
+        run: scripts/generate-grammars-md.sh
 
       - name: Create pull request
         id: create-pr
