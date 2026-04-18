@@ -28,12 +28,12 @@
 
 ; Preprocessor directives
 [
-  (include)
-  (define)
-  (ifdef)
-  (ifndef)
-  (else)
-  (endif)
+  "#include"
+  "#define"
+  "#ifdef"
+  "#ifndef"
+  (preproc_else)
+  (preproc_endif)
 ] @keyword.directive
 
 (preproc_const) @constant.macro
@@ -93,7 +93,12 @@
   "}"
 ] @punctuation.bracket
 
-; TODO: <> in decl_class
+(type_parameters
+  [
+    "<"
+    ">"
+  ] @punctuation.bracket)
+
 (types
   [
     "<"
