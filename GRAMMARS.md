@@ -501,6 +501,6 @@
 | Enabled | 412 |
 | Disabled | 78 |
 | Unique languages | 358 |
-| With release | 68 |
+| Releasable | 68 |
 | With highlights | 328 |
 | Queries from [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | 54 |
