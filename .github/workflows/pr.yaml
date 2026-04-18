@@ -136,7 +136,7 @@ jobs:
       pull-requests: write
     if: >-
       always() &&
-      github.event.pull_request.user.login == 'mc-ts-grammars-updater[bot]' &&
+      github.event.pull_request.user.login == 'jtyr-ts-grammars-updater[bot]' &&
       needs.lint.result == 'success' &&
       (needs.validate.result == 'success' || needs.validate.result == 'skipped')
     needs:

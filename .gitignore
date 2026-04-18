@@ -10,52 +10,44 @@ grammars/*/src/*
 !grammars/*/src/package.json
 !grammars/*/src/LICENSE*
 
-# --- First level: keep directories we need to descend into ---
-!grammars/*/src/src/
-!grammars/*/src/queries/
-!grammars/*/src/_parent/
-!grammars/*/src/grammar/
-!grammars/*/src/common/
+# --- Keep directories that may contain JS deps or C sources ---
+!grammars/*/src/*/
 
-# --- src/src/: C/C++ source and header files ---
-grammars/*/src/src/*
-!grammars/*/src/src/*.c
-!grammars/*/src/src/*.cc
-!grammars/*/src/src/*.h
-# Exclude language bindings and build placeholders
+# --- Second-level directories: ignore contents, whitelist needed files ---
+grammars/*/src/*/*
+
+# Keep C/C++ source and header files in any subdirectory (src/src/, etc.)
+!grammars/*/src/*/*.c
+!grammars/*/src/*/*.cc
+!grammars/*/src/*/*.h
+
+# Keep JS/JSON files for grammar.js dependencies (lib/, common/, grammar/, etc.)
+!grammars/*/src/*/*.js
+!grammars/*/src/*/*.json
+
+# Keep upstream query files and LICENSE in queries/
+!grammars/*/src/queries/*.scm
+!grammars/*/src/queries/LICENSE*
+
+# Descend one more level for subdirectories with C/H files
+!grammars/*/src/*/*/
+grammars/*/src/*/*/*
+!grammars/*/src/*/*/*.c
+!grammars/*/src/*/*/*.h
+!grammars/*/src/*/*/*.js
+
+# --- Exclude language bindings and build placeholders ---
 grammars/*/src/src/binding.c
 grammars/*/src/src/binding.cc
 grammars/*/src/src/dummy.c
-!grammars/*/src/src/*/
-grammars/*/src/src/*/*
-!grammars/*/src/src/*/*.c
-!grammars/*/src/src/*/*.h
 
-# --- src/src/: always ignore generated files ---
+# --- Always ignore generated files ---
 grammars/*/src/src/parser.c
 grammars/*/src/src/grammar.json
 grammars/*/src/src/node-types.json
 grammars/*/src/src/tree_sitter/
 
-# --- src/queries/: upstream .scm files and LICENSE ---
-grammars/*/src/queries/*
-!grammars/*/src/queries/*.scm
-!grammars/*/src/queries/LICENSE*
-
-# --- src/_parent/: JS/JSON for monorepo deps ---
-grammars/*/src/_parent/*
-!grammars/*/src/_parent/*.js
-!grammars/*/src/_parent/*.json
-!grammars/*/src/_parent/node_modules/
-
-# --- src/grammar/, src/common/: JS deps for generation ---
-grammars/*/src/grammar/*
-!grammars/*/src/grammar/*.js
-grammars/*/src/common/*
-!grammars/*/src/common/*.js
-
-# --- npm artifacts ---
-grammars/*/src/node_modules/
-grammars/*/src/package-lock.json
-grammars/*/src/_parent/node_modules/
-grammars/*/src/_parent/package-lock.json
+# --- Always ignore npm artifacts ---
+grammars/*/src/**/node_modules
+grammars/*/src/**/node_modules/**
+grammars/*/src/**/package-lock.json
