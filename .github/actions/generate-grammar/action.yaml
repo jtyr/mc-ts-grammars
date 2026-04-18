@@ -13,6 +13,10 @@ inputs:
     description: Prefix for the parser cache key (e.g. "pr-123" or "release")
     required: false
     default: default
+  clean:
+    description: Run generate.sh with --clean (isolated npm cache, forces fresh install per grammar)
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -54,5 +58,8 @@ runs:
         fi
         if [ "${{ inputs.cacheParsers }}" = "true" ]; then
           args="--cache-dir=.parser-cache $args"
+        fi
+        if [ "${{ inputs.clean }}" = "true" ]; then
+          args="--clean $args"
         fi
         $GITHUB_ACTION_PATH/scripts/generate.sh $args

@@ -20,15 +20,21 @@ REGISTRY="$REPO_ROOT/grammars.yaml"
 CACHE_DIR=""
 
 if [ $# -eq 0 ]; then
-    echo 'Usage: generate.sh [--all] [--cache-dir=DIR] <language> [<language> ...]'
+    echo 'Usage: generate.sh [--all] [--clean] [--cache-dir=DIR] <language> [<language> ...]'
     exit 1
 fi
+
+CLEAN=false
 
 # Parse options
 while [ $# -gt 0 ]; do
     case "$1" in
         --cache-dir=*)
             CACHE_DIR="${1#--cache-dir=}"
+            shift
+            ;;
+        --clean)
+            CLEAN=true
             shift
             ;;
         --all)
@@ -46,6 +52,14 @@ while [ $# -gt 0 ]; do
             ;;
     esac
 done
+
+# In --clean mode, isolate npm cache to a temp dir to simulate CI's fresh
+# environment. This catches missing dependencies that local npm cache would hide.
+if $CLEAN; then
+    NPM_TMP_CACHE=$(mktemp -d)
+    export npm_config_cache="$NPM_TMP_CACHE"
+    trap 'rm -rf "${NPM_TMP_CACHE:?}"' EXIT
+fi
 
 if ! command -v tree-sitter >/dev/null 2>&1; then
     echo 'ERROR: tree-sitter CLI not found'
@@ -118,6 +132,14 @@ store_cache() {
 try_local_generate() {
     local lang=$1
     local src_dir="$REPO_ROOT/grammars/$lang/src"
+
+    # In --clean mode, remove node_modules and any generated parser to force
+    # a fresh install/generate - simulates CI's clean environment.
+    if $CLEAN; then
+        rm -rf "$src_dir/node_modules" "$src_dir/_parent/node_modules" \
+               "$src_dir/src/parser.c" "$src_dir/src/grammar.json" \
+               "$src_dir/src/node-types.json" "$src_dir/src/tree_sitter"
+    fi
 
     # Install npm dependencies if package.json has them
     if [ -f "$src_dir/package.json" ] && \
