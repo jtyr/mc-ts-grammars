@@ -195,7 +195,7 @@
 | [idris2](https://github.com/gwerbin/tree-sitter-idris2/tree/a307cead536c1ba8143541a3df0a72a1f858efa4) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 13 |
 | [iex](https://github.com/elixir-lang/tree-sitter-iex/tree/39f20bb51f502e32058684e893c0c0b00bb2332c) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | 13 |
 | [ini](https://github.com/justinmk/tree-sitter-ini/tree/e4018b5176132b4f3c5d6e61cea383f42288d0f5) | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: | :x: | 15 |
-| [inko](https://github.com/inko-lang/tree-sitter-inko/tree/v0.6.0) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :white_check_mark: | 15 |
+| [inko](https://github.com/inko-lang/tree-sitter-inko/tree/v0.6.0) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 15 |
 | [ispc](https://github.com/tree-sitter-grammars/tree-sitter-ispc/tree/9b2f9aec2106b94b4e099fe75e73ebd8ae707c04) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | 14 |
 | ~~[jack](https://github.com/nverno/tree-sitter-jack/tree/1a617413ea92c237bff4cbe7fa67eb3bf4425596)~~ | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
 | ~~[jakt](https://github.com/demizer/tree-sitter-jakt/tree/e67a5de093cab9eb79be721bf39bc9115193534a)~~ | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | 14 |
@@ -502,5 +502,5 @@
 | Disabled | 78 |
 | Unique languages | 358 |
 | With release | 68 |
-| With highlights | 329 |
+| With highlights | 328 |
 | Queries from [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | 54 |

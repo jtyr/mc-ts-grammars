@@ -1953,9 +1953,6 @@
   ref: v0.6.0
   metadata:
     hasParser: true
-    hasHighlights: true
-    hasLocals: true
-    hasTags: true
     gitTags: true
     abi: 15
 
