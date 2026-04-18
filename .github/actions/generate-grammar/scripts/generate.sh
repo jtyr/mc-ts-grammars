@@ -205,13 +205,16 @@ generate_one() {
     echo "  GENERATE $lang"
 
     # Try local first, fall back to upstream clone
-    if try_local_generate "$lang" >/dev/null 2>&1 && \
-       [ -f "$src_dir/src/parser.c" ]; then
+    local local_output
+    local_output=$(try_local_generate "$lang" 2>&1)
+    if [ -f "$src_dir/src/parser.c" ]; then
         store_cache "$lang"
         return 0
     fi
 
-    echo "    local generation failed, trying upstream clone..."
+    echo "    local generation failed:"
+    echo "$local_output" | sed 's/^/      /' | head -20
+    echo "    trying upstream clone..."
     if upstream_generate "$lang"; then
         store_cache "$lang"
         return 0
