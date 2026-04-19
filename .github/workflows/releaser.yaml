@@ -120,7 +120,9 @@ jobs:
           path: release/mc-ts-grammars.sha256
 
   validate:
-    needs: build
+    needs:
+      - check-changes
+      - build
     if: always() && needs.build.result == 'success'
     runs-on: ubuntu-latest
     steps:
