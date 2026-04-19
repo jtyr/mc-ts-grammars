@@ -186,7 +186,7 @@ comment=brown
 keyword=yellow
 string=green
 function.special=brightred
-variable.builtin=brightred;blue
+variable.builtin=brightred/blue
 ```
 
 The `[grammar]` section holds file matching rules, display name, and
@@ -196,9 +196,10 @@ languages like `gotmpl`).
 
 The `[colors]` section maps tree-sitter capture names to MC terminal
 colors (16 ANSI colors plus MC extras `brown` and `lightgray`). Each
-value is `<fg>` or `<fg>;<bg>` - the semicolon separates foreground
-from background, and is only needed when setting a background color.
-Use `-` in either position to fall back to the default color.
+value is `<fg>` or `<fg>/<bg>` - the slash separates foreground from
+background, matching MC's legacy syntax format, and is only needed
+when setting a background color. Use `-` in either position to fall
+back to the default color.
 
 ## Testing highlighting quality
 
