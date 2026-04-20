@@ -15,6 +15,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install bats
+        uses: sgerrand/setup-bats-action@172528ec85b1fbf82d01d3f75317e22b9a13533f # v1.0.1
+
       - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
         env:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

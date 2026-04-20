@@ -46,11 +46,17 @@ EOF
 }
 
 # Create a fake release bundle tarball in the test cache.
-# Usage: create_fake_bundle <version> <lang1> [<lang2> ...]
+#
+# Each entry is either a plain grammar name ("python") or a variation entry
+# in the form "name@parent" (e.g. "terraform@hcl"). Variations get a
+# config.ini with `symbol=<parent>` and no shared library, simulating the
+# release layout produced by package.sh.
+#
+# Usage: create_fake_bundle <version> <entry1> [<entry2> ...]
 create_fake_bundle() {
     local version=$1
     shift
-    local langs=("$@")
+    local entries=("$@")
 
     local platform
     case "$(uname -s)" in
@@ -67,20 +73,45 @@ create_fake_bundle() {
     local staging="$TEST_PREFIX/staging/$tarball_name"
     mkdir -p "$staging"
 
-    for lang in "${langs[@]}"; do
+    for entry in "${entries[@]}"; do
+        local lang parent
+        if [[ "$entry" == *"@"* ]]; then
+            lang="${entry%@*}"
+            parent="${entry#*@}"
+        else
+            lang="$entry"
+            parent=""
+        fi
+
         mkdir -p "$staging/$lang"
 
-        cat > "$staging/$lang/config.ini" << EOF
+        if [ -n "$parent" ]; then
+            cat > "$staging/$lang/config.ini" << EOF
+[grammar]
+extensions=.${lang}
+display-name=Test $lang
+symbol=$parent
+
+[colors]
+keyword=yellow
+EOF
+        else
+            cat > "$staging/$lang/config.ini" << EOF
 [grammar]
 extensions=.${lang}
 display-name=Test $lang
 
 [colors]
-keyword=yellow;
+keyword=yellow
 EOF
+        fi
 
         echo '(identifier) @keyword' > "$staging/$lang/highlights.scm"
-        touch "$staging/$lang/$lang.so"
+
+        # Variations do not ship a library; they reuse the parent's.
+        if [ -z "$parent" ]; then
+            touch "$staging/$lang/$lang.so"
+        fi
     done
 
     echo "$version" > "$staging/VERSION"

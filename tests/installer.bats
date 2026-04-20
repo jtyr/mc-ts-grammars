@@ -97,9 +97,9 @@ load test_helper/common
 }
 
 @test "install --all installs all grammars from bundle" {
-    create_fake_bundle "2026.04.17" alpha beta gamma
+    create_fake_bundle "2026.04.14" alpha beta gamma
 
-    run "$INSTALLER" install --all --version 2026.04.17 --dir "$TEST_PREFIX"
+    run "$INSTALLER" install --all --version 2026.04.14 --dir "$TEST_PREFIX"
     [ "$status" -eq 0 ]
     [[ "$output" == *"alpha"* ]]
     [[ "$output" == *"beta"* ]]
@@ -114,9 +114,9 @@ load test_helper/common
 }
 
 @test "install specific grammars from bundle" {
-    create_fake_bundle "2026.04.17" alpha beta gamma
+    create_fake_bundle "2026.04.14" alpha beta gamma
 
-    run "$INSTALLER" install alpha gamma --version 2026.04.17 --dir "$TEST_PREFIX"
+    run "$INSTALLER" install alpha gamma --version 2026.04.14 --dir "$TEST_PREFIX"
     [ "$status" -eq 0 ]
     [[ "$output" == *"alpha"* ]]
     [[ "$output" == *"gamma"* ]]
@@ -127,28 +127,78 @@ load test_helper/common
 }
 
 @test "install skips grammars not in bundle" {
-    create_fake_bundle "2026.04.17" alpha
+    create_fake_bundle "2026.04.14" alpha
 
-    run "$INSTALLER" install alpha nonexistent --version 2026.04.17 --dir "$TEST_PREFIX"
+    run "$INSTALLER" install alpha nonexistent --version 2026.04.14 --dir "$TEST_PREFIX"
     [ "$status" -eq 0 ]
     [[ "$output" == *"alpha"* ]]
     [[ "$output" == *"SKIP"*"nonexistent"* ]]
 }
 
-@test "install writes correct version file" {
-    create_fake_bundle "2026.04.17" alpha
+@test "install variation auto-pulls its provider from bundle" {
+    create_fake_bundle "2026.04.14" alpha "zeta@alpha"
 
-    run "$INSTALLER" install alpha --version 2026.04.17 --dir "$TEST_PREFIX"
+    run "$INSTALLER" install zeta --version 2026.04.14 --dir "$TEST_PREFIX"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"DEPS"*"zeta"*"alpha"* ]]
+
+    # Variation installed as its own dir with config + queries, no .so
+    [ -f "$TEST_PREFIX/share/mc/syntax-ts/zeta/config.ini" ]
+    [ -f "$TEST_PREFIX/share/mc/syntax-ts/zeta/highlights.scm" ]
+    [ ! -f "$TEST_PREFIX/lib/mc/ts-grammars/zeta.so" ]
+
+    # Parent pulled in automatically
+    [ -f "$TEST_PREFIX/share/mc/syntax-ts/alpha/config.ini" ]
+    [ -f "$TEST_PREFIX/lib/mc/ts-grammars/alpha.so" ]
+}
+
+@test "install variation when provider already installed" {
+    create_fake_bundle "2026.04.14" alpha
+    run "$INSTALLER" install alpha --version 2026.04.14 --dir "$TEST_PREFIX"
+    [ "$status" -eq 0 ]
+
+    # Second bundle contains only the variation
+    create_fake_bundle "2026.04.15" "zeta@alpha"
+    run "$INSTALLER" install zeta --version 2026.04.15 --dir "$TEST_PREFIX"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"DEPS"*"zeta"*"alpha"*"already installed"* ]]
+    [ -f "$TEST_PREFIX/share/mc/syntax-ts/zeta/config.ini" ]
+}
+
+@test "install variation fails when provider is unavailable" {
+    create_fake_bundle "2026.04.14" "zeta@alpha"
+
+    run "$INSTALLER" install zeta --version 2026.04.14 --dir "$TEST_PREFIX"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"ERROR"*"zeta"*"alpha"* ]]
+    [ ! -d "$TEST_PREFIX/share/mc/syntax-ts/zeta" ]
+}
+
+@test "install --all pulls variations from bundle" {
+    create_fake_bundle "2026.04.14" alpha "zeta@alpha"
+
+    run "$INSTALLER" install --all --version 2026.04.14 --dir "$TEST_PREFIX"
+    [ "$status" -eq 0 ]
+    [ -f "$TEST_PREFIX/share/mc/syntax-ts/alpha/config.ini" ]
+    [ -f "$TEST_PREFIX/share/mc/syntax-ts/zeta/config.ini" ]
+    [ -f "$TEST_PREFIX/lib/mc/ts-grammars/alpha.so" ]
+    [ ! -f "$TEST_PREFIX/lib/mc/ts-grammars/zeta.so" ]
+}
+
+@test "install writes correct version file" {
+    create_fake_bundle "2026.04.14" alpha
+
+    run "$INSTALLER" install alpha --version 2026.04.14 --dir "$TEST_PREFIX"
     [ "$status" -eq 0 ]
 
     version=$(cat "$TEST_PREFIX/share/mc/syntax-ts/alpha/.version")
-    [ "$version" = "2026.04.17" ]
+    [ "$version" = "2026.04.14" ]
 }
 
 @test "install uses cached bundle" {
-    create_fake_bundle "2026.04.17" alpha
+    create_fake_bundle "2026.04.14" alpha
 
-    run "$INSTALLER" install alpha --version 2026.04.17 --dir "$TEST_PREFIX"
+    run "$INSTALLER" install alpha --version 2026.04.14 --dir "$TEST_PREFIX"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Using cached bundle"* ]]
 }
@@ -245,11 +295,11 @@ load test_helper/common
 # ============================================================
 
 @test "available lists grammars in bundle" {
-    create_fake_bundle "2026.04.17" alpha beta gamma
+    create_fake_bundle "2026.04.14" alpha beta gamma
 
-    run "$INSTALLER" available --version 2026.04.17
+    run "$INSTALLER" available --version 2026.04.14
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Release: 2026.04.17"* ]]
+    [[ "$output" == *"Release: 2026.04.14"* ]]
     [[ "$output" == *"alpha"* ]]
     [[ "$output" == *"beta"* ]]
     [[ "$output" == *"gamma"* ]]
@@ -257,9 +307,9 @@ load test_helper/common
 
 @test "available shows installed status" {
     create_installed_grammar alpha "$HOME/.local" "2026.04.14"
-    create_fake_bundle "2026.04.17" alpha beta
+    create_fake_bundle "2026.04.14" alpha beta
 
-    run "$INSTALLER" available --version 2026.04.17
+    run "$INSTALLER" available --version 2026.04.14
     [ "$status" -eq 0 ]
     # alpha should show installed version
     [[ "$output" == *"alpha"*"2026.04.14"* ]]

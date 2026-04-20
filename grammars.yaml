@@ -1715,6 +1715,8 @@
     hasParser: true
     hasScanner: true
     abi: 15
+  variations:
+    - terraform
 
 - language: hcl
   url: https://github.com/nvim-treesitter/nvim-treesitter

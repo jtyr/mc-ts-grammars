@@ -226,15 +226,11 @@ cmd_build() {
 
     echo "Building ${#grammars[@]} grammar(s)..."
 
-    # Check for compiler and tree-sitter CLI
+    # Check for compiler. tree-sitter CLI is only required when a grammar
+    # needs parser.c generated from grammar.js - checked lazily below.
     local cc="${CC:-gcc}"
     if ! command -v "$cc" >/dev/null 2>&1; then
         echo "ERROR: C compiler not found: $cc" >&2
-        exit 1
-    fi
-
-    if ! command -v tree-sitter >/dev/null 2>&1; then
-        echo 'ERROR: tree-sitter CLI not found' >&2
         exit 1
     fi
 
@@ -266,6 +262,11 @@ cmd_build() {
 
         # Generate parser if needed
         if [ ! -f "$parser_dir/parser.c" ] && [ -f "$src_dir/grammar.js" ]; then
+            if ! command -v tree-sitter >/dev/null 2>&1; then
+                echo "  ERROR    $lang: parser.c missing and tree-sitter CLI not found" >&2
+                failed=$((failed + 1))
+                continue
+            fi
             echo "  GENERATE $lang"
             if [ -f "$src_dir/package.json" ] && \
                grep -q '"dependencies"' "$src_dir/package.json" 2>/dev/null; then
@@ -968,6 +969,47 @@ install_from_tarball() {
         done
     fi
 
+    # Resolve symbol dependencies. A grammar whose config.ini declares
+    # `symbol=X` where X differs from the grammar's own name needs the
+    # grammar named X at runtime (the variation pattern, e.g. terraform
+    # uses hcl's parser via symbol=hcl). Auto-add the dependency when it
+    # is present in the bundle. Fail when it is neither in the bundle
+    # nor already installed.
+    local resolved=()
+    local -A dep_seen=()
+    local i=0
+    local pending=("${grammars[@]}")
+    while [ $i -lt ${#pending[@]} ]; do
+        local lang="${pending[$i]}"
+        i=$((i + 1))
+        [ -n "${dep_seen[$lang]:-}" ] && continue
+        dep_seen["$lang"]=1
+        resolved+=("$lang")
+
+        local src="$extracted/$lang"
+        [ -d "$src" ] || continue
+        [ -f "$src/config.ini" ] || continue
+
+        local dep
+        dep=$(sed -n '/^\[grammar\]/,/^\[/{s/^[[:space:]]*symbol[[:space:]]*=[[:space:]]*//p}' "$src/config.ini" | head -1)
+        [ -z "$dep" ] && continue
+        [ "$dep" = "$lang" ] && continue
+        [ -n "${dep_seen[$dep]:-}" ] && continue
+
+        if [ -d "$extracted/$dep" ] && [ -f "$extracted/$dep/$dep.$ext" ]; then
+            echo "  DEPS     $lang requires $dep; adding to install list"
+            pending+=("$dep")
+        elif [ -f "$lib_dir/$dep.$ext" ]; then
+            echo "  DEPS     $lang requires $dep; already installed"
+            dep_seen["$dep"]=1
+        else
+            echo "ERROR: $lang requires grammar '$dep' but no such grammar is available (not in bundle, not installed)" >&2
+            rm -rf "${tmpdir:?}"
+            exit 1
+        fi
+    done
+    grammars=("${resolved[@]}")
+
     local installed=0
 
     for lang in "${grammars[@]}"; do
@@ -985,9 +1027,11 @@ install_from_tarball() {
         cp "$src/injections.scm" "$dest/" 2>/dev/null || true
         echo "$version" > "$dest/.version"
 
-        # Install shared library
-        mkdir -p "$lib_dir"
-        cp "$src/$lang.$ext" "$lib_dir/$lang.$ext" 2>/dev/null || true
+        # Install shared library (variations have no .so of their own)
+        if [ -f "$src/$lang.$ext" ]; then
+            mkdir -p "$lib_dir"
+            cp "$src/$lang.$ext" "$lib_dir/$lang.$ext"
+        fi
 
         echo "  $lang ($version)"
         installed=$((installed + 1))

@@ -172,6 +172,7 @@
 | [haskell_persistent](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: | :x: | N/A |
 | [haxe](https://github.com/vantreeseba/tree-sitter-haxe/tree/a55f3e2cf1e4449200fd089a80d3af642bcf5f94) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | 14 |
 | [hcl](https://github.com/tree-sitter-grammars/tree-sitter-hcl/tree/64ad62785d442eb4d45df3a1764962dafd5bc98b) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | 15 |
+| terraform (via hcl) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
 | [hcl](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | N/A |
 | [heex](https://github.com/connorlay/tree-sitter-heex/tree/5842537f734d7c12685bf27d6005313e3e5a47a0) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | 15 |
 | [helma](https://github.com/kevinkeckeis/tree-sitter-helma/tree/db3ede53e9a29631fbf0835483caecef9b39d1fd) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
@@ -502,5 +503,6 @@
 | Disabled | 78 |
 | Unique languages | 358 |
 | Releasable | 68 |
+| Variations | 1 |
 | With highlights | 328 |
 | Queries from [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | 54 |

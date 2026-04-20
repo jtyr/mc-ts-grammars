@@ -43,6 +43,7 @@ N = ':x:'
 def check(val):
     return Y if val else N
 
+total_variations = 0
 for g in grammars:
     m = g.get('metadata', {})
     enabled = g.get('enabled', True)
@@ -74,6 +75,22 @@ for g in grammars:
     )
     lines.append(row)
 
+    # Variations share the parent's binary but have their own config and
+    # query files. They are rendered as their own rows with the parent
+    # language as the ABI column hint (e.g. 'via hcl').
+    for variation in g.get('variations', []) or []:
+        total_variations += 1
+        vrow = (
+            f'| {variation} (via {lang}) '
+            f'| {check(release)} '
+            f'| {check(m.get(\"hasParser\"))} '
+            f'| {check(m.get(\"hasScanner\"))} '
+            f'| {Y} '
+            f'| {N} | {N} | {N} | {N} | {N} '
+            f'| {abi} |'
+        )
+        lines.append(vrow)
+
 enabled = [g for g in grammars if g.get('enabled', True)]
 disabled = [g for g in grammars if not g.get('enabled', True)]
 unique_langs = set(g['language'] for g in enabled)
@@ -83,6 +100,7 @@ nvim_queries = sum(1 for g in enabled
     and 'nvim-treesitter' in g.get('url', ''))
 has_hl = len(set(g['language'] for g in enabled if g.get('metadata', {}).get('hasHighlights')))
 has_release = len(set(g['language'] for g in enabled if g.get('release')))
+released_variations = sum(len(g.get('variations', []) or []) for g in enabled if g.get('release'))
 
 lines.append('')
 lines.append('| Metric | Count |')
@@ -92,6 +110,7 @@ lines.append(f'| Enabled | {len(enabled)} |')
 lines.append(f'| Disabled | {len(disabled)} |')
 lines.append(f'| Unique languages | {len(unique_langs)} |')
 lines.append(f'| Releasable | {has_release} |')
+lines.append(f'| Variations | {released_variations} |')
 lines.append(f'| With highlights | {has_hl} |')
 lines.append(f'| Queries from [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | {nvim_queries} |')
 
