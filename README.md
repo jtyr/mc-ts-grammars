@@ -82,7 +82,7 @@ mc-ts-grammar install --all
 mc-ts-grammar install python bash yaml
 
 # Install a specific version
-mc-ts-grammar install python --version 2026.04.14
+mc-ts-grammar install python --version 2026.04.19
 
 # Install to a custom prefix
 mc-ts-grammar install python --dir /usr/local
@@ -127,8 +127,8 @@ mc-ts-grammar list
 
 ```text
 Grammar         Version        Scope
-python          2026.04.17     local
-bash            2026.04.17     system
+python          2026.04.19     local
+bash            2026.04.19     system
 ```
 
 Use `--verbose` to show installation paths.
@@ -143,7 +143,7 @@ already installed.
 mc-ts-grammar available
 
 # Show a specific release
-mc-ts-grammar available --version 2026.04.17
+mc-ts-grammar available --version 2026.04.19
 ```
 
 ### uninstall

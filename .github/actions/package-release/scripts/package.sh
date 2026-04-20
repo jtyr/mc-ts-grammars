@@ -15,6 +15,9 @@
 #       highlights.scm
 #       injections.scm  (if available)
 #       LICENSE          (if available)
+#     terraform/        (variation of hcl: shares hcl.so via config.ini symbol=hcl)
+#       config.ini
+#       highlights.scm
 #     VERSION
 #
 # Platforms: x86_64-linux, aarch64-linux, aarch64-macos, x86_64-macos, x86_64-windows
@@ -70,6 +73,39 @@ get_release_grammars() {
     ' "$REGISTRY"
 }
 
+# Get variation names listed under a given parent grammar's variations field.
+# Only variations of entries that are themselves released are returned.
+get_variations() {
+    local parent=$1
+    awk -v target="$parent" '
+        /^- language:/ {
+            in_target = ($3 == target)
+            in_variations = 0
+            release = 0
+        }
+        in_target && /^  release: true/ { release = 1 }
+        in_target && /^  variations:/ { in_variations = 1; next }
+        in_variations && /^    - / {
+            if (release) print $2
+            next
+        }
+        in_variations && /^  [^ ]/ { in_variations = 0 }
+        in_variations && /^- language:/ { in_variations = 0 }
+    ' "$REGISTRY"
+}
+
+# Copy config.ini + query files + LICENSE from a grammar directory into staging.
+# Used for both primary grammars and variations.
+copy_grammar_files() {
+    local src_dir=$1
+    local dest_dir=$2
+
+    [ -f "$src_dir/config.ini" ] && cp "$src_dir/config.ini" "$dest_dir/"
+    [ -f "$src_dir/highlights.scm" ] && cp "$src_dir/highlights.scm" "$dest_dir/"
+    [ -f "$src_dir/injections.scm" ] && cp "$src_dir/injections.scm" "$dest_dir/"
+    [ -f "$src_dir/src/LICENSE" ] && cp "$src_dir/src/LICENSE" "$dest_dir/"
+}
+
 tarball_name="mc-ts-grammars-$TAG-$PLATFORM"
 staging="$OUTPUT_DIR/$tarball_name"
 
@@ -92,28 +128,22 @@ for lang in $(get_release_grammars); do
 
     mkdir -p "$staging/$lang"
     cp "$lib_file" "$staging/$lang/$lang.$SO_EXT"
-
-    # Copy config.ini
-    if [ -f "$grammar_dir/config.ini" ]; then
-        cp "$grammar_dir/config.ini" "$staging/$lang/"
-    fi
-
-    # Copy highlights.scm
-    if [ -f "$grammar_dir/highlights.scm" ]; then
-        cp "$grammar_dir/highlights.scm" "$staging/$lang/"
-    fi
-
-    # Copy injections.scm if present
-    if [ -f "$grammar_dir/injections.scm" ]; then
-        cp "$grammar_dir/injections.scm" "$staging/$lang/"
-    fi
-
-    # Copy LICENSE if present
-    if [ -f "$grammar_dir/src/LICENSE" ]; then
-        cp "$grammar_dir/src/LICENSE" "$staging/$lang/"
-    fi
-
+    copy_grammar_files "$grammar_dir" "$staging/$lang"
     included=$((included + 1))
+
+    # Variations share the parent's .so but have their own config/queries.
+    # They are flattened to the top level of the tarball so MC's discovery
+    # scan finds them without any variations/ awareness on the MC side.
+    for variation in $(get_variations "$lang"); do
+        variation_dir="$grammar_dir/variations/$variation"
+        if [ ! -d "$variation_dir" ]; then
+            echo "WARNING: $lang: variation '$variation' listed in grammars.yaml but grammars/$lang/variations/$variation/ does not exist"
+            continue
+        fi
+        mkdir -p "$staging/$variation"
+        copy_grammar_files "$variation_dir" "$staging/$variation"
+        included=$((included + 1))
+    done
 done
 
 if [ $included -eq 0 ]; then

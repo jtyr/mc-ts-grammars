@@ -5,19 +5,23 @@ repos:
       - id: end-of-file-fixer
         name: Fix end of files
         exclude: ^grammars/[^/]+/src/
+
       - id: trailing-whitespace
         name: Trim trailing whitespace
         args:
           - --markdown-linebreak-ext=md,markdown
         exclude: ^grammars/[^/]+/src/
+
       - id: mixed-line-ending
         name: Check mixed line endings
         args:
           - --fix=lf
         exclude: ^grammars/[^/]+/src/
+
       - id: check-json
         name: Check JSON files
         exclude: ^grammars/[^/]+/src/
+
       - id: check-yaml
         name: Check YAML files
         args:
@@ -57,6 +61,14 @@ repos:
         language: script
         files: ^(grammars\.yaml|grammars/[^/]+/src/(grammar\.js|src/(parser\.c|scanner\.(c|cc))|queries/[^/]+\.scm))$
         pass_filenames: false
+
+      - id: check-variations
+        name: Warn about orphaned grammar variation directories
+        entry: scripts/check-variations.sh
+        language: script
+        files: ^(grammars\.yaml|grammars/[^/]+/variations/)
+        pass_filenames: false
+
       - id: grammars-md
         name: Check GRAMMARS.md is up to date
         entry: scripts/generate-grammars-md.sh
@@ -64,4 +76,11 @@ repos:
           - --autofix
         language: script
         files: ^grammars\.yaml$
+        pass_filenames: false
+
+      - id: installer-bats
+        name: Run installer bats tests
+        entry: bats tests/installer.bats
+        language: system
+        files: ^(scripts/mc-ts-grammar|tests/)
         pass_filenames: false
