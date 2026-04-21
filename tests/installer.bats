@@ -135,6 +135,38 @@ load test_helper/common
     [[ "$output" == *"SKIP"*"nonexistent"* ]]
 }
 
+@test "install grammar with symbol= function override does not resolve as dep" {
+    # A grammar with its own .so where symbol= is just the uppercase
+    # function name inside that .so (e.g. cobol has symbol=COBOL). Must
+    # not be treated as a cross-grammar dependency.
+    create_fake_bundle "2026.04.20" alpha
+    local bundle
+    bundle=$(find "$XDG_CACHE_HOME/mc-ts-grammar" -name "*.tar.gz")
+    local staging
+    staging=$(mktemp -d)
+    tar xzf "$bundle" -C "$staging"
+    local top
+    top=$(find "$staging" -mindepth 1 -maxdepth 1 -type d)
+    cat > "$top/alpha/config.ini" << 'EOF'
+[grammar]
+extensions=.alpha
+display-name=Test alpha
+symbol=ALPHA
+
+[colors]
+keyword=yellow
+EOF
+    (cd "$staging" && tar czf "$bundle" "$(basename "$top")")
+    rm -rf "$staging"
+
+    run "$INSTALLER" install alpha --version 2026.04.20 --dir "$TEST_PREFIX"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"ERROR"* ]]
+    [[ "$output" != *"DEPS"* ]]
+    [ -f "$TEST_PREFIX/share/mc/syntax-ts/alpha/config.ini" ]
+    [ -f "$TEST_PREFIX/lib/mc/ts-grammars/alpha.so" ]
+}
+
 @test "install variation auto-pulls its provider from bundle" {
     create_fake_bundle "2026.04.14" alpha "zeta@alpha"
 
