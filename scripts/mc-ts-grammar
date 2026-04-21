@@ -969,12 +969,17 @@ install_from_tarball() {
         done
     fi
 
-    # Resolve symbol dependencies. A grammar whose config.ini declares
-    # `symbol=X` where X differs from the grammar's own name needs the
-    # grammar named X at runtime (the variation pattern, e.g. terraform
-    # uses hcl's parser via symbol=hcl). Auto-add the dependency when it
-    # is present in the bundle. Fail when it is neither in the bundle
-    # nor already installed.
+    # Resolve symbol dependencies. The `symbol=X` field in a grammar's
+    # config.ini means one of two things:
+    #   1. If the grammar ships its own library, X is a function-name
+    #      override inside that library (e.g. cobol has symbol=COBOL
+    #      because the function is tree_sitter_COBOL). No cross-grammar
+    #      dependency.
+    #   2. If the grammar has no library of its own, it is a variation
+    #      that reuses grammar X's library at runtime (e.g. terraform
+    #      has symbol=hcl). Grammar X must be installed.
+    # Auto-add variation dependencies from the bundle and fail when a
+    # required grammar is neither in the bundle nor already installed.
     local resolved=()
     local -A dep_seen=()
     local i=0
@@ -990,12 +995,16 @@ install_from_tarball() {
         [ -d "$src" ] || continue
         [ -f "$src/config.ini" ] || continue
 
+        # Case 1: grammar has its own library, symbol= is a local override.
+        [ -f "$src/$lang.$ext" ] && continue
+
         local dep
         dep=$(sed -n '/^\[grammar\]/,/^\[/{s/^[[:space:]]*symbol[[:space:]]*=[[:space:]]*//p}' "$src/config.ini" | head -1)
         [ -z "$dep" ] && continue
         [ "$dep" = "$lang" ] && continue
         [ -n "${dep_seen[$dep]:-}" ] && continue
 
+        # Case 2: grammar is a variation; symbol= names the provider grammar.
         if [ -d "$extracted/$dep" ] && [ -f "$extracted/$dep/$dep.$ext" ]; then
             echo "  DEPS     $lang requires $dep; adding to install list"
             pending+=("$dep")
