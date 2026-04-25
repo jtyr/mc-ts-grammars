@@ -5,8 +5,7 @@ module.exports = grammar({
 
   externals: ($) => [
     $._newline,
-    $.comment,
-    $._newline_and_comment,
+    $.block_comment,
     '"',
     "`",
     $._template_chars,
@@ -18,7 +17,12 @@ module.exports = grammar({
     $._decorator_inline,
   ],
 
-  extras: ($) => [$.comment, $.decorator, /[\s\uFEFF\u2060\u200B\u00A0]/],
+  extras: ($) => [
+    $.block_comment,
+    $.line_comment,
+    $.decorator,
+    /[\s\uFEFF\u2060\u200B\u00A0]/,
+  ],
 
   supertypes: ($) => [
     $.statement,
@@ -45,8 +49,12 @@ module.exports = grammar({
       "binary_times",
       "binary_pow",
       "binary_plus",
+      "binary_shift",
       "binary_compare",
       "binary_relation",
+      "binary_bitand",
+      "binary_bitxor",
+      "binary_bitor",
       "binary_and",
       "binary_or",
       "coercion_relation",
@@ -109,6 +117,8 @@ module.exports = grammar({
     [$._type, $._non_function_inline_type],
     [$._module_structure, $.parenthesized_module_expression],
     [$._record_type_member, $._object_type_member],
+    [$._non_function_inline_type, $.generic_type],
+    [$._type_identifier, $.polymorphic_type]
   ],
 
   rules: {
@@ -117,8 +127,9 @@ module.exports = grammar({
 
     _statement: ($) => seq($.statement, repeat1($._statement_delimeter)),
 
-    _statement_delimeter: ($) =>
-      choice(";", $._newline, alias($._newline_and_comment, $.comment)),
+    _statement_delimeter: ($) => choice(";", $._newline),
+
+    line_comment: ($) => token(seq("//", /[^\n]*/)),
 
     _one_or_more_statements: ($) =>
       seq(repeat($._statement), $.statement, optional($._statement_delimeter)),
@@ -201,7 +212,7 @@ module.exports = grammar({
             ),
             optional($.module_type_annotation),
           ),
-          $.call_expression,
+          seq($.call_expression, optional($.module_type_annotation)),
           $.extension_expression,
         ),
         ")",
@@ -250,19 +261,24 @@ module.exports = grammar({
         field("name", choice($.type_identifier, $.type_identifier_path)),
         optional($.type_parameters),
         optional(
-          seq(
-            optional(seq("=", $._non_function_inline_type)),
-            optional(
-              seq(
-                choice("=", "+="),
-                optional("private"),
-                field("body", $._type),
+          choice(
+            seq("=", $.extensible_type),
+            seq(
+              optional(seq("=", $._non_function_inline_type)),
+              optional(
+                seq(
+                  choice("=", "+="),
+                  optional("private"),
+                  field("body", $._type),
+                ),
               ),
+              repeat($.type_constraint),
             ),
-            repeat($.type_constraint),
           ),
         ),
       ),
+
+    extensible_type: (_$) => "..",
 
     type_parameters: ($) =>
       seq(
@@ -305,7 +321,9 @@ module.exports = grammar({
     tuple_type: ($) => prec.dynamic(-1, seq("(", commaSep1t($._type), ")")),
 
     variant_type: ($) =>
-      prec.left(seq(optional("|"), barSep1($.variant_declaration))),
+      prec.left(
+        seq(optional("|"), barSep1(choice($.variant_declaration, $.variant_type_spread))),
+      ),
 
     variant_declaration: ($) =>
       prec.right(
@@ -315,6 +333,8 @@ module.exports = grammar({
           optional($.type_annotation),
         ),
       ),
+
+    variant_type_spread: ($) => seq("...", $._type_identifier),
 
     variant_parameters: ($) => seq("(", commaSep1t($._type), ")"),
 
@@ -538,7 +558,7 @@ module.exports = grammar({
 
     tuple: ($) => seq("(", commaSep2t($.expression), ")"),
 
-    array: ($) => seq("[", commaSept($.expression), "]"),
+    array: ($) => seq("[", commaSept(choice($.spread_element, $.expression)), "]"),
 
     list: ($) =>
       seq($._list_constructor, "{", optional(commaSep1t($._list_element)), "}"),
@@ -576,7 +596,7 @@ module.exports = grammar({
         -1,
         seq(
           "|",
-          field("pattern", $._pattern),
+          field("pattern", choice($.variant_spread_pattern, $._pattern)),
           optional($.guard),
           "=>",
           field(
@@ -589,6 +609,11 @@ module.exports = grammar({
     guard: ($) => seq(choice("if", "when"), $.expression),
 
     polyvar_type_pattern: ($) => seq("#", "...", $._type_identifier),
+
+    variant_type_pattern: ($) => seq("...", $._type_identifier),
+
+    variant_spread_pattern: ($) =>
+      seq($.variant_type_pattern, optional($.as_aliasing)),
 
     try_expression: ($) =>
       seq("try", $.expression, "catch", "{", repeat($.switch_match), "}"),
@@ -709,7 +734,7 @@ module.exports = grammar({
         -1,
         seq(
           choice(
-            $.value_identifier,
+            seq(optional("?"), $.value_identifier),
             $._literal_pattern,
             $._destructuring_pattern,
             $.polyvar_type_pattern,
@@ -985,8 +1010,11 @@ module.exports = grammar({
     binary_expression: ($) =>
       choice(
         ...[
+          ["&&&", "binary_bitand"],
           ["&&", "binary_and"],
+          ["|||", "binary_bitor"],
           ["||", "binary_or"],
+          ["^^^", "binary_bitxor"],
           ["++", "binary_plus"],
           ["+", "binary_plus"],
           ["+.", "binary_plus"],
@@ -994,9 +1022,13 @@ module.exports = grammar({
           ["-.", "binary_plus"],
           ["*", "binary_times"],
           ["*.", "binary_times"],
+          ["%", "binary_times"],
           ["**", "binary_pow"],
           ["/", "binary_times"],
           ["/.", "binary_times"],
+          ["<<", "binary_shift"],
+          [">>>", "binary_shift"],
+          [">>", "binary_shift"],
           ["<", "binary_relation"],
           ["<=", "binary_relation"],
           ["==", "binary_relation"],
@@ -1023,13 +1055,14 @@ module.exports = grammar({
         seq(
           field("left", $.expression),
           field("operator", ":>"),
-          field("right", $._type_identifier),
+          field("right", $._type),
         ),
       ),
 
     unary_expression: ($) =>
       choice(
         ...[
+          ["~~~", "unary_not"],
           ["!", "unary_not"],
           ["-", "unary_not"],
           ["-.", "unary_not"],
@@ -1085,7 +1118,7 @@ module.exports = grammar({
       ),
 
     _type_identifier: ($) =>
-      choice($.type_identifier, $.type_identifier_path, ".."),
+      choice($.type_identifier, $.type_identifier_path),
 
     type_identifier_path: ($) =>
       seq($.module_primary_expression, ".", $.type_identifier),

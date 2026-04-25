@@ -58,7 +58,7 @@
 - language: apex
   name: soql
   url: https://github.com/aheber/tree-sitter-sfapex
-  ref: 3597575a429766dd7ecce9f5bb97f6fec4419d5d
+  ref: 77632e159469f563a19e2f70c60148779abf821a
   path: soql
   metadata:
     hasParser: true
@@ -333,7 +333,7 @@
 - language: c
   url: https://github.com/tree-sitter/tree-sitter-c
   branch: master
-  ref: ae19b676b13bdcc13b7665397e6d9b14975473dd
+  ref: b780e47fc780ddc8da13afa35a3f4ed5c157823d
   release: true
   metadata:
     hasParser: true
@@ -448,7 +448,7 @@
 
 - language: cfengine
   url: https://github.com/olehermanse/tree-sitter-cfengine
-  ref: 04607817eea5b0f05b35de517a2453e8e23c971b
+  ref: 8babd72a3125a655f7c7d72bb80f450b3aa9a568
   metadata:
     hasParser: true
     abi: 15
@@ -1054,7 +1054,7 @@
 
 - language: erlang
   url: https://github.com/WhatsApp/tree-sitter-erlang
-  ref: 520202ffbedfdb68048073af6040d102c9290dce
+  ref: 2ace143dea47c872b334660956742dda4efa4ea3
   release: true
   metadata:
     hasParser: true
@@ -1207,7 +1207,7 @@
 - language: fortran
   url: https://github.com/stadelmanma/tree-sitter-fortran
   branch: master
-  ref: 2597b9a3f551b7c1e4668ca14bbe1502cb8414dc
+  ref: 7edacd2b21aa80057d9725384a1304a1c758e0f8
   release: true
   metadata:
     hasParser: true
@@ -1215,6 +1215,8 @@
     hasHighlights: true
     hasFolds: true
     hasIndents: true
+    hasLocals: true
+    hasTags: true
     abi: 15
 
 - language: fsh
@@ -1342,7 +1344,7 @@
 
 - language: git_rebase
   url: https://github.com/the-mikedavis/tree-sitter-git-rebase
-  ref: 760ba8e34e7a68294ffb9c495e1388e030366188
+  ref: 3db1f61fb928433381253bc5159c40f7d10c57b1
   metadata:
     hasParser: true
     hasHighlights: true
@@ -1374,7 +1376,7 @@
 
 - language: gleam
   url: https://github.com/gleam-lang/tree-sitter-gleam
-  ref: 0153f8b875cd02034b553f3a84a2f5ee67a80364
+  ref: 1627dc5101e63bf19717c540a56df5ef20b1fc7a
   metadata:
     hasParser: true
     hasScanner: true
@@ -1696,7 +1698,7 @@
 
 - language: haxe
   url: https://github.com/vantreeseba/tree-sitter-haxe
-  ref: a55f3e2cf1e4449200fd089a80d3af642bcf5f94
+  ref: f2a2394d9ca7a6099f78d8b0d178530e7c9a8e26
   metadata:
     hasParser: true
     hasScanner: true
@@ -1900,7 +1902,7 @@
 - language: idl
   url: https://github.com/cathaysia/tree-sitter-idl
   branch: master
-  ref: 123e30e19f5e414741c52cd1cf5c3a25431de060
+  ref: 62689e614328c5586b54a1bb27bde9ace80e8c2c
   release: true
   metadata:
     hasParser: true
@@ -2482,7 +2484,7 @@
 
 - language: magik
   url: https://github.com/krn-robin/tree-sitter-magik
-  ref: 3b6c0d033221b107c8b04bf789621e76c904ed55
+  ref: acb6fc12853eda8d60411fa87e863f2db904ba08
   metadata:
     hasParser: true
     hasHighlights: true
@@ -2625,7 +2627,7 @@
 - language: mlir
   url: https://github.com/artagnon/tree-sitter-mlir
   branch: master
-  ref: 38b1ab3044ec62c0c24c90de4bf5fb947561f390
+  ref: 63dc64a6317c11443749141b2313e24bdba8acad
   metadata:
     hasParser: true
     hasHighlights: true
@@ -2863,7 +2865,7 @@
 - language: ocaml
   url: https://github.com/tree-sitter/tree-sitter-ocaml
   branch: master
-  ref: 2c40c1346a712cb517eda3195224ff4a95c8cc10
+  ref: ec8dcc936f90007b86cb1a1683d09c0bf6d8183b
   release: true
   path: grammars/ocaml
   metadata:
@@ -3058,7 +3060,7 @@
 
 - language: pkl
   url: https://github.com/apple/tree-sitter-pkl
-  ref: f5beed1da8e5fc856a1a11e29a929d0b7cdcfe3c
+  ref: e800f06f06d461c4207867b44e76b0da1687a250
   metadata:
     hasParser: true
     hasScanner: true
@@ -3417,7 +3419,7 @@
 
 - language: razor
   url: https://github.com/tris203/tree-sitter-razor
-  ref: a57265cc454a060292f869d6b30c10f797adb971
+  ref: a3399c26610817c6d32c7643793caf3729cfb6d2
   metadata:
     hasParser: true
     hasScanner: true
@@ -3500,7 +3502,7 @@
 
 - language: rescript
   url: https://github.com/rescript-lang/tree-sitter-rescript
-  ref: 43c2f1f35024918d415dc933d4cc534d6419fedf
+  ref: cafdc4ffad57bcdb8cd49f19a640d0fdfc929387
   metadata:
     hasParser: true
     hasScanner: true
@@ -3969,7 +3971,7 @@
 
 - language: ssh_client_config
   url: https://github.com/metio/tree-sitter-ssh-client-config
-  ref: 9081753475109375ee1865c46cb52ec3e693ac2c
+  ref: 448e1a24ed8c7af6e5bb73148ecacd979dc80538
   metadata:
     hasParser: true
     hasHighlights: true
@@ -4984,7 +4986,7 @@
 
 - language: zeek
   url: https://github.com/zeek/tree-sitter-zeek
-  ref: v0.2.12
+  ref: v0.2.13
   metadata:
     hasParser: true
     hasHighlights: true
@@ -5040,7 +5042,7 @@
 
 - language: ziggy
   url: https://github.com/kristoff-it/ziggy
-  ref: 852053b09a5f8f5b79ca880f86ea77fc7da3dd6c
+  ref: 6760f0f4c4fc1ae01428bc6d87109e32124eeeb7
   path: tree-sitter-ziggy
   metadata:
     hasParser: true
