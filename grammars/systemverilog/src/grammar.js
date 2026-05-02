@@ -296,13 +296,13 @@ const rules = {
   ),
 
   module_declaration: $ => prec('module_declaration', choice(
-    seq( // ANSI
+    seq( // nonANSI
       $.module_nonansi_header,
       optional($.timeunits_declaration),
       repeat(alias($._module_item, $.module_item)),
       enclosing('endmodule', $.module_identifier)
     ),
-    seq( // nonANSI
+    seq( // ANSI
       $.module_ansi_header,
       optional($.timeunits_declaration),
       repeat($._non_port_module_item),
@@ -3843,6 +3843,7 @@ const rules = {
     $._constant_unary_expression,
     $._constant_binary_expression,
     $._constant_conditional_expression,
+    alias($._inside_constant_expression, $.inside_expression), // Out of LRM
     $.text_macro_usage, // Out of LRM
   ),
 
@@ -3898,6 +3899,11 @@ const rules = {
 
   inside_expression: $ => prec.left(PREC.RELATIONAL, seq(
     $.expression, 'inside', '{', $.range_list, '}'
+  )),
+
+  // Out of LRM: supports inside_expression on if_generate_construct
+  _inside_constant_expression: $ => prec.left(PREC.RELATIONAL, seq(
+    $.constant_expression, 'inside', '{', $.range_list, '}'
   )),
 
   mintypmax_expression: $ => prec('mintypmax_expression', seq(
@@ -4543,8 +4549,10 @@ const rules = {
     token.immediate(/\r?\n/),
   ),
 
+  // LRM 22.5.1: If formal arguments are used, the list of formal argument names shall be enclosed in
+  //             parentheses immediately following the name of the macro.
   text_macro_name: $ => seq(
-    $.text_macro_identifier,
+    $._text_macro_identifier,
     optseq(token.immediate('('), $.list_of_formal_arguments, ')')
   ),
 
@@ -4555,25 +4563,73 @@ const rules = {
     optseq('=', optchoice($.default_text, $.string_literal, $.tf_call, $.text_macro_usage, $.simple_identifier)),
   )),
 
-  text_macro_identifier: $ => reserved('macros', $._identifier),
+  _text_macro_identifier: $ => reserved('macros', alias(token(prec(-1, /[a-zA-Z_][a-zA-Z0-9_$]*/)), $.simple_identifier)),
 
+  // LRM 22.5.1: White space shall be allowed between the text macro name and the left parenthesis in the macro usage.
+  //             If the text macro name is an escaped identifier, then white space shall be required.
   text_macro_usage: $ => prec.right(seq(
     '`',
-    $.text_macro_identifier,
+    reserved('macros', alias(token.immediate(prec(-1, /[a-zA-Z_][a-zA-Z0-9_$]*/)), $.simple_identifier)),
     reserved('macros', optseq('(', optional($.list_of_actual_arguments), ')'))
   )),
 
   list_of_actual_arguments: $ => list_of_args($, 'list_of_arguments', $.actual_argument),
 
+  // Out of LRM: Workaround to support keywords as macro arguments:
+  //
+  // - Same keywords as in module.reserved.globals but excluding directives and the ones
+  //   already present in $.param_expression, $.constraint_block, and $constraint_block_item:
+  //
+  // 'bit', 'byte', 'chandle', 'event', 'int', 'integer', 'logic', 'longint', 'null', 'real',
+  // 'realtime', 'reg', 'shortint', 'shortreal', 'string', 'super', 'this', 'time'
+  _macro_arg_keywords: $ => choice(
+    'accept_on', 'alias', 'always', 'always_comb', 'always_ff', 'always_latch',
+    'and', 'assert', 'assign', 'assume', 'automatic', 'before', 'begin', 'bind',
+    'bins', 'binsof', 'break', 'buf', 'bufif0', 'bufif1', 'case', 'casex',
+    'casez', 'cell', 'checker', 'class', 'clocking', 'cmos', 'config', 'const',
+    'constraint', 'context', 'continue', 'cover', 'covergroup', 'coverpoint',
+    'cross', 'deassign', 'default', 'defparam', 'design', 'disable', 'dist',
+    'do', 'edge', 'else', 'end', 'endcase', 'endchecker', 'endclass',
+    'endclocking', 'endconfig', 'endfunction', 'endgenerate', 'endgroup',
+    'endinterface', 'endmodule', 'endpackage', 'endprimitive', 'endprogram',
+    'endproperty', 'endsequence', 'endspecify', 'endtable', 'endtask', 'enum',
+    'eventually', 'expect', 'export', 'extends', 'extern', 'final',
+    'first_match', 'for', 'force', 'foreach', 'forever', 'fork', 'forkjoin',
+    'function', 'generate', 'genvar', 'global', 'highz0', 'highz1', 'if', 'iff',
+    'ifnone', 'ignore_bins', 'illegal_bins', 'implements', 'implies', 'import',
+    'incdir', 'include', 'initial', 'inout', 'input', 'inside', 'instance',
+    'interconnect', 'interface', 'intersect', 'join', 'join_any', 'join_none',
+    'large', 'let', 'liblist', 'library', 'local', 'localparam', 'macromodule',
+    'matches', 'medium', 'modport', 'module', 'nand', 'negedge', 'nettype',
+    'new', 'nexttime', 'nmos', 'nor', 'noshowcancelled', 'not', 'notif0',
+    'notif1', 'or', 'output', 'package', 'packed', 'parameter', 'pmos',
+    'posedge', 'primitive', 'priority', 'program', 'property', 'protected',
+    'pull0', 'pull1', 'pulldown', 'pullup', 'pulsestyle_ondetect',
+    'pulsestyle_onevent', 'pure', 'rand', 'randc', 'randcase', 'randsequence',
+    'rcmos', 'ref', 'reject_on', 'release', 'repeat', 'restrict', 'return',
+    'rnmos', 'rpmos', 'rtran', 'rtranif0', 'rtranif1', 's_always',
+    's_eventually', 's_nexttime', 's_until', 's_until_with', 'scalared',
+    'sequence', 'showcancelled', 'signed', 'small', 'soft', 'solve', 'specify',
+    'specparam', 'static', 'strong', 'strong0', 'strong1', 'struct', 'supply0',
+    'supply1', 'sync_accept_on', 'sync_reject_on', 'table', 'tagged', 'task',
+    'throughout', 'timeprecision', 'timeunit', 'tran', 'tranif0', 'tranif1',
+    'tri', 'tri0', 'tri1', 'triand', 'trior', 'trireg', 'type', 'typedef',
+    'union', 'unique', 'unique0', 'unsigned', 'until', 'until_with', 'untyped',
+    'use', 'uwire', 'var', 'vectored', 'virtual', 'void', 'wait', 'wait_order',
+    'wand', 'weak', 'weak0', 'weak1', 'while', 'wildcard', 'wire', 'with',
+    'within', 'wor', 'xnor', 'xor'
+  ),
+
   actual_argument: $ => choice(
-    // Out of LRM, needed to support parameterized data types and constraints as macro args (common in the UVM)
+    // Out of LRM, needed to support parameterized data types, constraints and keywords as macro args (common in the UVM)
     $.param_expression, // e.g: `uvm_component_utils_param
     $.constraint_block, // e.g: `uvm_do_with
     repseq1($.constraint_block_item, optional(';')),
+    $._macro_arg_keywords,
     ';'
   ),
 
-  undefine_compiler_directive: $ => seq('`undef', $.text_macro_identifier),
+  undefine_compiler_directive: $ => seq('`undef', $._text_macro_identifier),
 
   undefineall_compiler_directive: $ => '`undefineall',
 
@@ -4593,12 +4649,12 @@ const rules = {
   ),
 
   ifdef_condition: $ => choice(
-    $.text_macro_identifier,
+    $._text_macro_identifier,
     seq('(', $.ifdef_macro_expression, ')')
   ),
 
   ifdef_macro_expression: $ => choice(
-    $.text_macro_identifier,
+    $._text_macro_identifier,
     binary_expr($, BINARY_MACRO_OP_TABLE, $.ifdef_macro_expression),
     unary_expr($, '!', $.ifdef_macro_expression),
     paren_expr($.ifdef_macro_expression),
@@ -4774,6 +4830,7 @@ module.exports = grammar({
 // ** Inline
   inline: $ => [
     $.snippets,
+    $._macro_arg_keywords,
 
     $.var_data_type,
     $.elaboration_severity_system_task,
@@ -4870,7 +4927,7 @@ module.exports = grammar({
     $.input_identifier,
     $.output_identifier,
     // $.edge_identifier, // Don't inline
-    $.text_macro_identifier,
+    // $._text_macro_identifier, // De-inline to support keywords in macros
 
     // Specify expressions
     $.t_path_delay_expression,
@@ -5271,12 +5328,12 @@ module.exports = grammar({
     ['program_declaration', '_non_port_program_item'],
 
 
-    // That constuct in a genvar corresponds to the initialization
+    // Treat 'for' snippets as statement instead of loop_generate_construct
     //
     // 'for'  '('  _identifier  •  '='  …
     // 1:  'for'  '('  (genvar_initialization  _identifier  •  '='  constant_expression)  (precedence: 'genvar_initialization')
     // 2:  'for'  '('  (hierarchical_identifier  _identifier)  •  '='  …                  (precedence: 'hierarchical_identifier')
-    ['genvar_initialization', 'hierarchical_identifier'],
+    ['hierarchical_identifier', 'genvar_initialization'],
 
 
     // This is illegal synax, so choose any

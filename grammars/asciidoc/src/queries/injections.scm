@@ -25,7 +25,7 @@
     (listing_block_body) @injection.content
     (listing_block_end_marker)))
   (#gsub! @injection.language "^[^,]*,%s*(%w+).*" "%1")
-  (#lua-match? @injection.language "^[^,]*,%s*%w+"))
+  (#match? @injection.language "^[^,]*,%s*%w+"))
 
 ((section_block
   (element_attr
@@ -49,7 +49,7 @@
   (paragraph) @injection.content)
   (#set! injection.include-children)
   (#gsub! @injection.language "^[^,]*,%s*(%w+)" "%1")
-  (#lua-match? @injection.language "^[^,]*,%s*%w+"))
+  (#match? @injection.language "^[^,]*,%s*%w+"))
 
 ((section_block
   (element_attr
@@ -61,7 +61,7 @@
     (listing_block_body) @injection.content
     (listing_block_end_marker)))
   (#gsub! @injection.language "^[^,]*,%s*(%w+)" "%1")
-  (#lua-match? @injection.language "latex"))
+  (#match? @injection.language "latex"))
 
 (section_block
   (element_attr

@@ -1,6 +1,6 @@
 /// <reference types="tree-sitter-cli/dsl" />
 
-module.exports = grammar({
+export default grammar({
   name: "rescript",
 
   externals: ($) => [
@@ -89,8 +89,6 @@ module.exports = grammar({
     [$.list, $.list_pattern],
     [$.array, $.array_pattern],
     [$.dict, $.dict_pattern],
-    [$.type_declaration],
-    [$.let_declaration],
     [$.variant_identifier, $.module_identifier],
     [$.variant, $.variant_pattern],
     [$.variant_arguments, $._variant_pattern_parameters],
@@ -100,6 +98,7 @@ module.exports = grammar({
     [$._record_pun_field, $._record_single_pun_field],
     [$._record_field_name, $.record_pattern],
     [$._statement, $._one_or_more_statements],
+    [$._statement, $._switch_body],
     [$._inline_type, $.function_type_parameters],
     [$.primary_expression, $.parameter, $._pattern],
     [$.parameter, $._pattern],
@@ -118,7 +117,7 @@ module.exports = grammar({
     [$._module_structure, $.parenthesized_module_expression],
     [$._record_type_member, $._object_type_member],
     [$._non_function_inline_type, $.generic_type],
-    [$._type_identifier, $.polymorphic_type]
+    [$._type_identifier, $.polymorphic_type],
   ],
 
   rules: {
@@ -133,6 +132,12 @@ module.exports = grammar({
 
     _one_or_more_statements: ($) =>
       seq(repeat($._statement), $.statement, optional($._statement_delimeter)),
+
+    // Like _one_or_more_statements but without a trailing delimiter.
+    // Used as switch_match / try-catch bodies so that trailing NEWLINEs
+    // (including those emitted between consecutive block comments) are
+    // absorbed by the enclosing switch/try rule instead of being orphaned.
+    _switch_body: ($) => seq(repeat($._statement), $.statement),
 
     statement: ($) =>
       choice(
@@ -253,7 +258,7 @@ module.exports = grammar({
         optional("export"),
         "type",
         optional("rec"),
-        sep1(seq(repeat($._newline), "and"), $.type_binding),
+        sep1("and", $.type_binding),
       ),
 
     type_binding: ($) =>
@@ -322,7 +327,10 @@ module.exports = grammar({
 
     variant_type: ($) =>
       prec.left(
-        seq(optional("|"), barSep1(choice($.variant_declaration, $.variant_type_spread))),
+        seq(
+          optional("|"),
+          barSep1(choice($.variant_declaration, $.variant_type_spread)),
+        ),
       ),
 
     variant_declaration: ($) =>
@@ -415,11 +423,7 @@ module.exports = grammar({
       ),
 
     let_declaration: ($) =>
-      seq(
-        choice("export", "let"),
-        optional("rec"),
-        sep1(seq(repeat($._newline), "and"), $.let_binding),
-      ),
+      seq(choice("export", "let"), optional("rec"), sep1("and", $.let_binding)),
 
     let_binding: ($) =>
       seq(
@@ -558,7 +562,8 @@ module.exports = grammar({
 
     tuple: ($) => seq("(", commaSep2t($.expression), ")"),
 
-    array: ($) => seq("[", commaSept(choice($.spread_element, $.expression)), "]"),
+    array: ($) =>
+      seq("[", commaSept(choice($.spread_element, $.expression)), "]"),
 
     list: ($) =>
       seq($._list_constructor, "{", optional(commaSep1t($._list_element)), "}"),
@@ -589,7 +594,13 @@ module.exports = grammar({
     else_clause: ($) => seq("else", $.block),
 
     switch_expression: ($) =>
-      seq("switch", $.expression, "{", repeat($.switch_match), "}"),
+      seq(
+        "switch",
+        $.expression,
+        "{",
+        repeat(seq($.switch_match, repeat($._statement_delimeter))),
+        "}",
+      ),
 
     switch_match: ($) =>
       prec.dynamic(
@@ -599,10 +610,7 @@ module.exports = grammar({
           field("pattern", choice($.variant_spread_pattern, $._pattern)),
           optional($.guard),
           "=>",
-          field(
-            "body",
-            alias($._one_or_more_statements, $.sequence_expression),
-          ),
+          field("body", alias($._switch_body, $.sequence_expression)),
         ),
       ),
 
@@ -616,7 +624,14 @@ module.exports = grammar({
       seq($.variant_type_pattern, optional($.as_aliasing)),
 
     try_expression: ($) =>
-      seq("try", $.expression, "catch", "{", repeat($.switch_match), "}"),
+      seq(
+        "try",
+        $.expression,
+        "catch",
+        "{",
+        repeat(seq($.switch_match, repeat($._statement_delimeter))),
+        "}",
+      ),
 
     as_aliasing: ($) =>
       prec.left(seq("as", $._pattern, optional($.type_annotation))),
@@ -1023,7 +1038,7 @@ module.exports = grammar({
           ["*", "binary_times"],
           ["*.", "binary_times"],
           ["%", "binary_times"],
-          ["**", "binary_pow"],
+          ["**", "binary_pow", "right"],
           ["/", "binary_times"],
           ["/.", "binary_times"],
           ["<<", "binary_shift"],
@@ -1037,8 +1052,8 @@ module.exports = grammar({
           ["!==", "binary_relation"],
           [">=", "binary_relation"],
           [">", "binary_relation"],
-        ].map(([operator, precedence]) =>
-          prec.left(
+        ].map(([operator, precedence, associativity]) =>
+          (associativity === "right" ? prec.right : prec.left)(
             precedence,
             seq(
               field("left", $.expression),
@@ -1088,7 +1103,7 @@ module.exports = grammar({
     _extension_expression_payload: ($) =>
       seq(
         "(",
-        $._one_or_more_statements,
+        choice($._one_or_more_statements, $.type_annotation),
         // explicit newline here because it won’t be reported otherwise by the scanner
         // because we’re in parens
         optional($._newline),
@@ -1117,8 +1132,7 @@ module.exports = grammar({
         ),
       ),
 
-    _type_identifier: ($) =>
-      choice($.type_identifier, $.type_identifier_path),
+    _type_identifier: ($) => choice($.type_identifier, $.type_identifier_path),
 
     type_identifier_path: ($) =>
       seq($.module_primary_expression, ".", $.type_identifier),
@@ -1409,10 +1423,6 @@ function commaSep1t(rule) {
 
 function commaSep2t(rule) {
   return seq(commaSep2(rule), optional(","));
-}
-
-function commaSep(rule) {
-  return optional(commaSep1(rule));
 }
 
 function commaSept(rule) {

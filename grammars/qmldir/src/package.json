@@ -1,6 +1,6 @@
 {
   "name": "tree-sitter-qmldir",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Qmldir grammar for tree-sitter",
   "main": "bindings/node",
   "keywords": [
@@ -21,10 +21,13 @@
     "nan": "^2.16.0"
   },
   "devDependencies": {
-    "eslint": "^8.35.0",
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.2.1",
     "eslint-config-google": "^0.14.0",
-    "prettier": "^2.7.1",
-    "tree-sitter-cli": "^0.20.6"
+    "globals": "^17.5.0",
+    "prettier": "^3.8.3",
+    "tree-sitter-cli": "^0.26.8"
   },
   "repository": "https://github.com/Decodetalkers/tree-sitter-qmldir",
   "scripts": {

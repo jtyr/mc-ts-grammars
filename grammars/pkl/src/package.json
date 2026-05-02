@@ -25,8 +25,8 @@
     "node-gyp-build": "^4.8.4"
   },
   "devDependencies": {
-    "tree-sitter-cli": "^0.25.10",
-    "typescript": "^5.9.3"
+    "tree-sitter-cli": "^0.26.8",
+    "typescript": "^6.0.3"
   },
   "peerDependencies": {
     "tree-sitter": "^0.25.0"
@@ -38,7 +38,7 @@
   },
   "scripts": {
     "build": "tree-sitter generate && node-gyp-build",
-    "generate": "tree-sitter generate --no-bindings",
+    "generate": "tree-sitter generate",
     "test": "tree-sitter test",
     "getVersion": "node -p \"require('./package.json').version\""
   },

@@ -75,63 +75,27 @@ static void scan_whitespace(TSLexer *lexer, bool skip) {
   }
 }
 
-// Tries to skip a comment (line or block) starting at the current position.
-// Returns true if a comment was consumed. All characters are skipped
-// (advance with skip=true) so they are not included in any token.
-static bool skip_comment(TSLexer *lexer) {
+// Tries to skip a line comment (//) starting at the current position.
+// Returns true if a line comment was consumed. Block comments are intentionally
+// NOT handled here: they are external tokens that must be left for the
+// BLOCK_COMMENT scanner handler.
+static bool skip_line_comment(TSLexer *lexer) {
   if (lexer->lookahead != '/') return false;
-  skip(lexer);
-  switch (lexer->lookahead) {
-    case '/':
-      // Single-line comment
-      while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
-        skip(lexer);
-      }
-      return true;
-
-    case '*':
-      // Multi-line block comment (may be nested)
-      // Rewind conceptually: we already skipped the leading '/', now handle '/*'.
-      // We advance past '*' and the body.
-      skip(lexer);
-      {
-        int level = 1;
-        while (level > 0 && !lexer->eof(lexer)) {
-          switch (lexer->lookahead) {
-            case '/':
-              skip(lexer);
-              if (lexer->lookahead == '*') {
-                ++level;
-                skip(lexer);
-              }
-              break;
-            case '*':
-              skip(lexer);
-              if (lexer->lookahead == '/') {
-                --level;
-                skip(lexer);
-              }
-              break;
-            default:
-              skip(lexer);
-          }
-        }
-      }
-      return true;
-
-    default:
-      // Not a comment after `/` — bail out.
-      return false;
+  skip(lexer);  // advance past first '/'
+  if (lexer->lookahead != '/') return false;  // not a line comment
+  while (lexer->lookahead != '\n' && !lexer->eof(lexer)) {
+    skip(lexer);
   }
+  return true;
 }
 
-// Skip whitespace and comments (line and block), all as skip=true.
-// Used for peek-ahead only: none of the consumed characters will be part
-// of any emitted token.
-static void skip_whitespace_and_comments(TSLexer *lexer) {
+// Skip whitespace and line comments only, all as skip=true.
+// Used for NEWLINE peek-ahead: block comments are external tokens and must
+// not be consumed here, otherwise the BLOCK_COMMENT handler never fires.
+static void skip_whitespace_and_line_comments(TSLexer *lexer) {
   while (!lexer->eof(lexer)) {
     scan_whitespace(lexer, true);
-    if (!skip_comment(lexer)) break;
+    if (!skip_line_comment(lexer)) break;
   }
 }
 
@@ -194,9 +158,11 @@ bool tree_sitter_rescript_external_scanner_scan(
     lexer->advance(lexer, true);
     lexer->mark_end(lexer);
 
-    // Peek past whitespace and any comments to determine whether the next
+    // Peek past whitespace and line comments to determine whether the next
     // meaningful character continues the current statement.
-    skip_whitespace_and_comments(lexer);
+    // Block comments are NOT skipped here: they are external tokens and must
+    // be left for the BLOCK_COMMENT handler in a subsequent scanner call.
+    skip_whitespace_and_line_comments(lexer);
 
     bool in_multiline_statement = false;
     if (lexer->lookahead == '-') {
@@ -221,8 +187,11 @@ bool tree_sitter_rescript_external_scanner_scan(
       if (lexer->lookahead == 'n') {
         advance(lexer);
         if (lexer->lookahead == 'd') {
-          // Ignore new lines before `and` keyword (recursive definition)
-          in_multiline_statement = true;
+          advance(lexer);
+          if (is_whitespace(lexer->lookahead)) {
+            // Ignore new lines before `and` keyword (recursive definition)
+            in_multiline_statement = true;
+          }
         }
       }
     } else if (lexer->lookahead == 'e') {
