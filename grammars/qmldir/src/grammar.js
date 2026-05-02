@@ -6,9 +6,9 @@
  * @see {@link https://doc.qt.io/qt-6/qtqml-modules-qmldir.html|official documentation}
  */
 
-/* eslint-disable arrow-parens */
-/* eslint-disable camelcase */
-/* eslint-disable-next-line spaced-comment */
+
+
+
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
 
@@ -51,6 +51,6 @@ module.exports = grammar({
 
     float: _ => /[0-9]*\.[0-9]+/,
 
-    comment: _ => token(seq('#', /[^\n]+/g)),
+    comment: _ => token(seq('#', /[^\n]+/)),
   },
 });

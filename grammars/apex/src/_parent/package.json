@@ -1,6 +1,6 @@
 {
   "name": "tree-sitter-sfapex",
-  "version": "2.4.1",
+  "version": "3.0.0",
   "description": "A tree-sitter grammer for Salesforce's Apex, SOQL, and SOSL",
   "homepage": "https://github.com/aheber/tree-sitter-sfapex",
   "bugs": {
@@ -15,7 +15,7 @@
     "url": "https://github.com/aheber/tree-sitter-sfapex.git"
   },
   "dependencies": {
-    "node-addon-api": "^7.1.0",
+    "node-addon-api": "^8.7.0",
     "node-gyp-build": "^4.8.0"
   },
   "peerDependencies": {
@@ -28,8 +28,8 @@
   },
   "devDependencies": {
     "prebuildify": "^6.0.1",
-    "tree-sitter-cli": "^0.24.0",
-    "web-tree-sitter": "^0.24.0"
+    "tree-sitter-cli": "^0.26.8",
+    "web-tree-sitter": "^0.26.8"
   },
   "main": "bindings/node",
   "scripts": {
@@ -40,10 +40,10 @@
     "build-sosl": "cd sosl && npx tree-sitter generate",
     "build-sflog": "cd sflog && npx tree-sitter generate",
     "build-wasm": "npm run build-apex-wasm && npm run build-soql-wasm && npm run build-sosl-wasm && npm run build-sflog-wasm",
-    "build-apex-wasm": "cd apex && npx tree-sitter build --wasm && cp tree-sitter-apex.wasm ../docs/playground/js/ && cp tree-sitter-apex.wasm ../bindings/web/",
-    "build-soql-wasm": "cd soql && npx tree-sitter build --wasm && cp tree-sitter-soql.wasm ../docs/playground/js/ && cp tree-sitter-soql.wasm ../bindings/web/",
-    "build-sosl-wasm": "cd sosl && npx tree-sitter build --wasm && cp tree-sitter-sosl.wasm ../docs/playground/js/ && cp tree-sitter-sosl.wasm ../bindings/web/",
-    "build-sflog-wasm": "cd sflog && npx tree-sitter build --wasm && cp tree-sitter-sflog.wasm ../docs/playground/js/ && cp tree-sitter-sflog.wasm ../bindings/web/",
+    "build-apex-wasm": "cd apex && npx tree-sitter build --wasm && node ../scripts/copyFile.mjs tree-sitter-apex.wasm ../docs/playground/tree-sitter-apex.wasm && node ../scripts/copyFile.mjs tree-sitter-apex.wasm ../bindings/web/tree-sitter-apex.wasm",
+    "build-soql-wasm": "cd soql && npx tree-sitter build --wasm && node ../scripts/copyFile.mjs tree-sitter-soql.wasm ../docs/playground/tree-sitter-soql.wasm && node ../scripts/copyFile.mjs tree-sitter-soql.wasm ../bindings/web/tree-sitter-soql.wasm",
+    "build-sosl-wasm": "cd sosl && npx tree-sitter build --wasm && node ../scripts/copyFile.mjs tree-sitter-sosl.wasm ../docs/playground/tree-sitter-sosl.wasm && node ../scripts/copyFile.mjs tree-sitter-sosl.wasm ../bindings/web/tree-sitter-sosl.wasm",
+    "build-sflog-wasm": "cd sflog && npx tree-sitter build --wasm && node ../scripts/copyFile.mjs tree-sitter-sflog.wasm ../docs/playground/tree-sitter-sflog.wasm && node ../scripts/copyFile.mjs tree-sitter-sflog.wasm ../bindings/web/tree-sitter-sflog.wasm",
     "test-load": "npm run test-load-rust && npm run test-load-node",
     "test-load-rust": "cargo test",
     "test-load-node": "node -e \"console.log(require('./apex').name), console.log(require('./soql').name), console.log(require('./sosl').name), console.log(require('./sflog').name)\"",
