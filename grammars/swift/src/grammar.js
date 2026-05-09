@@ -56,6 +56,7 @@ const PRECS = {
   range_suffix: -2,
   ternary_binary_suffix: -2,
   await: -2,
+  consume: -2,
   assignment: -3,
   comment: -3,
   lambda: -3,
@@ -123,6 +124,9 @@ module.exports = grammar({
     // await {expression} has the same special cases as `try`.
     [$.await_expression, $._unary_expression],
     [$.await_expression, $._expression],
+    // consume {expression} has the same special cases as `try` and `await`.
+    [$.consume_expression, $._unary_expression],
+    [$.consume_expression, $._expression],
     // In a computed property, when you see an @attribute, it's not yet clear if that's going to be for a
     // locally-declared class or a getter / setter specifier.
     [
@@ -174,6 +178,8 @@ module.exports = grammar({
     [$._contextual_simple_identifier, $.type_parameter_pack],
     [$._contextual_simple_identifier, $.type_pack_expansion],
     [$._contextual_simple_identifier, $.visibility_modifier],
+    // `consume` is a contextual keyword: identifier in most positions, operator in `consume x`.
+    [$._contextual_simple_identifier, $._consume_operator],
   ],
   extras: ($) => [
     $.comment,
@@ -277,6 +283,8 @@ module.exports = grammar({
       choice(
         "actor",
         "async",
+        "consume",
+        "discard",
         "each",
         "lazy",
         "repeat",
@@ -480,7 +488,16 @@ module.exports = grammar({
             "wrapped",
             choice($.user_type, $.tuple_type, $.array_type, $.dictionary_type)
           ),
-          repeat1(alias($._immediate_quest, "?"))
+          repeat1(
+            choice(
+              alias($._immediate_quest, "?"),
+              // The external scanner always tokenizes `??` as NIL_COALESCING_OPERATOR.
+              // In type position (e.g. `(v: AnyObject??)`) that single token represents
+              // two consecutive optional markers; accept it here since nil-coalescing is
+              // an expression-only construct and cannot appear in a type.
+              alias($._nil_coalescing_operator, "??")
+            )
+          )
         )
       ),
     metatype: ($) => seq($._unannotated_type, ".", choice("Type", "Protocol")),
@@ -847,6 +864,24 @@ module.exports = grammar({
         )
       ),
     _await_operator: ($) => alias("await", "await"),
+    consume_expression: ($) =>
+      prec.right(
+        PRECS.consume,
+        seq(
+          $._consume_operator,
+          field(
+            "expr",
+            choice(
+              // Prefer direct calls over indirect (same as with `try`).
+              prec.right(-2, $._expression),
+              prec.left(0, $.call_expression),
+              // Special case ternary to `consume` the whole thing (same as with `try`).
+              prec.dynamic(1, prec.left(-1, $.ternary_expression))
+            )
+          )
+        )
+      ),
+    _consume_operator: ($) => alias("consume", "consume"),
     ternary_expression: ($) =>
       prec.right(
         PRECS.ternary,
@@ -904,6 +939,8 @@ module.exports = grammar({
         $.super_expression,
         $.try_expression,
         $.await_expression,
+        $.consume_expression,
+        $.discard_statement,
         $._referenceable_operator,
         $.key_path_expression,
         $.key_path_string_expression,
@@ -1087,7 +1124,15 @@ module.exports = grammar({
       ),
     switch_pattern: ($) => alias($._binding_pattern_with_expr, $.pattern),
     do_statement: ($) =>
-      prec.right(PRECS["do"], seq("do", $._block, repeat($.catch_block))),
+      prec.right(
+        PRECS["do"],
+        seq(
+          "do",
+          optional(choice($.throws_clause, $.throws)),
+          $._block,
+          repeat($.catch_block)
+        )
+      ),
     catch_block: ($) =>
       seq(
         $.catch_keyword,
@@ -1270,6 +1315,9 @@ module.exports = grammar({
     throw_keyword: ($) => "throw",
     _optionally_valueful_control_keyword: ($) =>
       choice("return", "continue", "break", "yield"),
+    discard_statement: ($) =>
+      prec.right(PRECS.consume, seq($._discard_operator, $.self_expression)),
+    _discard_operator: ($) => alias("discard", "discard"),
     assignment: ($) =>
       prec.left(
         PRECS.assignment,
