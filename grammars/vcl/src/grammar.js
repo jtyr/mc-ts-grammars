@@ -20,7 +20,9 @@ module.exports = grammar({
     _statement: $ => choice(
       $.vcl_declaration,
       $.import_statement,
+      $.include_statement,
       $.backend_declaration,
+      $.probe_declaration,
       $.acl_declaration,
       $.subroutine_declaration,
     ),
@@ -43,6 +45,12 @@ module.exports = grammar({
       'import',
       $.identifier,
       optional(seq('from', $.string)),
+      ';'
+    ),
+
+    include_statement: $ => seq(
+      'include',
+      $.string,
       ';'
     ),
 
@@ -69,9 +77,16 @@ module.exports = grammar({
           $.string,
           $.integer,
           $.duration,
+          $.identifier,
         )),
         ';'
       )
+    ),
+
+    probe_declaration: $ => seq(
+      'probe',
+      $.identifier,
+      field('properties', $.probe_properties)
     ),
 
     probe_properties: $ => seq(
@@ -139,13 +154,17 @@ module.exports = grammar({
       ';'
     ),
 
-    if_statement: $ => seq(
+    if_statement: $ => prec.right(seq(
       'if',
       field('condition', $.condition),
       field('consequence', $.block),
-      repeat(seq('elsif', field('condition', $.condition), field('alternative', $.block))),
+      repeat(seq(
+        choice('elsif', 'elseif', seq('else', 'if')),
+        field('condition', $.condition),
+        field('alternative', $.block)
+      )),
       optional(seq('else', field('alternative', $.block)))
-    ),
+    )),
 
     condition: $ => seq(
       '(',
@@ -169,12 +188,14 @@ module.exports = grammar({
 
     return_statement: $ => seq(
       'return',
-      '(',
-      choice(
-        $.identifier,
-        $.function_call
-      ),
-      ')',
+      optional(seq(
+        '(',
+        choice(
+          $.identifier,
+          $.function_call
+        ),
+        ')'
+      )),
       ';'
     ),
 

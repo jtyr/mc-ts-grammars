@@ -218,6 +218,7 @@ export default grammar({
             optional($.module_type_annotation),
           ),
           seq($.call_expression, optional($.module_type_annotation)),
+          seq($.module_pack, optional($.module_type_annotation)),
           $.extension_expression,
         ),
         ")",
@@ -1274,6 +1275,7 @@ export default grammar({
       const octal_literal = seq(choice("0o", "0O"), /[0-7](_?[0-7])*/);
 
       const bigint_literal = seq(
+        optional(choice("-", "+")),
         choice(hex_literal, binary_literal, octal_literal, decimal_digits),
         "n",
       );
