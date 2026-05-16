@@ -1,57 +1,84 @@
-(date) @variable.member
-
-(txn) @attribute
-
-(account) @type
-
-(amount) @number
-
-(incomplete_amount) @number
-
-(compound_amount) @number
-
-(amount_tolerance) @number
-
-(currency) @property
-
-(key) @label
-
-(string) @string
-
-(narration) @string @spell
-
-(payee) @string @spell
-
-(tag) @constant
-
-(link) @constant
-
+; Entry type keywords
 [
-  (minus)
+  "open"
+  "close"
+  "balance"
+  "pad"
+  "note"
+  "document"
+  "price"
+  "event"
+  "query"
+  "custom"
+  "commodity"
+  "txn"
+] @keyword
+
+; Directive keywords
+[
+  "pushtag"
+  "poptag"
+  "pushmeta"
+  "popmeta"
+  "option"
+  "include"
+  "plugin"
+] @keyword.import
+
+; Transaction and posting flags
+(txn) @keyword
+(flag) @keyword
+
+; Dates
+(date) @string.special
+
+; Accounts
+(account) @variable
+
+; Currencies
+(currency) @type
+
+; Strings
+(string) @string
+(unquoted_string) @string
+(narration) @string
+(payee) @string.special
+
+; Numbers
+(number) @number
+
+; Booleans and null
+(bool) @boolean
+"NULL" @constant.builtin
+
+; Tags and links
+(tag) @label
+(link) @label
+
+; Metadata keys
+(key_value (key) @property)
+
+; Arithmetic operators
+[
   (plus)
-  (slash)
+  (minus)
   (asterisk)
+  (slash)
 ] @operator
 
-(comment) @comment @spell
-
+; Price annotation operators
 [
-  (balance)
-  (open)
-  (close)
-  (commodity)
-  (pad)
-  (event)
-  (price)
-  (note)
-  (document)
-  (query)
-  (custom)
-  (pushtag)
-  (poptag)
-  (pushmeta)
-  (popmeta)
-  (option)
-  (include)
-  (plugin)
-] @keyword
+  (at)
+  (atat)
+] @operator
+
+; Punctuation
+["(" ")"] @punctuation.bracket
+["{" "}" "{{" "}}"] @punctuation.bracket
+["," "~" ":"] @punctuation.delimiter
+
+; Comments
+(comment) @comment
+
+; Org-mode / markdown section headlines
+(headline (item) @markup.heading)
