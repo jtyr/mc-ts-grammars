@@ -10,6 +10,7 @@
 const HTML = require('../../html/src/grammar');
 
 const PREC = {
+  ARROW: 0,
   CALL: 1,
   ALIAS: 2,
 };
@@ -17,11 +18,16 @@ const PREC = {
 module.exports = grammar(HTML, {
   name: 'angular',
 
+  conflicts: ($) => [
+    [$.arrow_function_parameters, $._primitive],
+  ],
+
   externals: ($, original) =>
     original.concat([
       $._interpolation_start,
       $._interpolation_end,
       $._control_flow_start,
+      $._empty_quoted_string,
     ]),
 
   rules: {
@@ -97,7 +103,7 @@ module.exports = grammar(HTML, {
         '(',
         field('value', $._any_expression),
         ')',
-        field('body', $.statement_block),
+        optional(field('body', $.statement_block)),
       ),
 
     default_statement: ($) =>
@@ -265,6 +271,7 @@ module.exports = grammar(HTML, {
     // ---------- Expressions -----------
     _any_expression: ($) =>
       choice(
+        $.arrow_function,
         $.binary_expression,
         $.unary_expression,
         $.expression,
@@ -272,6 +279,29 @@ module.exports = grammar(HTML, {
         $.nullish_coalescing_expression,
         $.regular_expression,
         prec(3, $.conditional_expression),
+      ),
+
+    arrow_function: ($) =>
+      prec.right(
+        PREC.ARROW,
+        seq(
+          field('parameters', choice(
+            $.identifier,
+            $.arrow_function_parameters,
+          )),
+          '=>',
+          field('body', $._any_expression),
+        ),
+      ),
+
+    arrow_function_parameters: ($) =>
+      seq(
+        '(',
+        optional(seq(
+          $.identifier,
+          repeat(seq(',', $.identifier)),
+        )),
+        ')',
       ),
 
     regular_expression: ($) =>
@@ -362,7 +392,7 @@ module.exports = grammar(HTML, {
     structural_directive: ($) =>
       seq(
         '*',
-        $.identifier,
+        alias($.attribute_name, $.identifier),
         optional(
           seq(
             '=',
@@ -426,15 +456,33 @@ module.exports = grammar(HTML, {
       seq('[@', $.binding_name, ']', optional(field('trigger', $._binding_assignment))),
 
     _binding_assignment: ($) =>
-      seq(
-        '=',
-        $._double_quote,
-        optional(choice($._any_expression, $.assignment_expression)),
-        repeat(seq(';', optional(choice($._any_expression, $.assignment_expression)))),
-        $._double_quote,
+      choice(
+        seq('=', alias($._empty_quoted_string, '""')),
+        seq(
+          '=',
+          $._double_quote,
+          optional(choice($._any_expression, $.assignment_expression)),
+          repeat(seq(';', optional(choice($._any_expression, $.assignment_expression)))),
+          $._double_quote,
+        ),
       ),
 
-    binding_name: ($) => choice($.identifier, $.member_expression),
+    binding_identifier: () => /[-a-zA-Z_\$][-a-zA-Z0-9_\$]*/,
+    binding_name: ($) => $._binding_primitive,
+    _binding_primitive: ($) =>
+      choice(
+        alias($.binding_identifier, $.identifier),
+        alias($.binding_member_expression, $.member_expression),
+      ),
+    binding_member_expression: ($) =>
+      seq(
+        field('object', $._binding_primitive),
+        '.',
+        choice(
+          field('property', alias($.binding_identifier, $.identifier)),
+          field('unit', $.style_unit),
+        ),
+      ),
 
     class_binding: ($) =>
       seq(alias('class', $.identifier), optional(seq('.', $.class_name))),
@@ -473,7 +521,7 @@ module.exports = grammar(HTML, {
 
     // Unary expression
     unary_expression: ($) =>
-      seq(field('operator', alias('!', $.unary_operator)), field('value', $.expression)),
+      seq(field('operator', alias('!', $.unary_operator)), field('value', choice($.expression, $.unary_expression))),
 
     // Binary expression
     binary_expression: ($) =>
@@ -553,7 +601,7 @@ module.exports = grammar(HTML, {
       ),
 
     // Object
-    object: ($) => seq('{', repeat(choice($.pair, $._shorthand, $.spread)), '}'),
+    object: ($) => seq('{', repeat(choice($.pair, $._shorthand, seq($.spread, optional(',')))), '}'),
 
     pair: ($) =>
       seq(
@@ -564,19 +612,21 @@ module.exports = grammar(HTML, {
       ),
 
     _shorthand: ($) => seq($.identifier, optional(',')),
-    spread: ($) => seq('...', $.identifier, optional(',')),
+    spread: ($) => seq('...', $._primitive),
 
     // Array
     array: ($) =>
       seq(
         '[',
-        choice($.expression, $.unary_expression),
-        repeat(seq(',', choice($.expression, $.unary_expression))),
+        optional(seq(
+          choice($.expression, $.unary_expression, $.spread),
+          repeat(seq(',', choice($.expression, $.unary_expression, $.spread))),
+        )),
         ']',
       ),
 
     // Identifier
-    identifier: () => /[-a-zA-Z_\$][-a-zA-Z0-9_\$]*/,
+    identifier: () => /[a-zA-Z_\$][a-zA-Z0-9_\$]*/,
 
     // String
     string: ($) =>
@@ -627,8 +677,8 @@ module.exports = grammar(HTML, {
       ),
     arguments: ($) =>
       seq(
-        choice($._primitive, $.binary_expression, $.unary_expression, $._timed_argument),
-        repeat(seq(',', $._primitive)),
+        choice($._primitive, $.binary_expression, $.unary_expression, $._timed_argument, $.spread, $.arrow_function),
+        repeat(seq(',', choice($._primitive, $.spread, $.arrow_function))),
       ),
 
     _timed_argument: ($) => seq($.number, $.unit),
@@ -640,11 +690,7 @@ module.exports = grammar(HTML, {
         choice(
           seq(
             choice('.', '?.', '!.'),
-            choice(
-              field('property', $.identifier),
-              field('call', $.call_expression),
-              field('unit', $.style_unit),
-            ),
+            choice(field('property', $.identifier), field('call', $.call_expression)),
           ),
         ),
       ),

@@ -124,6 +124,14 @@
 ; HLL variables
 (identifier) @variable
 
+(symbol) @variable
+
+((symbol) @constant
+  (#match? @constant "^\\\\\\\\\\\\[^\\\\]*(\\\\\\\\[^\\\\]*)?(\\\\[^\\\\]*)?$"))
+
+((symbol) @constant
+  (#match? @constant "^\\\\\\\\[^\\\\]*(\\\\[^\\\\]*)?$"))
+
 (hll_field_identifier) @field
 
 ; HLL call expressions
@@ -158,10 +166,8 @@
   command: (identifier) @keyword
   subroutine: (identifier) @function.call)
 
-; Variables, constants and labels
+; Macros, parameters, and labels
 (macro) @variable.builtin
-
-(symbol) @variable
 
 (argument_list
   (identifier) @constant.builtin)
@@ -169,12 +175,6 @@
 ((argument_list
   (identifier) @constant.builtin)
   (#match? @constant.builtin "^[%/][a-zA-Z][a-zA-Z0-9.]*$"))
-
-((symbol) @constant
-  (#match? @constant "^\\\\\\\\\\\\[^\\\\]*(\\\\\\\\[^\\\\]*)?(\\\\[^\\\\]*)?$"))
-
-((symbol) @constant
-  (#match? @constant "^\\\\\\\\[^\\\\]*(\\\\[^\\\\]*)?$"))
 
 ((command_expression
   command: (identifier) @keyword
@@ -205,16 +205,7 @@
 (parameter_declaration
   command: (identifier) @keyword
   (identifier)? @constant.builtin
-  macro: [
-    (macro) @variable.parameter
-    (string
-      (macro) @variable.parameter)
-  ])
-
-(parameter_declaration
-  command: (identifier) @keyword
-  (identifier)? @constant.builtin
-  macro: (macro) @variable.parameter)
+  macro: (macro)+ @variable.parameter)
 
 ; Control flow
 (if_block

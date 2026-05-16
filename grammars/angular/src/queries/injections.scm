@@ -1,1 +1,1 @@
-; inherits: html_tags
+; inherits: html

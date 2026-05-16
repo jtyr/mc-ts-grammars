@@ -16,10 +16,11 @@
 
 // Higher value == higher precedence
 const PREC = {
-    CATCH: 0,
     DCOLON: 1, // `::`
     PIPE: 2, // `|`
-    EQ: 3, // `=` in Expr
+    CATCH: 3, // `catch` must be above PIPE so [catch X | Y] parses as [(catch X) | Y]
+    COND_MATCH: 4, // `?=` in maybe expr. Should have lowest priority https://www.erlang.org/eeps/eep-0049#operator-priority
+    EQ: 5, // `=` in Expr
 
     DOTDOT: 6, // `..` in Type
     DARROW: 7, // `=>` in Type, Expr
@@ -37,8 +38,8 @@ const PREC = {
     // + - bor bxor bsl bsr or xor  | ADD_OP    | Left-associative
     // ++ --                        | LIST_OP   | Right-associative
     // == /= =< < >= > =:= =/=      | COMP_OP   | Non-associative
-    // andalso                      | ANDALSO   | Left-associative
-    // orelse                       | ORELSE    | Left-associative
+    // andalso                      | ANDALSO   | Right-associative (OTP parses as left, then re-associates)
+    // orelse                       | ORELSE    | Right-associative (OTP parses as left, then re-associates)
     // catch                        |
     // = !                          | EQ, BANG  | Right-associative
     // ?=                           | Non-associative
@@ -59,8 +60,6 @@ const PREC = {
     REMOTE: 22,
     BIT_EXPR: 2,
     CALL: 80,
-
-    COND_MATCH: 81, // `?=` in maybe expr. Should has lowest priority https://www.erlang.org/eeps/eep-0049#operator-priority
 
     // In macro def, prefer expressions, if type and expr would parse
     DYN_CR_CLAUSES: 1,
@@ -264,14 +263,14 @@ module.exports = grammar({
             'ssr', ':',
             field("lhs", $._expr),
             field("rhs", optional($.ssr_replacement)),
-            field("when", optional($.ssr_when)),
+            field("where", optional($.ssr_where)),
             '.'
         )),
         ssr_replacement: $ => seq(
             '==>>',
             field("expr", $._expr),
         ),
-        ssr_when: $ => seq('when', field("guard", $.guard)),
+        ssr_where: $ => seq('where', field("guard", $.guard)),
 
         _preprocessor_directive: $ => choice(
             $.pp_include,
@@ -538,7 +537,7 @@ module.exports = grammar({
 
         ann_type: $ => prec(PREC.DCOLON, seq(field("var", $.ann_var), field("ty", $._expr))),
 
-        ann_var: $ => prec(PREC.DCOLON, seq(field("var", $.var), '::')),
+        ann_var: $ => prec(PREC.DCOLON, seq(field("var", $.var), choice('::', ':>'))),
 
         // Both union type and list tail
         pipe: $ => prec.right(PREC.PIPE, seq(field("lhs", $._expr), '|', field("rhs", $._expr))),
@@ -616,12 +615,12 @@ module.exports = grammar({
                 '!',
                 field("rhs", $._expr),
             )),
-            prec.left(PREC.ORELSE, seq(
+            prec.right(PREC.ORELSE, seq(
                 field("lhs", $._expr),
                 'orelse',
                 field("rhs", $._expr),
             )),
-            prec.left(PREC.ANDALSO, seq(
+            prec.right(PREC.ANDALSO, seq(
                 field("lhs", $._expr),
                 'andalso',
                 field("rhs", $._expr),

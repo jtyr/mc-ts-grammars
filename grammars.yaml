@@ -33,7 +33,7 @@
 
 - language: angular
   url: https://github.com/dlvandenberg/tree-sitter-angular
-  ref: v0.8.3
+  ref: v0.9.2
   extraFiles:
     - html.tag.h
     - tag.h
@@ -208,7 +208,7 @@
 - language: beancount
   url: https://github.com/polarmutex/tree-sitter-beancount
   branch: master
-  ref: 81769709e26c3469d827f1b1c6c34120bb4966b1
+  ref: c5e6cdf260629f76035a0c0de830947f385ae622
   metadata:
     hasParser: true
     hasScanner: true
@@ -1054,7 +1054,7 @@
 
 - language: erlang
   url: https://github.com/WhatsApp/tree-sitter-erlang
-  ref: 2ace143dea47c872b334660956742dda4efa4ea3
+  ref: cd372956af6b515b222923d096d0b4878bc7300c
   release: true
   metadata:
     hasParser: true
@@ -1166,7 +1166,7 @@
 
 - language: fluentbit
   url: https://github.com/sh-cho/tree-sitter-fluentbit
-  ref: 94e92e064ea80de03cba5a728087b5688d04615e
+  ref: 879433b55fae911189f5ca32de53ba1b3443167b
   metadata:
     hasParser: true
     hasHighlights: true
@@ -1408,7 +1408,7 @@
 
 - language: glimmer_javascript
   url: https://github.com/NullVoxPopuli/tree-sitter-glimmer-javascript
-  ref: 5cc865a2a0a77cbfaf5062c8fcf2a9919bd54f87
+  ref: d9cf7a2f1dad3c6b660148eaf77e955d418fdb8b
   metadata:
     hasParser: true
     hasScanner: true
@@ -1471,7 +1471,7 @@
 
 - language: gnuplot
   url: https://github.com/dpezto/tree-sitter-gnuplot
-  ref: 8923c1e38b9634a688a6c0dce7c18c8ffb823e79
+  ref: 29586d47b9363c29bf02cc4d1b45c4379adf6317
   metadata:
     hasParser: true
     hasHighlights: true
@@ -1902,7 +1902,7 @@
 - language: idl
   url: https://github.com/cathaysia/tree-sitter-idl
   branch: master
-  ref: d323227fd9430cd7f949fff39c5490337e5f0659
+  ref: d9ac4b12fd2092fea27f6803defd14b2ae10b4f9
   release: true
   metadata:
     hasParser: true
@@ -2748,7 +2748,7 @@
 - language: nix
   url: https://github.com/nix-community/tree-sitter-nix
   branch: master
-  ref: 35b2a51e93625e50e0bbff58b4aad45706cdc299
+  ref: 69fbfb02896cdd27cb7ff3cd61f7f3f6bde4f017
   metadata:
     hasParser: true
     hasScanner: true
@@ -2865,7 +2865,7 @@
 - language: ocaml
   url: https://github.com/tree-sitter/tree-sitter-ocaml
   branch: master
-  ref: ec8dcc936f90007b86cb1a1683d09c0bf6d8183b
+  ref: 6902a86ab5b3b80c622030210aae2d8cb95eb775
   release: true
   path: grammars/ocaml
   metadata:
@@ -2991,7 +2991,7 @@
 - language: perl
   url: https://github.com/tree-sitter-perl/tree-sitter-perl
   branch: master
-  ref: 21fd668a42b620617c9a0a97b2ca6a9a3ef8ef43
+  ref: 9b651c0ca29a2c581e2bb07815e17432ac3820d3
   release: true
   generate: true
   metadata:
@@ -3060,7 +3060,7 @@
 
 - language: pkl
   url: https://github.com/apple/tree-sitter-pkl
-  ref: 4b0c34dde3fa8a6bb3c3e6118e5cec745f452c9a
+  ref: ed7b2e15909c8806e9f9a08300df64336d74b06a
   metadata:
     hasParser: true
     hasScanner: true
@@ -3334,7 +3334,7 @@
 - language: qmldir
   url: https://github.com/Decodetalkers/tree-sitter-qmldir
   branch: master
-  ref: 408bd08ef5ada87a45e9cf58795fb95b2654e862
+  ref: 1fa9200b3e57f728291f7a85b0a6990fc98387ac
   metadata:
     hasParser: true
     hasHighlights: true
@@ -3971,7 +3971,7 @@
 
 - language: ssh_client_config
   url: https://github.com/metio/tree-sitter-ssh-client-config
-  ref: 96f77729ee69d05d66ffe085ba5f181d9afa10d5
+  ref: f239ab0bd16bbe1c9fb6b24f33841d48a954e064
   metadata:
     hasParser: true
     hasHighlights: true
@@ -4125,7 +4125,7 @@
 
 - language: swift
   url: https://github.com/alex-pinkus/tree-sitter-swift
-  ref: 30f30560932cf5b6ab26a383b372233db461b80a
+  ref: 3d38a39612badc2a2525dde3676c90b0fe8128cd
   release: true
   generate: true
   metadata:
@@ -4196,7 +4196,7 @@
 
 - language: t32
   url: https://codeberg.org/xasc/tree-sitter-t32
-  ref: v8.0.0
+  ref: v9.0.0
   metadata:
     hasParser: true
     hasScanner: true
@@ -4456,7 +4456,7 @@
 
 - language: twig
   url: https://github.com/gbprod/tree-sitter-twig
-  ref: 7195ee573ab5c3b3bb0e91b042e6f83ac1b11104
+  ref: 0afd9a6d808944e65a7be393e31868b85345735f
   ignoreFiles:
     - queries/injections.scm
   note: injections.scm references node types from a different grammar
