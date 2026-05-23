@@ -33,7 +33,8 @@
 (alias_expression
   (identifier) @label)
 
-(storage_identifier) @type
+(storage_identifier (identifier) @type)
+(storage_identifier (dotted_identifier (identifier) @type))
 
 (_ function_name:(identifier) @function)
 
