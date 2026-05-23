@@ -58,7 +58,7 @@
 - language: apex
   name: soql
   url: https://github.com/aheber/tree-sitter-sfapex
-  ref: 94f1e55064e1136738c30ea9a326e63406107a35
+  ref: 27a3091a1a444ce19d6099e00cd3788f019d0c2b
   path: soql
   metadata:
     hasParser: true
@@ -731,7 +731,7 @@
 - language: dart
   url: https://github.com/UserNobody14/tree-sitter-dart
   branch: master
-  ref: 507c5546dc73667c03d36803ee9bd4df0bbe4b0b
+  ref: a9bdfa3db2fbc9b9f12c93450d04a671f33a5102
   metadata:
     hasParser: true
     hasScanner: true
@@ -1054,7 +1054,7 @@
 
 - language: erlang
   url: https://github.com/WhatsApp/tree-sitter-erlang
-  ref: cd372956af6b515b222923d096d0b4878bc7300c
+  ref: e446ec60022a7cafe157805742b41c04b499cc5d
   release: true
   metadata:
     hasParser: true
@@ -1841,7 +1841,7 @@
 
 - language: htmldjango
   url: https://github.com/interdependence/tree-sitter-htmldjango
-  ref: 3a643167ad9afac5d61e092f08ff5b054576fadf
+  ref: a10318892603d9a0b925df7cc7771a840304b997
   metadata:
     hasParser: true
     hasHighlights: true
@@ -1963,7 +1963,7 @@
 - language: ispc
   url: https://github.com/tree-sitter-grammars/tree-sitter-ispc
   branch: master
-  ref: 9b2f9aec2106b94b4e099fe75e73ebd8ae707c04
+  ref: ba1bb38ac8ddfa6aa7571cbfe9b4d029f7f77447
   metadata:
     hasParser: true
     hasHighlights: true
@@ -2245,7 +2245,7 @@
 
 - language: koto
   url: https://github.com/koto-lang/tree-sitter-koto
-  ref: f8b3f62c0eed185dca1559789e78759d4bee60e5
+  ref: e8d41cbaca867aa1b0213e1fc1caeaf593da7bf7
   metadata:
     hasParser: true
     hasScanner: true
@@ -2300,10 +2300,15 @@
 
 - language: lean
   url: https://github.com/Julian/tree-sitter-lean
-  ref: efe6b87145608d12f5996bd7f0cf6095a0e82261
+  ref: 15c50c05eb1a7338f2d11f787d0b64ff4052b80d
   metadata:
     hasParser: true
     hasScanner: true
+    hasHighlights: true
+    hasLocals: true
+    hasInjections: true
+    hasFolds: true
+    hasIndents: true
     abi: 13
 
 - language: ledger
@@ -2484,7 +2489,7 @@
 
 - language: magik
   url: https://github.com/krn-robin/tree-sitter-magik
-  ref: 54585aa46b3ab73c84246d11f0a859285c9afa32
+  ref: d638b80811965e990a8f8d45896cd708687811b2
   metadata:
     hasParser: true
     hasHighlights: true
@@ -2627,7 +2632,7 @@
 - language: mlir
   url: https://github.com/artagnon/tree-sitter-mlir
   branch: master
-  ref: 40cecd36b0790ac76baa97c8f70742d0403d11cf
+  ref: 40ed63e398b75991e3c9fa32b9d88f44a93e4994
   metadata:
     hasParser: true
     hasHighlights: true
@@ -3971,7 +3976,7 @@
 
 - language: ssh_client_config
   url: https://github.com/metio/tree-sitter-ssh-client-config
-  ref: f239ab0bd16bbe1c9fb6b24f33841d48a954e064
+  ref: 7fe108cdead7cd06a042ddaad8ba53cf3bde07ab
   metadata:
     hasParser: true
     hasHighlights: true
@@ -4125,7 +4130,7 @@
 
 - language: swift
   url: https://github.com/alex-pinkus/tree-sitter-swift
-  ref: 3d38a39612badc2a2525dde3676c90b0fe8128cd
+  ref: a923ac6d78d6f3132d996ecd189a4c7ca13c8d9d
   release: true
   generate: true
   metadata:
@@ -4947,7 +4952,7 @@
 - language: yaml
   url: https://github.com/tree-sitter-grammars/tree-sitter-yaml
   branch: master
-  ref: 4463985dfccc640f3d6991e3396a2047610cf5f8
+  ref: a1c4812a73ec5e089de8e441fdea3a921e8d5079
   release: true
   extraFiles:
     - schema.core.c
@@ -4986,7 +4991,7 @@
 
 - language: zeek
   url: https://github.com/zeek/tree-sitter-zeek
-  ref: v0.2.14
+  ref: v0.2.15
   metadata:
     hasParser: true
     hasHighlights: true
@@ -5052,7 +5057,7 @@
 
 - language: zsh
   url: https://github.com/georgeharker/tree-sitter-zsh
-  ref: v0.63.3
+  ref: v0.63.5
   metadata:
     hasParser: true
     hasScanner: true

@@ -40,6 +40,10 @@ module.exports = grammar({
     $._raw_string_end,
     $._interpolation_start,
     $._interpolation_end,
+    $._operator_continuation_add,
+    $._operator_continuation_multiply,
+    $._operator_continuation_power,
+    $._operator_continuation_comparison,
     $.error_sentinel,
   ],
 
@@ -242,6 +246,11 @@ module.exports = grammar({
           $.call_arg,
         ),
       ),
+      optional(seq(
+        ',',
+        optional($._newline),
+        alias($._call_map_block_arg, $.call_arg),
+      )),
     )),
 
     call_arg: $ => choice(
@@ -375,26 +384,22 @@ module.exports = grammar({
     ),
 
     binary_op: $ => choice(
-      binary_op($, '-', prec.left, PREC.add),
-      binary_op($, '+', prec.left, PREC.add),
-      binary_op($, '*', prec.left, PREC.multiply),
-      binary_op($, '/', prec.left, PREC.multiply),
-      binary_op($, '%', prec.left, PREC.multiply),
-      binary_op($, '^', prec.right, PREC.power),
+      binary_op($, choice('-', '+'), $._operator_continuation_add, prec.left, PREC.add),
+      binary_op($, choice('*', '/', '%'), $._operator_continuation_multiply, prec.left, PREC.multiply),
+      binary_op($, '^', $._operator_continuation_power, prec.right, PREC.power),
     ),
 
-    comparison_op: $ => choice(
-      binary_op($, '!=', prec.left, PREC.comparison),
-      binary_op($, '==', prec.left, PREC.comparison),
-      binary_op($, '>', prec.left, PREC.comparison),
-      binary_op($, '>=', prec.left, PREC.comparison),
-      binary_op($, '<', prec.left, PREC.comparison),
-      binary_op($, '<=', prec.left, PREC.comparison),
+    comparison_op: $ => binary_op(
+      $,
+      choice('!=', '==', '>=', '>', '<=', '<'),
+      $._operator_continuation_comparison,
+      prec.left,
+      PREC.comparison,
     ),
 
     boolean_op: $ => choice(
-      binary_op($, 'and', prec.left, PREC.and),
-      binary_op($, 'or', prec.left, PREC.or),
+      binary_op($, 'and', null, prec.left, PREC.and),
+      binary_op($, 'or', null, prec.left, PREC.or),
     ),
 
     range: $ => prec.left(PREC.range, seq(
@@ -584,6 +589,7 @@ module.exports = grammar({
       field('key', $._map_key),
       ':',
       field('value', choice(
+        alias($._map_block_tuple_value, $.comma_separated),
         $._line_or_block,
         $.call_indented,
         $.map_block,
@@ -625,9 +631,9 @@ module.exports = grammar({
 
     string: $ => choice(
       seq(
-        $._string_start,
+        alias($._string_start, $.string_quote),
         optional($.string_content),
-        $._string_end,
+        alias($._string_end, $.string_quote),
       ),
       seq(
         $._raw_string_start,
@@ -952,6 +958,14 @@ module.exports = grammar({
         /u\{[0-9a-fA-F]{1,6}\}/,
       )
     ),
+
+    _call_map_block_arg: $ => $.map_block,
+
+    _map_block_tuple_value: $ => prec(PREC.comma, seq(
+      $._expression,
+      ',',
+      $._newline,
+    )),
   }
 });
 
@@ -963,16 +977,20 @@ function assign_op($, operator, precedence_fn) {
   ));
 }
 
-function binary_op($, operator, precedence_fn, precedence) {
+function binary_op($, operator, operator_continuation, precedence_fn, precedence) {
+  const operator_token = operator_continuation == null
+    ? operator
+    : choice(operator, seq(operator_continuation, operator));
+
   return precedence_fn(precedence, seq(
     $._term_ext,
     choice(
       seq(
-        operator,
+        operator_token,
         $._term_ext,
       ),
       seq(
-        operator,
+        operator_token,
         $._indent,
         $._term_ext,
         $._dedent,
