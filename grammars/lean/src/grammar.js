@@ -61,10 +61,17 @@ export default grammar({
     /* `public`/`meta` can start either an `import` or a Lean 4
        module-system-visibility-prefixed declaration. */
     [$.import, $.declaration],
+    /* `public meta section` shares its prefix with the
+       visibility-prefixed-declaration form. */
+    [$.public_section, $.declaration],
     /* `{ ident <ident> … }` could be a function-style struct_field
        (`method args := body`) or the singleton-set `{ app args }`. We
        always prefer the struct_field when followed by `:=`. */
     [$.struct_field, $._term_atom],
+    /* `{ a, b ... }` could be a set literal (`elem` list) or the
+       multi-source struct update `{ src₁, src₂ with … }`. `with`
+       one token after disambiguates. */
+    [$.struct_lit],
   ],
 
   rules: {
@@ -129,17 +136,22 @@ export default grammar({
       optional(field('target', $._term_atom)),
     ),
 
-    /* Lean/Mathlib commands that attach a doc/spelling/grind note to
-       an existing declaration. Takes an identifier (and optionally
-       `=> rhs` or `for ident` continuations). */
+    /* Lean/Mathlib commands that attach a doc/spelling/grind note or
+       a `:=`-bodied cast/coercion to an existing declaration. Takes
+       an identifier or string literal, optional atomic args
+       (`initialize_simps_projections Foo (a, b)`), and any number of
+       `=> e` / `for e` / `in e` / `:= e` clauses
+       (`recommended_spelling "iff" for "↔" in [Iff, …]`). */
     decl_doc_cmd: $ => prec.right(seq(
       choice(
         'add_decl_doc', 'library_note', 'recommended_spelling',
         'initialize_simps_projections',
+        'to_dual_insert_cast', 'to_dual_insert_cast_fun',
       ),
       field('name', choice($.identifier, $.str_lit)),
-      optional(seq(
-        choice('=>', 'for', 'in'),
+      repeat(field('arg', $._term_atom)),
+      repeat(seq(
+        field('clause', choice('=>', 'for', 'in', ':=')),
         field('rhs', $._term),
       )),
     )),
@@ -161,12 +173,17 @@ export default grammar({
     ),
 
     /* `infix:20 " <-> " => Iff`, `infixr:30 " ⊕ " => Sum`,
-       `prefix:max " - " => Neg.neg`, etc. The `:prec` slot is
-       immediate so it sticks to the keyword. */
+       `prefix:max " - " => Neg.neg`, `notation "⊥" => bot`. The
+       `:prec` slot is immediate so it sticks to the keyword. The
+       Mathlib `scoped[Foo]` variant pins the notation to a namespace. */
     notation_decl_cmd: $ => seq(
       optional($.attributes),
-      optional(choice('scoped', 'local')),
-      choice('infix', 'infixl', 'infixr', 'prefix', 'postfix'),
+      optional(choice(
+        'scoped',
+        'local',
+        seq('scoped', '[', field('namespace', $.identifier), ']'),
+      )),
+      choice('infix', 'infixl', 'infixr', 'prefix', 'postfix', 'notation'),
       optional(seq(
         token.immediate(':'),
         field('prec', choice($.num_lit, $.identifier)),
@@ -175,6 +192,7 @@ export default grammar({
       '=>',
       field('target', $._term),
     ),
+
 
     /* `deriving instance Foo, Bar for Baz` — standalone deriving. */
     deriving_cmd: $ => seq(
@@ -222,12 +240,15 @@ export default grammar({
       ),
     )),
 
-    /* `public section` is a Lean 4 module-system marker — everything
-       below is exported. It has no body and no matching `end`.
-       Optionally preceded by attributes (e.g. `@[expose] public section`). */
+    /* `public section` / `public meta section` — Lean 4 module-system
+       marker; everything below is exported. It has no body and no
+       matching `end`. Optionally preceded by attributes
+       (e.g. `@[expose] public section`). */
     public_section: $ => seq(
       optional($.attributes),
-      'public', 'section',
+      $.public,
+      optional($.meta),
+      'section',
     ),
 
     check:  $ => seq(choice('#check', '#check_failure'),  field('term', $._term)),
@@ -264,7 +285,11 @@ export default grammar({
       repeat1(field('name', $.identifier)),
     ),
 
-    open: $ => seq('open', $._open_decl),
+    open: $ => prec.right(seq(
+      'open',
+      $._open_decl,
+      optional(seq('in', field('body', $._command))),
+    )),
     _open_decl: $ => choice(
       seq(
         field('namespace', $.identifier),
@@ -317,6 +342,8 @@ export default grammar({
       'private',
       'protected',
       'unsafe',
+      'scoped',
+      'local',
     )),
 
     attributes: $ => seq('@[', sep1($._attr_instance, ','), ']'),
@@ -325,12 +352,17 @@ export default grammar({
       $._attribute,
     ),
     /* Attributes can carry arguments (`@[simp 1000]`,
-       `@[combinator_parenthesizer foo, expose]`, `@[simps -isSimp]`).
-       Args restricted to atoms or unary-prefixed atoms (`-isSimp`,
-       `←foo`) to keep state count bounded. */
+       `@[combinator_parenthesizer foo, expose]`, `@[simps -isSimp]`,
+       `@[grind =]`, `@[grind →]`). Args restricted to atoms,
+       unary-prefixed atoms, or bare directive tokens to keep state
+       count bounded. */
     _attribute: $ => seq(
       field('name', $.identifier),
-      repeat(field('arg', choice($._term_atom, $.unary_op))),
+      repeat(field('arg', choice(
+        $._term_atom,
+        $.unary_op,
+        '=', '←', '→', '↔',
+      ))),
     ),
 
 
@@ -338,7 +370,7 @@ export default grammar({
        parameters. The `.{` token must be immediate (no space). */
     _decl_universes: $ => seq(
       token.immediate('.{'),
-      sep1(field('level', $.identifier), ','),
+      sep1(field('level', choice($.identifier, $.num_lit)), ','),
       '}',
     ),
 
@@ -446,13 +478,17 @@ export default grammar({
       optional(seq(
         'where',
         /* Indented field block separates fields with NEWLINE so a
-           greedy `_term`-typed type doesn't eat the next field. */
+           greedy `_term`-typed type doesn't eat the next field.
+           `deriving` may also live inside the indent block at the
+           same indent as the fields. */
         optional(choice(
-          seq(optional($.ctor), repeat1($.field)),
+          seq(optional($.ctor), repeat1($.field),
+              optional($._deriving_clause)),
           seq(
             $._indent,
             optional($.ctor),
             sep1($.field, $._newline),
+            optional(seq($._newline, $._deriving_clause)),
             $._dedent,
           ),
         )),
@@ -495,9 +531,9 @@ export default grammar({
        surrounding declaration. Real Lean code overwhelmingly uses one
        name per line in structure fields. doc_comment is in `extras`
        so it still attaches to the field as trivia. Function-style
-       fields with binders are common (`f (a : α) : β`). Also accepts
-       `[name : T]` instance-implicit field form. Modifiers like
-       `protected`/`private` are recognized. */
+       fields with binders are common (`f (a : α) : β`). `(name : T)`
+       and `[name : T]` allow explicit / instance-implicit field forms.
+       Modifiers like `protected`/`private` are recognised. */
     field: $ => choice(
       seq(
         optional($.decl_modifiers),
@@ -505,6 +541,14 @@ export default grammar({
         optional($._binders),
         $._type_spec,
         optional(field('default', seq(':=', $._term))),
+      ),
+      seq(
+        '(',
+        field('name', $._binder_ident),
+        optional($._binders),
+        $._type_spec,
+        optional(field('default', seq(':=', $._term))),
+        ')',
       ),
       seq(
         '[',
@@ -539,17 +583,21 @@ export default grammar({
        declares a value of a structure/instance type by field. The
        indented form uses scanner-emitted INDENT/NEWLINE/DEDENT so a
        field whose RHS is a multi-line term doesn't accidentally
-       swallow the next field's name. */
+       swallow the next field's name. The body is optional: an empty
+       `where` clause is legal when the structure has no fields.
+       `where ...` is Lean's "fill all required fields with sorry"
+       elision marker. */
     where_struct: $ => prec.right(seq(
       'where',
-      choice(
+      optional(choice(
+        '...',
         $.struct_field,
         seq(
           $._indent,
           sep1($.struct_field, $._newline),
           $._dedent,
         ),
-      ),
+      )),
     )),
 
     /* ===== binders ======================================================= */
@@ -640,6 +688,8 @@ export default grammar({
       $.fun,
       $.let,
       $.have,
+      $.suffices,
+      $.by_cases,
       $.show,
       $.if_then_else,
       $.forall,
@@ -649,6 +699,7 @@ export default grammar({
       $.by,
       $.do_block,
       $.match,
+      $.tactic_case,
     ),
 
     _op_term: $ => choice(
@@ -684,6 +735,7 @@ export default grammar({
       $.bot_const,
       $.top_const,
       $.empty_const,
+      $.goal_const,
       $.sorry,
       $.paren,
       $.anon_ctor,
@@ -724,9 +776,23 @@ export default grammar({
       token.immediate('%'),
     ),
 
-    /* `@foo` — disables implicit insertion (explicit args mode).
-       Distinct from `@[…]` attributes via immediate-next-char check. */
-    explicit_mode: $ => seq('@', $.identifier),
+    /* `@expr` — disables implicit-argument insertion (explicit args
+       mode). Applies to arbitrary terms, not just identifiers
+       (`@fun x => …`, `@(f x)`). Excludes `[…]` follow-ups to keep
+       `@[…]` attributes unambiguous. */
+    explicit_mode: $ => prec(PREC.prefix, seq(
+      '@',
+      field('term', choice(
+        $.identifier,
+        $.dot_ident,
+        $.paren,
+        $.fun,
+        $.let,
+        $.have,
+        $.if_then_else,
+        $.match,
+      )),
+    )),
 
 
     hole:        _ => '_',
@@ -752,6 +818,9 @@ export default grammar({
     top_const: _ => '⊤',
     /* `∅` is the empty-set/empty-collection literal. */
     empty_const: _ => '∅',
+    /* `⊢` is the tactic-language goal marker (used after `at` in
+       `rw [h] at h₁ ⊢`). */
+    goal_const: _ => '⊢',
     /* Capital `True`/`False` are Prop; lowercase `true`/`false` are
        the boolean inductive's constructors. */
     true_const:  _ => choice('True', 'true'),
@@ -761,11 +830,13 @@ export default grammar({
     paren: $ => seq(
       '(',
       optional(choice(
-        /* Named-argument form: `(name := value)`. */
+        /* Named-argument form: `(name := value)` with an optional
+           trailing arg list (`(attr := simps, implicit_reducible)`). */
         seq(
           field('arg_name', $.identifier),
           ':=',
           field('arg_value', $._term),
+          repeat(seq(',', $._term)),
         ),
         /* Operator section: `(↑)`, `(↓)`, `(↥)` — bare prefix/coercion
            operator inside parens, treated as a function value. */
@@ -807,14 +878,18 @@ export default grammar({
 
     /* `{ field := value, ... }` (anonymous structure) and the
        `{ src with field := value, ... }` update form. `{}` is empty.
-       `{a, b, c}` is Mathlib's finite-set / insert-chain notation. */
+       `{ src₁, src₂ with }` (multi-source, no new fields) is the
+       Mathlib pattern for structure-extension. `{a, b, c}` is the
+       finite-set / insert-chain notation. */
     struct_lit: $ => seq(
       '{',
       optional(choice(
         seq(
-          optional(seq(field('source', $._term), 'with')),
-          sep1($.struct_field, optional(',')),
+          sep1(field('source', $._term), ','),
+          'with',
+          optional(sep1($.struct_field, optional(','))),
         ),
+        sep1($.struct_field, optional(',')),
         sep1(field('elem', $._term), ','),
       )),
       '}',
@@ -839,16 +914,19 @@ export default grammar({
       field('pred', $._term),
       '}',
     ),
-    /* `name := value` or `name binders := value` (function-style
-       field, used in `instance F where method args := body`). Binders
-       are bare-ident-only here to avoid ambiguity with bracketed
-       atoms like `(a, b)` in the value position. Type ascription
-       `name : T := value` is intentionally omitted because the
-       leading `{ ident :` would conflict with `set_builder` /
-       `subtype_lit`. */
+    /* `name := value`, `name binders := value`, or `name {a b} :=
+       value` (function-style fields in `instance F where method args
+       := body`). Bare-ident, implicit-`{}`, and explicit-`()` binders
+       are accepted. Type ascription `name : T := value` is
+       intentionally omitted because the leading `{ ident :` would
+       conflict with `set_builder` / `subtype_lit`. */
     struct_field: $ => seq(
       field('name', $.identifier),
-      optional(alias(repeat1($._binder_ident), $.binders)),
+      optional(alias(repeat1(choice(
+        $._binder_ident,
+        $.implicit_binder,
+        $.explicit_binder,
+      )), $.binders)),
       ':=',
       field('value', $._term),
     ),
@@ -868,13 +946,14 @@ export default grammar({
       field('field', choice($.identifier, $.num_lit)),
     )),
 
-    /* `Foo.{u₁, u₂}` — explicit universe-level application.
-       The `.{` is one immediate token so it wins the longest-match
-       race against the proj-dot. */
+    /* `Foo.{u₁, u₂}` or `NonemptyType.{0}` — explicit universe-level
+       application. The `.{` is one immediate token so it wins the
+       longest-match race against the proj-dot. Numeric levels appear
+       for `Type 0` etc. */
     universe_app: $ => prec.left(PREC.proj, seq(
       field('term', $._op_term),
       token.immediate('.{'),
-      sep1(field('level', $.identifier), ','),
+      sep1(field('level', choice($.identifier, $.num_lit)), ','),
       '}',
     )),
 
@@ -894,13 +973,17 @@ export default grammar({
     /* `arr[idx]` — array/dict indexing. Distinguished from `f [list]`
        by the immediate `[` (no whitespace between fn and bracket).
        `arr[idx]?` and `arr[idx]!` are option-returning and panicking
-       variants. */
+       variants. `arr[idx]'proof` supplies an in-bounds proof. */
     subscript: $ => prec.left(PREC.proj, seq(
       field('term', $._op_term),
       token.immediate('['),
       field('index', $._term),
       ']',
-      optional(choice(token.immediate('?'), token.immediate('!'))),
+      optional(choice(
+        token.immediate('?'),
+        token.immediate('!'),
+        seq(token.immediate("'"), field('proof', $._term_atom)),
+      )),
     )),
 
     /* ----- operators ---------------------------------------------------- */
@@ -908,9 +991,11 @@ export default grammar({
     unary_op: $ => prec(PREC.prefix, seq(
       field('op', choice('-', '¬', '!', '←', '<-', '#',
         /* Coercion prefixes. */
-        '↥', '↑', '↓',
-        /* Heyting negation (Mathlib). */
-        '￢')),
+        '↥', '↑', '↓', '⇑',
+        /* Heyting negation, co-Heyting boundary (Mathlib). */
+        '￢', '∂',
+        /* Lean's "borrow ref" prefix on argument types. */
+        '@&')),
       field('rhs', $._op_term),
     )),
 
@@ -928,6 +1013,8 @@ export default grammar({
           '→ᵃ', '≃ᵃ',
           '↪', '↠', '↪o', '↪+', '↪*', '↪+*',
           '⇨',       /* Heyting implication */
+          '⥤',       /* Mathlib functor arrow */
+          '≌',       /* category equivalence */
         )),
         field('rhs', $._term),
       )),
@@ -955,8 +1042,8 @@ export default grammar({
           '=', '==', '≠', '!=',
           '<', '≤', '<=',
           '>', '≥', '>=',
-          '∈', '∉', '⊆', '⊂', '⊇', '⊃',
-          '≡', '≢', '~', '≃', '≅',
+          '∈', '∉', '⊆', '⊂', '⊇', '⊃', '⊑', '⊒',
+          '≡', '≢', '~', '≃', '≅', '≈', '≉',
           '∣', '∤',  /* divides, not-divides */
           '⋖', '⋗',  /* covby (atomic-cover) and its dual */
         )),
@@ -993,10 +1080,12 @@ export default grammar({
       prec.left(PREC.mul, seq(
         field('lhs', $._op_term),
         field('op', choice(
-          '*', '/', '%', '∩', '×', "×'", '×ˢ', '•', '∙',
+          '*', '/', '%', '∩', '×', "×'", '×ˢ', '×ₗ', '•', '∙',
           /* Tensor and related Mathlib operators (without bracket
              param — `⊗ₜ[R]` parses as `⊗ₜ` + `[R]` consumed by app). */
           '⊗', '⊗ₜ', '⊗ₛ',
+          /* Sum/direct-sum operators (Mathlib). */
+          '⊕', '⊕ₗ',
         )),
         field('rhs', $._op_term),
       )),
@@ -1011,13 +1100,16 @@ export default grammar({
           '∘',
           /* Mathlib's set image / preimage operators. */
           "''", "⁻¹'",
+          /* Category-theory morphism / functor composition (Mathlib). */
+          '≫', '⋙',
         )),
         field('rhs', $._op_term),
       )),
       prec.left(PREC.pipe, seq(
         field('lhs', $._op_term),
         field('op', choice('|>', '<|')),
-        field('rhs', $._op_term),
+        /* `f <| have h := …; body` is common Mathlib. */
+        field('rhs', $._term),
       )),
       /* `$` is right-associative function application without parens
          (`f $ g x = f (g x)`). Low precedence. */
@@ -1059,7 +1151,8 @@ export default grammar({
     )),
 
     /* `∀ x, body`, `∀ x : T, body`, `∀ x ∈ s, body` (sugar) — and
-       Mathlib's `∀ b ≠ ⊥, body` predicate-tail sugar. */
+       Mathlib's `∀ b ≠ ⊥, body` / `∀ c ⊆ S, body` predicate-tail
+       sugar. */
     forall: $ => prec.right(seq(
       /* `Π` is a deprecated Mathlib synonym for `∀` for product types. */
       choice('∀', 'forall', 'Π'),
@@ -1067,7 +1160,7 @@ export default grammar({
       optional(choice(
         $._type_spec,
         seq(
-          field('rel', choice('∈', '∉', '≠')),
+          field('rel', choice('∈', '∉', '≠', '⊆', '⊂')),
           field('bound', $._op_term),
         ),
       )),
@@ -1081,7 +1174,7 @@ export default grammar({
       optional(choice(
         $._type_spec,
         seq(
-          field('rel', choice('∈', '∉', '≠')),
+          field('rel', choice('∈', '∉', '≠', '⊆', '⊂')),
           field('bound', $._op_term),
         ),
       )),
@@ -1119,11 +1212,18 @@ export default grammar({
        Inline binders are not modeled — write `let f := fun x => …`
        instead. The `←`/`<-` form is monadic bind for do-blocks. */
     let: $ => prec.right(seq(
-      /* `letI` is Mathlib's "let instance" variant (immediately
-         registers the bound value as a typeclass instance). */
-      choice('let', 'letI'),
+      /* `letI` is Mathlib's "let instance" variant; `obtain` and
+         `set` are tactic-language siblings for pattern-binding from
+         a result. */
+      choice('let', 'letI', 'obtain', 'set'),
       optional(choice('mut', 'rec')),
-      field('name', choice($._binder_ident, $.tuple_binder)),
+      field('name', choice(
+        $._binder_ident,
+        $.tuple_binder,
+        $.anon_ctor_binder,
+      )),
+      /* `let rec foo (x : T) : U := …` — function-style binders. */
+      optional($._binders),
       optional($._type_spec),
       choice(':=', '←', '<-'),
       field('value', $._term),
@@ -1139,6 +1239,27 @@ export default grammar({
       ':=',
       field('value', $._term),
       optional(seq(';', field('body', $._term))),
+    )),
+
+    /* `suffices g : T from proof` / `suffices g : T by tac` — a
+       tactic-language reframing. The `from`/`by` proves the new
+       suffices-goal, then the original goal is discharged via `g`. */
+    suffices: $ => prec.right(seq(
+      'suffices',
+      field('name', $._binder_ident),
+      $._type_spec,
+      choice(
+        seq('from', field('value', $._term)),
+        $.by,
+      ),
+    )),
+
+    /* `by_cases h : cond` — splits a tactic goal on the truth of
+       `cond`, binding `h` to a proof in each branch. */
+    by_cases: $ => prec.right(seq(
+      'by_cases',
+      field('name', $._binder_ident),
+      $._type_spec,
     )),
 
     show: $ => prec.right(seq(
@@ -1210,6 +1331,19 @@ export default grammar({
       '=>',
       field('body', $._term),
     ),
+
+    /* `case name args => body` — Lean tactic-language case selection
+       (analogous to a `match_alt` but goal-keyed). Stand-alone tactic
+       statement; commonly chained as sibling at the same indent. */
+    tactic_case: $ => prec.right(seq(
+      'case',
+      field('name', $.identifier),
+      repeat(field('arg', $._binder_ident)),
+      '=>',
+      field('body', $._term),
+    )),
+
+
 
     /* ===== lexicals (carried from stage 1) =============================== */
 

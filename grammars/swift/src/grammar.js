@@ -46,7 +46,7 @@ const PRECS = {
   do: -1,
   fully_open_range: -1,
   range: -1,
-  navigation: -1,
+  navigation: 12,
   expr: -1,
   ty: -1,
   call: -2,
@@ -272,7 +272,7 @@ module.exports = grammar({
     simple_identifier: ($) =>
       choice(
         LEXICAL_IDENTIFIER,
-        /`[^\r\n` ]*`/,
+        /`[^\r\n`]+`/,
         /\$[0-9]+/,
         token(seq("$", LEXICAL_IDENTIFIER)),
         $._contextual_simple_identifier
@@ -303,7 +303,7 @@ module.exports = grammar({
         $.boolean_literal,
         $._string_literal,
         $.regex_literal,
-        "nil"
+        $.nil_literal
       ),
     real_literal: ($) =>
       token(
@@ -323,6 +323,7 @@ module.exports = grammar({
     oct_literal: ($) => token(seq("0", /[oO]/, OCT_DIGITS)),
     bin_literal: ($) => token(seq("0", /[bB]/, BIN_DIGITS)),
     boolean_literal: ($) => choice("true", "false"),
+    nil_literal: ($) => "nil",
     // String literals
     _string_literal: ($) =>
       choice(
@@ -1661,7 +1662,10 @@ module.exports = grammar({
     _class_member_separator: ($) => choice($._semi, $.multiline_comment),
     _class_member_declarations: ($) =>
       seq(
-        sep1($._type_level_declaration, $._class_member_separator),
+        sep1(
+          choice($._type_level_declaration, $.directive),
+          $._class_member_separator
+        ),
         optional($._class_member_separator)
       ),
     _function_value_parameters: ($) =>
@@ -1730,7 +1734,11 @@ module.exports = grammar({
     throws_clause: ($) =>
       seq($._throws_keyword, "(", field("type", $._unannotated_type), ")"),
     enum_class_body: ($) =>
-      seq("{", repeat(choice($.enum_entry, $._type_level_declaration)), "}"),
+      seq(
+        "{",
+        repeat(choice($.enum_entry, $._type_level_declaration, $.directive)),
+        "}"
+      ),
     enum_entry: ($) =>
       seq(
         optional($.modifiers),
@@ -1782,7 +1790,10 @@ module.exports = grammar({
     protocol_body: ($) =>
       seq("{", optional($._protocol_member_declarations), "}"),
     _protocol_member_declarations: ($) =>
-      seq(sep1($._protocol_member_declaration, $._semi), optional($._semi)),
+      seq(
+        sep1(choice($._protocol_member_declaration, $.directive), $._semi),
+        optional($._semi)
+      ),
     _protocol_member_declaration: ($) =>
       choice(
         alias(

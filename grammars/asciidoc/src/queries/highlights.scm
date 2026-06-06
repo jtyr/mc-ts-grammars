@@ -33,12 +33,22 @@
 
 (revremark) @string
 
-(table_block_marker) @punctuation.special
+[
+  (table_block_marker)
+  (csv_table_block_marker)
+  (dsv_table_block_marker)
+] @punctuation.special
 
 (table_cell_attr) @attribute
 
 (table_cell
   "|" @punctuation.special)
+
+(csv_record
+  "," @punctuation.special)
+
+(dsv_record
+  ":" @punctuation.special)
 
 [
   (breaks)
@@ -73,6 +83,11 @@
   (list_marker_geek)
   (list_marker_alpha)
 ] @markup.list
+
+(description_marker) @markup.list
+
+(description_list_item
+  (term) @markup.strong)
 
 [
   (line_comment)

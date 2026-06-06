@@ -2,6 +2,7 @@
 #include "tree_sitter/parser.h"
 #include "tsp_unicode.h"
 #include "tsp_keywords.h"
+#include "tsp_intuit_more.h"
 
 // grumble grumble no stdlib
 static char *tsp_strchr(register const char *s, int c) {
@@ -50,6 +51,8 @@ enum TokenType {
   TOKEN_ESCAPE_SEQUENCE,
   TOKEN_ESCAPED_DELIMITER,
   TOKEN_DOLLAR_IN_REGEXP,
+  TOKEN_REGEXP_OPEN_BRACKET,
+  TOKEN_REGEXP_OPEN_BRACE,
   TOKEN_POD,
   TOKEN_GOBBLED_CONTENT,
   TOKEN_ATTRIBUTE_VALUE_BEGIN,
@@ -126,13 +129,25 @@ typedef struct {
 static TSPQuote tspquote_new() { return (TSPQuote){0, 0, 0}; }
 
 enum HeredocState { HEREDOC_NONE, HEREDOC_START, HEREDOC_UNKNOWN, HEREDOC_CONTINUE, HEREDOC_END };
+
+/* Perl allows multiple heredocs queued on a single line, consumed FIFO after
+ * the newline.  We hold up to HEREDOC_QUEUE_MAX pending heredocs; each one
+ * carries its own delimiter and interpolate/indent flags.  The consume-FSM
+ * state (heredoc_state) applies to the FRONT of the queue (the one currently
+ * being consumed); when it finishes we dequeue and advance to the next. */
+#define HEREDOC_QUEUE_MAX 8
+typedef struct {
+  TSPString delim;
+  bool interpolates, indents;
+} HeredocEntry;
+
 typedef struct {
   Array(TSPQuote) quotes;
-  /* heredoc - we need to track if we should start the heredoc, if it's
-   * interpolating, how many chars the delimiter is and what the delimiter is */
-  bool heredoc_interpolates, heredoc_indents;
+  /* FIFO queue of pending heredocs (front = index 0). heredoc_count is how
+   * many entries are live; heredoc_state is the consume state of the front. */
+  HeredocEntry heredoc_queue[HEREDOC_QUEUE_MAX];
+  uint8_t heredoc_count;
   enum HeredocState heredoc_state;
-  TSPString heredoc_delim;
   bool recovery_emitted;
 } LexerState;
 
@@ -217,16 +232,48 @@ static bool lexerstate_is_paired_delimiter(LexerState *state) {
 
 // we can match perl's behavior if we are intentionally destructive here and find our match
 
-static void lexerstate_add_heredoc(LexerState *state, TSPString *delim, bool interp, bool indent) {
-  state->heredoc_delim = *delim;
-  state->heredoc_interpolates = interp;
-  state->heredoc_indents = indent;
-  state->heredoc_state = HEREDOC_START;
+/* The front of the queue is the heredoc currently being consumed. */
+static HeredocEntry *lexerstate_front_heredoc(LexerState *state) {
+  return &state->heredoc_queue[0];
 }
 
+/* ENQUEUE a pending heredoc to the back of the FIFO.  When this is the first
+ * pending heredoc, prime the consume FSM at HEREDOC_START.
+ *
+ * Overflow handling: if the queue is already full we OVERWRITE THE LAST SLOT
+ * with the new entry rather than dropping it.  The last slot then always
+ * tracks the FINAL heredoc's terminator, so the scanner stays in heredoc-mode
+ * and greedily consumes all overflow content up to that final terminator —
+ * absorbing the excess into the last body instead of leaking it into the code
+ * stream.  For >MAX heredocs on a line this means the first MAX-1 bodies parse
+ * correctly, the last body greedily swallows the remaining overflow (wrong but
+ * BOUNDED), and code after the heredoc block is unaffected (no desync).  This
+ * is graceful degradation for a pathological input. */
+static void lexerstate_add_heredoc(LexerState *state, TSPString *delim, bool interp, bool indent) {
+  HeredocEntry *e;
+  if (state->heredoc_count >= HEREDOC_QUEUE_MAX)
+    e = &state->heredoc_queue[HEREDOC_QUEUE_MAX - 1];
+  else
+    e = &state->heredoc_queue[state->heredoc_count++];
+  e->delim = *delim;
+  e->interpolates = interp;
+  e->indents = indent;
+  if (state->heredoc_count == 1) state->heredoc_state = HEREDOC_START;
+}
+
+/* DEQUEUE the finished front heredoc and advance to the next pending one.
+ * Each heredoc body is wrapped in its own `heredoc_content` grammar node which
+ * begins with a fresh `_heredoc_start` zero-width token; that token only fires
+ * in HEREDOC_START.  So when another heredoc remains queued we re-arm the FSM
+ * to HEREDOC_START, exactly as if its delimiter had just been declared. */
 static void lexerstate_finish_heredoc(LexerState *state) {
-  state->heredoc_delim = (TSPString){0};
-  state->heredoc_state = HEREDOC_NONE;
+  if (state->heredoc_count > 0) {
+    state->heredoc_count--;
+    for (int i = 0; i < state->heredoc_count; i++)
+      state->heredoc_queue[i] = state->heredoc_queue[i + 1];
+  }
+  state->heredoc_queue[state->heredoc_count] = (HeredocEntry){0};
+  state->heredoc_state = state->heredoc_count > 0 ? HEREDOC_START : HEREDOC_NONE;
 }
 
 #define ADVANCE_C                                                             \
@@ -394,12 +441,17 @@ unsigned int tree_sitter_perl_external_scanner_serialize(void *payload, char *bu
   }
   size += quote_count * sizeof(TSPQuote);
 
-  // Serialize the heredoc state and delimiter
-  buffer[size++] = (char)state->heredoc_interpolates;
-  buffer[size++] = (char)state->heredoc_indents;
+  // Serialize the heredoc consume state, then the whole pending FIFO queue:
+  // a count byte followed by each entry's flags + delimiter.
   buffer[size++] = (char)state->heredoc_state;
-  memcpy(&buffer[size], &state->heredoc_delim, sizeof(TSPString));
-  size += sizeof(TSPString);
+  buffer[size++] = (char)state->heredoc_count;
+  for (uint8_t i = 0; i < state->heredoc_count; i++) {
+    HeredocEntry *e = &state->heredoc_queue[i];
+    buffer[size++] = (char)e->interpolates;
+    buffer[size++] = (char)e->indents;
+    memcpy(&buffer[size], &e->delim, sizeof(TSPString));
+    size += sizeof(TSPString);
+  }
   buffer[size++] = (char)state->recovery_emitted;
 
   return size;
@@ -420,14 +472,21 @@ void tree_sitter_perl_external_scanner_deserialize(void *payload, const char *bu
       size += quote_count * sizeof(TSPQuote);
     }
 
-    // Deserialize the heredoc state and delimiter
-    state->heredoc_interpolates = (bool)buffer[size++];
-    state->heredoc_indents = (bool)buffer[size++];
+    // Deserialize the heredoc consume state and the pending FIFO queue.
     state->heredoc_state = (enum HeredocState)buffer[size++];
-
-    memcpy(&state->heredoc_delim, &buffer[size], sizeof(TSPString));
-    size += sizeof(TSPString);
+    state->heredoc_count = (uint8_t)buffer[size++];
+    if (state->heredoc_count > HEREDOC_QUEUE_MAX) state->heredoc_count = HEREDOC_QUEUE_MAX;
+    for (uint8_t i = 0; i < state->heredoc_count; i++) {
+      HeredocEntry *e = &state->heredoc_queue[i];
+      e->interpolates = (bool)buffer[size++];
+      e->indents = (bool)buffer[size++];
+      memcpy(&e->delim, &buffer[size], sizeof(TSPString));
+      size += sizeof(TSPString);
+    }
     state->recovery_emitted = (bool)buffer[size++];
+  } else {
+    state->heredoc_count = 0;
+    state->heredoc_state = HEREDOC_NONE;
   }
 }
 
@@ -455,7 +514,8 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
 
   // this is whitespace sensitive, so it must go before any whitespace is
   // skipped
-  if (valid_symbols[TOKEN_HEREDOC_MIDDLE] && !is_ERROR) {
+  if (valid_symbols[TOKEN_HEREDOC_MIDDLE] && !is_ERROR && state->heredoc_count > 0) {
+    HeredocEntry *front = lexerstate_front_heredoc(state);
     DEBUG("Beginning heredoc contents\n", 0);
     if (state->heredoc_state != HEREDOC_CONTINUE) {
       TSPString line = {0};
@@ -468,7 +528,7 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
             state->heredoc_state == HEREDOC_END || lexer->get_column(lexer) == 0;
         bool saw_escape = false;
         DEBUG("Starting loop at col %d\n", lexer->get_column(lexer));
-        if (is_valid_start_pos && state->heredoc_indents) {
+        if (is_valid_start_pos && front->indents) {
           DEBUG("Skipping initial whitespace in heredoc\n", 0);
           skip_whitespace(lexer);
           c = lexer->lookahead;
@@ -488,8 +548,8 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
           if (c == '$' || c == '@' || c == '\\') saw_escape = true;
           ADVANCE_C;
         }
-        DEBUG("got length %d, want length %d\n", line.length, state->heredoc_delim.length);
-        if (is_valid_start_pos && tspstring_eq(&line, &state->heredoc_delim)) {
+        DEBUG("got length %d, want length %d\n", line.length, front->delim.length);
+        if (is_valid_start_pos && tspstring_eq(&line, &front->delim)) {
           // if we've read already, we return everything up until now
           if (state->heredoc_state != HEREDOC_END) {
             state->heredoc_state = HEREDOC_END;
@@ -499,7 +559,7 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
           lexerstate_finish_heredoc(state);
           TOKEN(TOKEN_HEREDOC_END);
         }
-        if (saw_escape && state->heredoc_interpolates) {
+        if (saw_escape && front->interpolates) {
           // we'll repeat this line in continue mode where we'll pause midline
           state->heredoc_state = HEREDOC_CONTINUE;
           TOKEN(TOKEN_HEREDOC_MIDDLE);
@@ -659,9 +719,25 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
           while (isidcont(c)) ADVANCE_C;
           // if ident chars took us until the closing `>` then we're readline FILEHANDLE
           if (c == '>') TOKEN(TOKEN_OPEN_READLINE_BRACKET);
-          // otherwise we're a fileglob operator, and we set up our string parse + be excellent
-          lexerstate_push_quote(state, '<');
-          TOKEN(TOKEN_OPEN_FILEGLOB_BRACKET);
+          // otherwise we *might* be a fileglob operator (`<*.c>`, `<$dir/*>`).
+          // But a bare `<` followed by a term (e.g. `CONST < 0`) is the
+          // relational less-than operator, not a fileglob. The two are only
+          // distinguishable by whether a closing `>` appears before the end of
+          // the statement: a real fileglob is always `<...>` on a single line.
+          // So we scan ahead (without moving the marked token end, which still
+          // covers just `<`) and only commit to a fileglob if we find a `>`. If
+          // we don't, we bail and let the grammar lex `<` as the operator.
+          if (valid_symbols[TOKEN_OPEN_FILEGLOB_BRACKET]) {
+            while (c != '>' && c != '<' && c != ';' && c != '\n' && !lexer->eof(lexer))
+              ADVANCE_C;
+            if (c == '>') {
+              lexerstate_push_quote(state, '<');
+              TOKEN(TOKEN_OPEN_FILEGLOB_BRACKET);
+            }
+          }
+          // not a readline, not a fileglob — let `<` fall through to the
+          // grammar as the relational operator.
+          return false;
       }
 
   }
@@ -728,6 +804,43 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
         TOKEN(TOKEN_DOLLAR_IN_REGEXP);
     }
 
+    return false;
+  }
+
+  /* A '[' or '{' in a pattern is ambiguous: it can begin a subscript on the
+   * preceding variable (/$foo[0]/, /$foo{k}/) or a character class /
+   * quantifier (/[abc]/, /a{2,3}/).  We replicate perl's S_intuit_more
+   * heuristic (tsp_intuit_more) to decide.  When it's a class/quantifier we
+   * emit a literal opener (aliased back to '[' / '{' in the grammar); when
+   * it's a subscript we decline so the grammar's token.immediate('[' / '{')
+   * takes over. */
+  if ((valid_symbols[TOKEN_REGEXP_OPEN_BRACKET] && c == '[') ||
+      (valid_symbols[TOKEN_REGEXP_OPEN_BRACE] && c == '{')) {
+    int32_t open = c;
+    int32_t close = (open == '[') ? ']' : '}';
+
+    char buf[256];
+    int n = 0;
+    buf[n++] = (char)open;
+
+    ADVANCE_C;   /* consume the opener... */
+    MARK_END;    /* ...the emitted token is exactly that one char */
+
+    /* Read ahead to gather the construct for the heuristic, stopping once we
+     * have buffered the matching close (so intuit_more can find it) or we run
+     * out of room / input.  These advances past MARK_END are pure lookahead;
+     * the token stays one char wide.  Non-ASCII collapses to a placeholder
+     * since the heuristic is ASCII-only by design (a best-effort gap). */
+    while (n < (int)sizeof(buf) && c != 0 && !lexer->eof(lexer)) {
+      buf[n++] = (c < 0x80) ? (char)c : (char)0x7f;
+      if (c == close) break;
+      ADVANCE_C;
+    }
+
+    if (!tsp_intuit_more(buf, n)) {
+      TOKEN(open == '[' ? TOKEN_REGEXP_OPEN_BRACKET : TOKEN_REGEXP_OPEN_BRACE);
+    }
+    /* subscript: let the grammar's immediate '[' / '{' win */
     return false;
   }
 
@@ -853,6 +966,17 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
       TOKEN(TOKEN_BRACE_END_ZW);
     }
     MARK_END;
+
+    // In a paired multi-part quote (s{}{}, tr[][], ...), the replacement pair
+    // opens a fresh quote whose delimiter may differ from the pattern's. The
+    // pattern's quote is still on top of the stack (middle_close consumes its
+    // closer but doesn't pop it), so its closer would wrongly stay active while
+    // we scan the replacement. Now that the second pair is opening, retire it.
+    // MIDDLE_SKIP being a valid symbol here means we're at the middle choice
+    // point (between pattern and replacement) rather than an initial begin.
+    if (valid_symbols[TOKEN_QUOTELIKE_MIDDLE_SKIP] && state->quotes.size) {
+      lexerstate_pop_quote(state, state->quotes.size);
+    }
 
     lexerstate_push_quote(state, delim);
     // TODO - fill in this debug print here?
