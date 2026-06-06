@@ -525,7 +525,18 @@ module.exports = grammar({
     float: $ => $._float_literal,
 
     // NOTE: See `?NumericConstants` for precise details
-    _hex_literal: $ => /0[xX][0-9a-fA-F]+([pP][+-]?[0-9]+)?/,
+    //
+    // For hexadecimal:
+    // - '0'
+    // - 'x' or 'X'
+    // - Non-empty sequence of '[0-9a-fA-F.]' restricted to at most 1 '.'
+    //   - LHS `([0-9a-fA-F]+(\.[0-9a-fA-F]*)?)` handles 0x1, 0x1.2
+    //   - RHS `(\.[0-9a-fA-F]*)` handles 0x.1, and 0x. (surprisingly R allows this)
+    // - Optional binary exponent of:
+    //   - 'p' or 'P'
+    //   - Optional '+' or '-'
+    //   - Non-empty sequence of '[0-9]'
+    _hex_literal: $ => /0[xX](([0-9a-fA-F]+(\.[0-9a-fA-F]*)?)|(\.[0-9a-fA-F]*))([pP][+-]?[0-9]+)?/,
     _number_literal: $ => /(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d*)?/,
     _float_literal: $ => choice($._hex_literal, $._number_literal),
 
@@ -591,6 +602,12 @@ module.exports = grammar({
     dot_dot_i: $ => /[.][.]\d+/,
 
     // Identifiers.
+    //
+    // NOTE: R identifiers can start with a letter or a `.`, as long as the `.` is not
+    // followed by a digit, like `.1foo`. This has practical implications, as otherwise
+    // `.1i` and `.1L` can be confused as identifiers (#190).
+    // https://github.com/wch/r-source/blob/f118c37fe39c57f302341a89da75e25045d5f01e/src/library/base/man/Quotes.Rd#L92-L95
+    //
     // NOTE: `_` isn't a valid way to start an R identifier, but we are a little
     // lax here and parse it anyways. One reason is because want to support a lone `_` as
     // the pipe placeholder identifier. It could be included as a separate `"_"` choice,
@@ -598,20 +615,24 @@ module.exports = grammar({
     // check that `_foo` is an invalid identifier. It seems simpler to parse `_foo` as a
     // single identifier, and then let downstream consumers do further checks on the
     // validity as needed (#71).
+    //
     // NOTE: Due to the linked tree-sitter discussion, if `_unquoted_identifier` and
     // `_quoted_identifier` are their own hidden terminal rules, then we can't detect error
     // recovered `identifier`s as missing with `ts_node_is_missing()`. The workaround used
     // here inlines the regexes, and wraps the `choice()` call in a single terminal
     // `token()` so `identifier` can still be used as the `word` rule.
     // https://github.com/tree-sitter/tree-sitter/issues/3332
+    //
     // NOTE: Do not use this directly in the grammar, use `_identifier` instead!
     identifier: $ => {
-      const _unquoted_identifier = /[\p{XID_Start}._][\p{XID_Continue}.]*/;
+      const _unquoted_identifier = /[\p{XID_Start}_][\p{XID_Continue}.]*/;
+      const _unquoted_identifier_with_leading_dot = /\.(?:[\p{XID_Start}._][\p{XID_Continue}.]*)?/;
       const _quoted_identifier = /`((?:\\(.|\n))|[^`\\])*`/;
 
       return token(
         choice(
           _unquoted_identifier,
+          _unquoted_identifier_with_leading_dot,
           _quoted_identifier
         )
       )
@@ -668,10 +689,7 @@ module.exports = grammar({
     // We define keywords as those contained in `?Reserved`, i.e. it must be a reserved
     // word in R's parser to be considered here. If a keyword from `?Reserved` is already
     // mentioned within a wider rule (like "if" and "function"), then it is not included
-    // again here. Grammar consumers can choose to highlight more words as required. We
-    // make a single exception for `return`, which is not in `?Reserved` but is SO special
-    // that we decided to include it as a keyword.
-    return: $ => "return",
+    // again here. Grammar consumers can choose to highlight more words as required (#109, #189).
     next: $ => "next",
     break: $ => "break",
     true: $ => "TRUE",
@@ -718,7 +736,6 @@ module.exports = grammar({
       $.dots,
       $.dot_dot_i,
 
-      $.return,
       $.next,
       $.break,
       $.true,

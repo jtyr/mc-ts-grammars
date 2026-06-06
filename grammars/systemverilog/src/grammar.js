@@ -3645,7 +3645,7 @@ const rules = {
   ),
 
   multiple_concatenation: $ => seq(
-    '{', $.expression, $.concatenation, '}'
+    '{', $.constant_expression, $.concatenation, '}'
   ),
 
   streaming_concatenation: $ => seq(
@@ -6172,7 +6172,6 @@ module.exports = grammar({
     [$.full_path_description, $.full_edge_sensitive_path_description],
     [$.parallel_path_description, $.parallel_edge_sensitive_path_description],
     [$.scalar_timing_check_condition, $.mintypmax_expression],
-    [$.constant_function_call, $.module_path_primary],
 
 
     // After inlining of identifiers
