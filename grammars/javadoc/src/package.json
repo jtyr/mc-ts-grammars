@@ -28,17 +28,17 @@
     "*.wasm"
   ],
   "dependencies": {
-    "node-addon-api": "^8.7.0",
+    "node-addon-api": "^8.8.0",
     "node-gyp-build": "^4.8.2"
   },
   "devDependencies": {
     "prebuildify": "^6.0.1",
-    "tree-sitter-cli": "^0.26.8",
+    "tree-sitter-cli": "^0.26.9",
     "tree-sitter": "^0.25.0",
     "eslint": "^10.4.0",
     "@eslint/js": "^10.0.1",
     "eslint-config-treesitter": "^1.0.2",
-    "globals": "^17.5.0",
+    "globals": "^17.6.0",
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
@@ -56,5 +56,9 @@
     "lint": "eslint --max-warnings 0 grammar.js",
     "typecheck": "tsc --noEmit",
     "test": "node --test bindings/node/*_test.js"
+  },
+  "allowScripts": {
+    "tree-sitter": true,
+    "tree-sitter-cli": true
   }
 }
