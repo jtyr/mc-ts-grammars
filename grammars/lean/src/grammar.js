@@ -58,11 +58,11 @@ export default grammar({
   word: $ => $._plain_ident,
 
   conflicts: $ => [
-    /* `public`/`meta` can start either an `import` or a Lean 4
-       module-system-visibility-prefixed declaration. */
-    [$.import, $.declaration],
-    /* `public meta section` shares its prefix with the
-       visibility-prefixed-declaration form. */
+    /* `public`/`meta` can start an `import`, a `public meta section`
+       marker, or a Lean 4 visibility-prefixed declaration. */
+    [$.import, $.public_section, $.declaration],
+    /* After `attributes`, `import` is no longer possible, but
+       `public meta …` still chooses between section and declaration. */
     [$.public_section, $.declaration],
     /* `{ ident <ident> … }` could be a function-style struct_field
        (`method args := body`) or the singleton-set `{ app args }`. We
@@ -573,9 +573,9 @@ export default grammar({
        body of `field := value` lines (instance/anonymous-structure
        def form). */
     _decl_val: $ => choice(
-      field('body', seq(':=', $._term)),
-      repeat1($.match_alt),
-      $.where_struct,
+      seq(field('body', seq(':=', $._term)), optional($.where_decls)),
+      seq(repeat1($.match_alt), optional($.where_decls)),
+      seq($.where_struct, optional($.where_decls)),
     ),
     _type_spec: $ => field('type', seq(':', $._term)),
 
@@ -586,7 +586,17 @@ export default grammar({
        swallow the next field's name. The body is optional: an empty
        `where` clause is legal when the structure has no fields.
        `where ...` is Lean's "fill all required fields with sorry"
-       elision marker. */
+       elision marker.
+
+       The same `where` clause also introduces auxiliary helper
+       definitions on a regular `def`/`theorem`:
+         def f x := body
+         where
+           helper := …
+           another | pat => …
+       A `where_item` covers both forms: a struct field
+       (`name [binders] := value`) or a function-style helper
+       (`name | pat => … | pat => …`). */
     where_struct: $ => prec.right(seq(
       'where',
       optional(choice(
@@ -598,6 +608,34 @@ export default grammar({
           $._dedent,
         ),
       )),
+    )),
+    /* `where` block of auxiliary helper definitions trailing a
+       `def`/`theorem`. Distinct from `where_struct`: the items here
+       are full sub-declarations (function-style match alts), not
+       struct field assignments. */
+    where_decls: $ => seq(
+      'where',
+      choice(
+        $.where_aux_def,
+        seq(
+          $._indent,
+          sep1($.where_aux_def, $._newline),
+          $._dedent,
+        ),
+      ),
+    ),
+    where_aux_def: $ => prec.right(seq(
+      field('name', $.identifier),
+      optional(alias(repeat1(choice(
+        $._binder_ident,
+        $.implicit_binder,
+        $.explicit_binder,
+      )), $.binders)),
+      optional($._type_spec),
+      choice(
+        seq(':=', field('body', $._term)),
+        repeat1($.match_alt),
+      ),
     )),
 
     /* ===== binders ======================================================= */
@@ -711,6 +749,7 @@ export default grammar({
       $.binary_op,
       $.unary_op,
       $.universe_app,
+      $.induction,
     ),
 
     _term_atom: $ => choice(
@@ -1260,6 +1299,19 @@ export default grammar({
       'by_cases',
       field('name', $._binder_ident),
       $._type_spec,
+    )),
+
+    /* `induction x [using ind]? [generalizing ys]? [with | … ]?` —
+       Lean's structural-induction tactic. Same shape with `cases` for
+       the case-analysis tactic. Both are written as terms inside a
+       `by`-block, so they belong with the other lead terms. The
+       `with`-clause holds match-style branches. */
+    induction: $ => prec.right(seq(
+      choice('induction', 'cases'),
+      sep1(field('target', $._term_atom), ','),
+      optional(seq('using', field('elim', $.identifier))),
+      optional(seq('generalizing', repeat1(field('gen', $._binder_ident)))),
+      optional(seq('with', repeat1($.match_alt))),
     )),
 
     show: $ => prec.right(seq(

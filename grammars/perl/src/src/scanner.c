@@ -3,6 +3,7 @@
 #include "tsp_unicode.h"
 #include "tsp_keywords.h"
 #include "tsp_intuit_more.h"
+#include "tsp_intuit_readline.h"
 
 // grumble grumble no stdlib
 static char *tsp_strchr(register const char *s, int c) {
@@ -78,6 +79,8 @@ enum TokenType {
   TOKEN_RECOVER_BRACKET_CLOSE,
   TOKEN_RECOVER_BRACE_CLOSE,
   TOKEN_RECOVER_ARROW,
+  /* `x` repetition operator glued to its count (`"ab"x3`) */
+  TOKEN_X_OP,
   /* error condition is always last */
   TOKEN_ERROR
 };
@@ -124,9 +127,25 @@ static int32_t close_for_open(int32_t c) {
 
 typedef struct {
   int32_t open, close, count;
+  /* Recognises a pattern-LEADING '['/'{' -- the quote's own opening delimiter
+   * appearing (after optional whitespace) as the literal first element of the
+   * body (m{{...}}, qr{ {...} }, s{{...}}, m[[...]]) -- where the S_intuit_more
+   * subscript heuristic (tsp_intuit_more) has no preceding variable to weigh and
+   * so must not be consulted.
+   *
+   * Decided ONCE by a bounded lookahead at the opening delimiter (see the open
+   * handler), where the lexer sits exactly at the body start: if the first
+   * non-space body char is the delimiter again, the body leads with a literal
+   * group.  Looking at the actual first char sidesteps both problems of the
+   * earlier column+flag scheme -- columns repeat across lines, and the scanner
+   * can't see grammar-lexed interpolation -- because we never have to ask "has
+   * content been seen?": we just check what the first char *is*.
+   *
+   * Set at the opener, consumed (cleared) by that first bracket. */
+  bool body_leads_with_delim;
 } TSPQuote;
 
-static TSPQuote tspquote_new() { return (TSPQuote){0, 0, 0}; }
+static TSPQuote tspquote_new() { return (TSPQuote){0, 0, 0, false}; }
 
 enum HeredocState { HEREDOC_NONE, HEREDOC_START, HEREDOC_UNKNOWN, HEREDOC_CONTINUE, HEREDOC_END };
 
@@ -212,6 +231,20 @@ static void lexerstate_pop_quote(LexerState *state, int32_t idx) {
 static bool lexerstate_is_paired_delimiter(LexerState *state) {
   TSPQuote *q = array_back(&state->quotes);
   return !!q->open;
+}
+
+/* Is `c` the innermost quote's pattern-leading bracket -- the delimiter-matching
+ * '['/'{' the open-handler lookahead flagged as the body's first literal element?
+ * One-shot: clears the flag so a later same-delimiter bracket is treated as
+ * ordinary (subscript/class) content. */
+static bool lexerstate_take_body_lead(LexerState *state, int32_t c) {
+  if (!state->quotes.size) return false;
+  TSPQuote *q = array_back(&state->quotes);
+  if (q->body_leads_with_delim && c == q->open) {
+    q->body_leads_with_delim = false;
+    return true;
+  }
+  return false;
 }
 
 //   in order to emulate a sublex, we basically need to have a new escape type character
@@ -425,14 +458,37 @@ static bool isidcont(int32_t c) { return c == '_' || is_tsp_id_continue(c); }
 // there's a matching rule in the grammar to catch when it doesn't match a rule
 static bool is_interpolation_escape(int32_t c) { return c < 256 && tsp_strchr("$@-[{\\", c); }
 
+/* The runtime hands serialize() a FIXED buffer of TREE_SITTER_SERIALIZATION_BUFFER_SIZE
+ * (1024) bytes — `self->lexer.debug_buffer`, a member embedded in the Lexer/TSParser
+ * struct.  Writing past it is intra-object memory corruption (ASAN doesn't flag it),
+ * and returning a length > the buffer trips the runtime's `assert(length <= 1024)`
+ * (or, in NDEBUG builds, silently clobbers adjacent parser fields).  So we must bound
+ * the serialized size to the buffer, NOT to UINT8_MAX.
+ *
+ * Budget: everything except the quotes is fixed-size — the two count bytes, the
+ * recovery flag, and the whole heredoc FIFO at its worst case (HEREDOC_QUEUE_MAX
+ * full entries).  Whatever room is left holds quotes.  A deeply nested (or, in a
+ * mid-edit buffer, deeply *unclosed*) interpolation like `qq{ ${\ qq{ ... }} }`
+ * stacks one quote per level and can blow past this; we cap it.  Truncating the
+ * stack degrades parsing of pathologically-nested input (>~59 levels) but keeps it
+ * BOUNDED — the same graceful-degradation contract the heredoc overflow already uses.
+ */
+#define SER_FIXED_OVERHEAD \
+  (1 /* quote_count   */ + \
+   1 /* heredoc_state */ + 1 /* heredoc_count */ + \
+   HEREDOC_QUEUE_MAX * (1 /* interpolates */ + 1 /* indents */ + (int)sizeof(TSPString)) + \
+   1 /* recovery_emitted */)
+#define MAX_SERIALIZED_QUOTES \
+  ((TREE_SITTER_SERIALIZATION_BUFFER_SIZE - SER_FIXED_OVERHEAD) / (int)sizeof(TSPQuote))
+
 unsigned int tree_sitter_perl_external_scanner_serialize(void *payload, char *buffer) {
   LexerState *state = payload;
   size_t size = 0;
 
-  // Serialize the quotes array
+  // Serialize the quotes array, capped to what fits in the fixed buffer (see above).
   size_t quote_count = state->quotes.size;
-  if (quote_count > UINT8_MAX) {
-    quote_count = UINT8_MAX;
+  if (quote_count > MAX_SERIALIZED_QUOTES) {
+    quote_count = MAX_SERIALIZED_QUOTES;
   }
   buffer[size++] = (char)quote_count;
 
@@ -465,6 +521,9 @@ void tree_sitter_perl_external_scanner_deserialize(void *payload, const char *bu
   if (length > 0) {
     // Deserialize the quotes array
     size_t quote_count = (uint8_t)buffer[size++];
+    // Defensive: a well-formed buffer never exceeds this (serialize caps it), but
+    // clamp anyway so a malformed/old buffer can't drive an oversized memcpy.
+    if (quote_count > MAX_SERIALIZED_QUOTES) quote_count = MAX_SERIALIZED_QUOTES;
     if (quote_count > 0) {
       array_reserve(&state->quotes, quote_count);
       state->quotes.size = quote_count;
@@ -511,6 +570,18 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   /* we use this to force tree-sitter to stay on the error branch of a nonassoc
    * operator */
   if (!is_ERROR && valid_symbols[TOKEN_NONASSOC]) TOKEN(TOKEN_NONASSOC);
+
+  /* The `x` repetition operator glued to its count (`"ab"x3`, `("")x4`). The
+   * internal lexer would greedily take `x3` as one identifier, so when the
+   * grammar offers the operator here (an operator is expected — perl's
+   * XOPERATOR state, which `valid_symbols` encodes) and `x` is glued to a digit,
+   * we emit it explicitly, consuming just the `x`. Anything else (`xor`, an
+   * identifier, a space-delimited `x`) falls through to the normal lexer. */
+  if (!is_ERROR && valid_symbols[TOKEN_X_OP] && c == 'x') {
+    ADVANCE_C;
+    if (c >= '0' && c <= '9') { MARK_END; TOKEN(TOKEN_X_OP); }
+    return false;
+  }
 
   // this is whitespace sensitive, so it must go before any whitespace is
   // skipped
@@ -714,25 +785,49 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
           MARK_END;
           // ah, we have a heredoc; let's just go down to that section then
           if (c == '<') goto heredoc_token_handling;
-          if (c == '$') ADVANCE_C;
+          // Gather the `<...>` body as we go, starting right after `<`, so the
+          // fileglob content heuristic below sees the WHOLE body -- including
+          // the `$ident` prefix the readline probe consumes here (otherwise a
+          // `<$sner >` glob would reach the heuristic with content " ").
+          char content[256];
+          size_t clen = 0;
+          if (c == '$') { content[clen++] = '$'; ADVANCE_C; }
           // we now zoooom as many ident chars as we can
-          while (isidcont(c)) ADVANCE_C;
+          while (isidcont(c)) {
+            if (clen < sizeof(content)) content[clen++] = (c < 0x80) ? (char)c : (char)0x7f;
+            ADVANCE_C;
+          }
           // if ident chars took us until the closing `>` then we're readline FILEHANDLE
           if (c == '>') TOKEN(TOKEN_OPEN_READLINE_BRACKET);
-          // otherwise we *might* be a fileglob operator (`<*.c>`, `<$dir/*>`).
-          // But a bare `<` followed by a term (e.g. `CONST < 0`) is the
-          // relational less-than operator, not a fileglob. The two are only
-          // distinguishable by whether a closing `>` appears before the end of
-          // the statement: a real fileglob is always `<...>` on a single line.
-          // So we scan ahead (without moving the marked token end, which still
-          // covers just `<`) and only commit to a fileglob if we find a `>`. If
-          // we don't, we bail and let the grammar lex `<` as the operator.
+          // Otherwise `<...>` is either a fileglob (`<*.c>`) or the relational
+          // `<` operator (`CONST < 0`); both are live after an ambiguous
+          // bareword.  Gather the body and the bytes after the `>` (pure
+          // lookahead past MARK_END, so the token stays the one-char `<`;
+          // non-ASCII -> 0x7f), then let tsp_is_fileglob() decide -- see
+          // tsp_intuit_readline.h.
           if (valid_symbols[TOKEN_OPEN_FILEGLOB_BRACKET]) {
-            while (c != '>' && c != '<' && c != ';' && c != '\n' && !lexer->eof(lexer))
+            // `content`/`clen` already hold the `$ident` prefix from above.
+            // Stop at a statement boundary so we don't chase a `>` onto the
+            // next line.
+            while (c != '>' && c != '<' && c != ';' && c != '\n' &&
+                   !lexer->eof(lexer)) {
+              if (clen < sizeof(content))
+                content[clen++] = (c < 0x80) ? (char)c : (char)0x7f;
               ADVANCE_C;
+            }
+
             if (c == '>') {
-              lexerstate_push_quote(state, '<');
-              TOKEN(TOKEN_OPEN_FILEGLOB_BRACKET);
+              ADVANCE_C;  // step past the closing `>` (still pure lookahead)
+              char after[256];
+              size_t alen = 0;
+              while (alen < sizeof(after) && c != '\n' && !lexer->eof(lexer)) {
+                after[alen++] = (c < 0x80) ? (char)c : (char)0x7f;
+                ADVANCE_C;
+              }
+              if (tsp_is_fileglob(content, clen, after, alen)) {
+                lexerstate_push_quote(state, '<');
+                TOKEN(TOKEN_OPEN_FILEGLOB_BRACKET);
+              }
             }
           }
           // not a readline, not a fileglob — let `<` fall through to the
@@ -743,8 +838,11 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   }
 
   if (!is_ERROR && valid_symbols[TOKEN_DOLLAR_IDENT_ZW]) {
-    // false on word chars, another dollar or {
-    if (!isidcont(c) && !tsp_strchr("${", c)) {
+    // false on word chars, another dollar or {  -- but if whitespace intervened
+    // the `$` can't begin a glued deref ($$foo needs the name glued on), so a
+    // following word char is a separate token: `$$ eq …`, `$$ and …` are the
+    // PID var `$$`, not `${$eq}`. Treat skipped whitespace as a hard boundary.
+    if (!tsp_strchr("${", c) && (skipped_whitespace || !isidcont(c))) {
       if (c == ':') {
         // NOTE - it's a syntax error to do $$:, so that's why we return
         // dollar_ident_zw in that case
@@ -816,6 +914,18 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
    * takes over. */
   if ((valid_symbols[TOKEN_REGEXP_OPEN_BRACKET] && c == '[') ||
       (valid_symbols[TOKEN_REGEXP_OPEN_BRACE] && c == '{')) {
+    /* A pattern-LEADING '['/'{' that is the quote's own opening delimiter is a
+     * balanced nested delimiter (m{{...}}, qr{ {...} }, s{{...}}, m[[...]]),
+     * NOT a subscript: there is no preceding variable for intuit_more to weigh,
+     * and its subscript verdict here would be meaningless.  Fall through to the
+     * Q/QQ content scanner, which consumes the opener while tracking the nesting
+     * count so the matching inner close doesn't terminate the quote early.
+     * Anything beyond the leading position is genuinely ambiguous again, so the
+     * heuristic below applies as before. */
+    bool leading = lexerstate_take_body_lead(state, c);
+    if (leading) {
+      /* leave the opener for the content scanner below */
+    } else {
     int32_t open = c;
     int32_t close = (open == '[') ? ']' : '}';
 
@@ -838,10 +948,19 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     }
 
     if (!tsp_intuit_more(buf, n)) {
+      /* If this class/quantifier opener is also the quote's own delimiter
+       * (`m{ \d{2} }`, `m[ [abc] ]`), it opens a nested level — bump the count
+       * so the matching inner close doesn't terminate the quote early. The
+       * content scanner does this when it consumes `{`/`[` inline; we must do
+       * the same here, since we only reach this branch when the opener leads a
+       * scan (e.g. right after an escape) and the content scanner is bypassed. */
+      int32_t qi = lexerstate_is_quote_opener(state, open);
+      if (qi) lexerstate_saw_opener(state, qi);
       TOKEN(open == '[' ? TOKEN_REGEXP_OPEN_BRACKET : TOKEN_REGEXP_OPEN_BRACE);
     }
     /* subscript: let the grammar's immediate '[' / '{' win */
     return false;
+    }
   }
 
   if (valid_symbols[TOKEN_POD]) {
@@ -937,7 +1056,13 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
           ADVANCE_C;
         }
       }
-      if (delim.length > 0) {
+      // We stop the loop above either at the closing quote or at EOF.  Only
+      // commit a heredoc if we actually found the closer; an EMPTY delimiter
+      // (`<<''` / `<<""`) is legal — perl terminates its body at the next blank
+      // line, which the body matcher already handles (an empty delim compares
+      // equal to an empty line).  Keying off the closer rather than a non-empty
+      // delim is also more correct: it won't mis-fire on EOF-without-closer.
+      if (c == delim_open) {
         // gotta eat that delimiter
         ADVANCE_C;
         // gotta null terminate up in here
@@ -979,9 +1104,16 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     }
 
     lexerstate_push_quote(state, delim);
-    // TODO - fill in this debug print here?
-    // DEBUG("Generic QSTRING open='%c' close='%c'\n", state->delim_open,
-    // state->delim_close);
+    /* Pattern-leading bracket lookahead (see TSPQuote.body_leads_with_delim):
+     * for a paired delimiter, peek past any leading whitespace -- if the body's
+     * first real char is the delimiter again (m{{...}}, qr{ {...} }, m[[...]]),
+     * it's a literal leading group, not a subscript.  This is pure lookahead:
+     * MARK_END already covers just the opener, so these advances don't extend
+     * the emitted token and the body is re-scanned from the opener's end. */
+    if (close_for_open(delim)) {
+      while (is_tsp_whitespace(c)) ADVANCE_C;
+      if (c == delim) array_back(&state->quotes)->body_leads_with_delim = true;
+    }
     TOKEN(TOKEN_QUOTELIKE_BEGIN);
   }
 
@@ -1137,6 +1269,23 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
       ADVANCE_C;
       if (!isidcont(c)) TOKEN(TOKEN_FILETEST);
     }
+    return false;
+  }
+  // A lone non-identifier punctuation variable inside ${...} — ${@}, ${!},
+  // ${%}, ${$}, ${"} … — names the punctuation variable $@/$!/…, NOT a
+  // sigil/operator. The main lexer would otherwise pick the sigil/operator token
+  // (and for @ / % that token swallows the closing brace, decapitating the rest
+  // of the file). Recognize it here with the same '}'-lookahead the bareword
+  // path uses: one var char immediately followed (modulo whitespace) by '}' is
+  // the autoquoted name. Identifiers, digits and ^carets are handled by the
+  // grammar's other varname alternatives; '{' would begin a block, '#' a comment.
+  if (valid_symbols[TOKEN_BRACE_AUTOQUOTED] && !isidfirst(c) &&
+      c > ' ' && c != '}' && c != '{' && c != '^' && c != '#' &&
+      !(c >= '0' && c <= '9')) {
+    ADVANCE_C;
+    MARK_END;
+    while (is_tsp_whitespace(c)) ADVANCE_C;
+    if (c == '}') TOKEN(TOKEN_BRACE_AUTOQUOTED);
     return false;
   }
   if (isidfirst(c) &&
