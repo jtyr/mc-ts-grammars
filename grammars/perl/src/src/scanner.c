@@ -66,6 +66,7 @@ enum TokenType {
   TOKEN_HEREDOC_MIDDLE,
   TOKEN_HEREDOC_END,
   TOKEN_FAT_COMMA_AUTOQUOTED,
+  TOKEN_FAT_COMMA_AUTOQUOTED_AHEAD,
   TOKEN_FILETEST,
   TOKEN_BRACE_AUTOQUOTED,
   /* zero-width lookahead tokens */
@@ -79,8 +80,19 @@ enum TokenType {
   TOKEN_RECOVER_BRACKET_CLOSE,
   TOKEN_RECOVER_BRACE_CLOSE,
   TOKEN_RECOVER_ARROW,
+  TOKEN_RECOVER_BLOCK_CLOSE,
+  /* opaque body of a `format NAME = ... .` declaration: everything from the
+   * line after `=` up to and including the lone-`.` terminator line */
+  TOKEN_FORMAT_CONTENT,
   /* `x` repetition operator glued to its count (`"ab"x3`) */
   TOKEN_X_OP,
+  /* `class`/`role`/`method` emitted only in declaration position */
+  TOKEN_KW_CLASS,
+  TOKEN_KW_ROLE,
+  TOKEN_KW_METHOD,
+  /* `async`/`try` contextual keywords, emitted only in keyword position */
+  TOKEN_KW_ASYNC,
+  TOKEN_KW_TRY,
   /* error condition is always last */
   TOKEN_ERROR
 };
@@ -372,14 +384,24 @@ static bool isidfirst(int32_t c);
 static bool isidcont(int32_t c);
 
 enum PeekResult {
-  PEEK_NO_MATCH,    // first char not a keyword starter — lexer untouched
-  PEEK_KEYWORD,     // statement keyword (not followed by =>)
-  PEEK_FAT_COMMA,   // keyword followed by => — caller should goto fat_comma_check
-  PEEK_NOT_KEYWORD, // word read but not a keyword — caller MUST return false
+  PEEK_NO_MATCH,      // first char not a keyword starter — lexer untouched
+  PEEK_KEYWORD,       // statement keyword (not followed by =>)
+  PEEK_FAT_COMMA,     // keyword followed by => — caller MARK_ENDs then goto fat_comma_check
+  PEEK_AUTOQUOTE_KEY, // non-keyword word followed by => — peek already marked the
+                      // word boundary; caller goes straight to fat_comma_check
+  PEEK_NOT_KEYWORD,   // word read but not a keyword — caller MUST return false
 };
 
-static enum PeekResult peek_is_statement_keyword(TSLexer *lexer) {
+// How a word read by the keyword peek classifies (set by KEYWORD_MATCH).
+enum KwKind {
+  KW_NONE,       // not a statement keyword
+  KW_ALWAYS,     // always a statement keyword (package/use/no/class/role)
+  KW_NEEDS_NAME, // declaration only if followed by a name (sub/method)
+};
+
+static enum PeekResult peek_is_statement_keyword(TSLexer *lexer, bool *is_structural) {
   int32_t la = lexer->lookahead;
+  *is_structural = false;
 
   if (KEYWORD_FIRST_CHAR_FILTER(la))
     return PEEK_NO_MATCH;
@@ -394,31 +416,77 @@ static enum PeekResult peek_is_statement_keyword(TSLexer *lexer) {
   }
   word[len] = '\0';
 
-  // Must be a word boundary (not followed by more identifier chars)
-  if (isidcont(la))
+  // Classify *before* consuming any identifier tail: a statement keyword must
+  // end exactly at the keyword charset boundary.  A longer identifier (e.g.
+  // "service", "naming") read only partway by the loop above is never a
+  // keyword — but it can still be a fat-comma autoquote key, so we don't bail.
+  enum KwKind kind = KW_NONE;
+  if (!isidcont(la))
+    KEYWORD_MATCH(word, kind);
+
+  if (kind == KW_NONE) {
+    // Not a statement keyword.  It may still be a fat-comma autoquote key
+    // (`name => 1` on a continuation line inside an open list, where the
+    // recovery gate fires and would otherwise lex it as a plain bareword).
+    // Consume the rest of the identifier, mark the token end at the word
+    // boundary, then look past whitespace for '='.  The whole word must be
+    // covered, so skip with advance(false): advance(true) would reset the
+    // token start past the word and emit a zero-width key.  mark_end fixes the
+    // end at the word, so trailing whitespace stays out of the token anyway.
+    while (isidcont(la)) {
+      lexer->advance(lexer, false);
+      la = lexer->lookahead;
+    }
+    lexer->mark_end(lexer);
+    while (is_tsp_whitespace(la)) {
+      lexer->advance(lexer, false);
+      la = lexer->lookahead;
+    }
+    if (la == '=') return PEEK_AUTOQUOTE_KEY;
     return PEEK_NOT_KEYWORD;
+  }
 
-  bool needs_name = false;
-  KEYWORD_MATCH(word, needs_name);
+  // A statement keyword.  Structural OO keywords (method/class/role) never
+  // legitimately nest inside a sub/method body, so they alone trigger body
+  // block-close recovery.  use/no/sub/package commonly DO appear in a body
+  // (e.g. `no strict 'refs';`) and must not trigger it.
+  //
+  // `sub` is the tempting one: a bare nested `sub foo {...}` is almost always a
+  // "won't stay shared" bug, not intent — so closing the enclosing body at it
+  // would often be the *helpful* read.  We deliberately don't.  It is valid Perl
+  // and it is genuinely out there (~140 nested bare subs across a 92k-file
+  // corpus: perl's own regen/Porting codegen scripts, some CPAN, real app code),
+  // so the parser tree-s it faithfully; diagnosing the footgun belongs to the
+  // layer above (linter/LSP), not the grammar.  Lexical `my sub` (which *does*
+  // truly nest, and is legit) is a separate story and is excluded for free
+  // anyway: it starts with `my`, takes the KW_NONE path above, and never reaches
+  // here.  (`kind` was already classified above; don't re-run KEYWORD_MATCH.)
+  *is_structural = (strcmp(word, "method") == 0 ||
+                    strcmp(word, "class") == 0 ||
+                    strcmp(word, "role") == 0);
 
-  // Skip whitespace after keyword (including newlines — the peek resets
-  // on failure, and we need to see past newlines for fat comma detection).
-  // Use advance(true) so whitespace is NOT included in the token.
+  // The caller already marked a zero-width position at the keyword start for
+  // recovery-token emission; leave that mark alone (don't mark_end here) and
+  // skip trailing whitespace with advance(true) — the recovery-safe behavior.
+  // A word-end mark here would make the recovery token swallow the keyword
+  // (and breaks the keyword-boundary tests).
   while (is_tsp_whitespace(la)) {
     lexer->advance(lexer, true);
     la = lexer->lookahead;
   }
 
-  // Fat comma => means it's a hash key, not a statement.
-  // Bail at '=' without advancing past it.  Caller will MARK_END
-  // (covering the word) then goto fat_comma_check.
+  // Fat comma => means even a keyword is a hash key, not a statement
+  // (`package => 1`).  We can't mark the word boundary here without clobbering
+  // the recovery mark, so the caller emits a zero-width _fat_comma_autoquoted
+  // _ahead marker and tree-sitter re-lexes the word through the normal
+  // autoquote path with a correct span.  (Plain words and non-keyword builtins
+  // — sort/map/ref/state/… — take the KW_NONE path above and autoquote in a
+  // single pass.)
   if (la == '=') return PEEK_FAT_COMMA;
 
   // For sub/method: only a declaration if followed by an identifier (name)
-  if (needs_name) {
-    if (!isidfirst(la))
-      return PEEK_NOT_KEYWORD;  // anonymous sub/method
-  }
+  if (kind == KW_NEEDS_NAME && !isidfirst(la))
+    return PEEK_NOT_KEYWORD;  // anonymous sub/method
 
   return PEEK_KEYWORD;
 }
@@ -565,6 +633,37 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     while (!lexer->eof(lexer)) ADVANCE_C;
 
     TOKEN(TOKEN_GOBBLED_CONTENT);
+  }
+
+  /* `format NAME = <newline> BODY .` — the body (line after `=` up to and
+   * including a lone `.` line) is opaque content the LR grammar can't parse, read
+   * as one TOKEN_FORMAT_CONTENT.  Lives before whitespace handling so the body's
+   * leading newline isn't skipped separately. */
+  if (!is_ERROR && valid_symbols[TOKEN_FORMAT_CONTENT]) {
+    /* swallow the remainder of the `format ... =` line, then its newline */
+    while (c != '\n' && !lexer->eof(lexer)) ADVANCE_C;
+    if (c == '\n') ADVANCE_C;
+    /* now read body lines; stop after a line consisting solely of `.`
+     * (perl: a lone `.`, trailing whitespace tolerated) */
+    while (!lexer->eof(lexer)) {
+      /* peek whether this whole line is just `.` */
+      bool only_dot = false;
+      if (c == '.') {
+        ADVANCE_C;
+        only_dot = true;
+        while (c == ' ' || c == '\t' || c == '\r') ADVANCE_C;
+        if (c != '\n' && !lexer->eof(lexer)) only_dot = false;
+      }
+      if (only_dot) {
+        if (c == '\n') ADVANCE_C; /* include the terminator's newline */
+        break;
+      }
+      /* not the terminator: consume to end of this line */
+      while (c != '\n' && !lexer->eof(lexer)) ADVANCE_C;
+      if (c == '\n') ADVANCE_C;
+    }
+    MARK_END;
+    TOKEN(TOKEN_FORMAT_CONTENT);
   }
 
   /* we use this to force tree-sitter to stay on the error branch of a nonassoc
@@ -714,19 +813,105 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   // CTRL-Z must be here, b/c it cares about whitespace
   if (c == 26 && valid_symbols[TOKEN_CTRL_Z]) TOKEN(TOKEN_CTRL_Z);
 
+  bool any_recovery_valid =
+    valid_symbols[TOKEN_RECOVER_ARROW] ||
+    valid_symbols[TOKEN_RECOVER_PAREN_CLOSE] ||
+    valid_symbols[TOKEN_RECOVER_BRACKET_CLOSE] ||
+    valid_symbols[TOKEN_RECOVER_BRACE_CLOSE] ||
+    valid_symbols[TOKEN_RECOVER_BLOCK_CLOSE] ||
+    valid_symbols[PERLY_SEMICOLON];
+
+  // Contextual keywords: class/role/method are declarations only when a name (or
+  // a block, for method) follows; otherwise they're ordinary barewords
+  // (`class($cv)`, `role { … }`, `-role`).  Decide here, before emitting, so
+  // there's no keyword-vs-call ambiguity.  The OO keywords are deferred while
+  // recovery is pending because they trigger the structural body block-close,
+  // which must fire first; async/try don't, so they're classified unconditionally.
+  bool oo_kw_valid = valid_symbols[TOKEN_KW_CLASS] || valid_symbols[TOKEN_KW_ROLE] || valid_symbols[TOKEN_KW_METHOD];
+  bool asynctry_valid = valid_symbols[TOKEN_KW_ASYNC] || valid_symbols[TOKEN_KW_TRY];
+  bool recovery_pending = any_recovery_valid && (crossed_newline || recovery_emitted);
+  bool enter_oo = oo_kw_valid && !recovery_pending && (c == 'c' || c == 'r' || c == 'm');
+  bool enter_asynctry = asynctry_valid && (c == 'a' || c == 't');
+  if (!is_ERROR && (enter_oo || enter_asynctry)) {
+    char word[8];
+    int wlen = 0;
+    while (isidcont(c)) {  // consume the whole identifier (store first 7 chars)
+      if (wlen < 7) word[wlen++] = (char)c;
+      lexer->advance(lexer, false);
+      c = lexer->lookahead;
+    }
+    word[wlen] = '\0';
+    MARK_END;  // the token covers exactly the word (lookahead past here is free)
+    while (is_tsp_whitespace(c)) {  // peek past whitespace at the next token
+      lexer->advance(lexer, false);
+      c = lexer->lookahead;
+    }
+    bool is_class  = !recovery_pending && valid_symbols[TOKEN_KW_CLASS]  && strcmp(word, "class")  == 0;
+    bool is_role   = !recovery_pending && valid_symbols[TOKEN_KW_ROLE]   && strcmp(word, "role")   == 0;
+    bool is_method = !recovery_pending && valid_symbols[TOKEN_KW_METHOD] && strcmp(word, "method") == 0;
+    bool is_async  = valid_symbols[TOKEN_KW_ASYNC]  && strcmp(word, "async")  == 0;
+    bool is_try    = valid_symbols[TOKEN_KW_TRY]    && strcmp(word, "try")    == 0;
+
+    // `try` is the try/catch keyword only before a block `{`; `try(...)`/`try =>`
+    // /`try;` are bareword calls.  (`catch` is never over-reserved.)
+    if (is_try) {
+      if (c == '{') TOKEN(TOKEN_KW_TRY);
+    }
+
+    // `async` is a keyword before a block (`async { … }` — threads::async, a bare
+    // block run as an anon sub; F::AA itself has only `async sub`) or before a
+    // sub/method/extended declaration.  Else it's a bareword/call.
+    if (is_async) {
+      if (c == '{') TOKEN(TOKEN_KW_ASYNC);
+      if (c == 's' || c == 'm' || c == 'e') {  // peek for sub/method/extended
+        char nword[9];
+        int nlen = 0;
+        while (isidcont(c)) {
+          if (nlen < 8) nword[nlen++] = (char)c;
+          lexer->advance(lexer, false);
+          c = lexer->lookahead;
+        }
+        nword[nlen] = '\0';
+        if (strcmp(nword, "sub") == 0 || strcmp(nword, "method") == 0 ||
+            strcmp(nword, "extended") == 0)
+          TOKEN(TOKEN_KW_ASYNC);
+        // Not a decl: `async` is a bareword/call.  Must `return false` (re-lex),
+        // NOT `goto kw_autoquote` like the path below — we consumed past `async`
+        // into the next word, so the handler would read *that* word's `=>` as
+        // async's own fat comma and wrongly autoquote `async` (`async send=>1`).
+        return false;
+      }
+    }
+
+    // `class NAME` / `role NAME` — a name following => declaration; else bareword.
+    if ((is_class || is_role) && isidfirst(c))
+      TOKEN(is_class ? TOKEN_KW_CLASS : TOKEN_KW_ROLE);
+
+    // `method NAME { … }` / `method { … }` are declarations (named/anonymous);
+    // `method NAME => sub { … }` (MooseX) is a call — peek past the name for `=>`.
+    if (is_method) {
+      if (c == '{' || c == '(') TOKEN(TOKEN_KW_METHOD);  // anonymous method
+      if (isidfirst(c)) {
+        while (isidcont(c)) { lexer->advance(lexer, false); c = lexer->lookahead; }  // skip the name
+        while (is_tsp_whitespace(c)) { lexer->advance(lexer, false); c = lexer->lookahead; }
+        if (c != '=') TOKEN(TOKEN_KW_METHOD);  // `{`/`(`/`:`/`;` => decl; `=>` => call
+        return false;  // method NAME => … : re-lex as a call (the name autoquotes)
+      }
+    }
+
+    // Bareword/call, or an autoquoted key (`class => 1`, `$h{m}`).  Can't just
+    // `return false` — a quote-op word (`m`/`s`/`y`) would re-lex as a match — so
+    // fall through to the canonical autoquote handler; MARK_END already fixed the
+    // token at the word, and it emits the autoquote or returns false on no match.
+    goto kw_autoquote;
+  }
+
   // === Error recovery: close unclosed delimiters and insert semicolons ===
   //
   // When the scanner sees '}', ';', EOF, or a statement keyword on a new
   // line, it emits recovery tokens to unwind open delimiters.  Each call
   // peels one layer — the parser keeps calling until everything is closed.
   //
-  bool any_recovery_valid =
-    valid_symbols[TOKEN_RECOVER_ARROW] ||
-    valid_symbols[TOKEN_RECOVER_PAREN_CLOSE] ||
-    valid_symbols[TOKEN_RECOVER_BRACKET_CLOSE] ||
-    valid_symbols[TOKEN_RECOVER_BRACE_CLOSE] ||
-    valid_symbols[PERLY_SEMICOLON];
-
   // Syntactic boundary: '}', ';', or EOF
   if (!is_ERROR) {
     if (c == '}' || c == ';' || lexer->eof(lexer)) {
@@ -757,21 +942,56 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   if ((crossed_newline || recovery_emitted) && !is_ERROR && any_recovery_valid &&
       !KEYWORD_FIRST_CHAR_FILTER(c)) {
     MARK_END;  // zero-width position for recovery tokens
-    enum PeekResult peek = peek_is_statement_keyword(lexer);
+    bool is_structural = false;
+    enum PeekResult peek = peek_is_statement_keyword(lexer, &is_structural);
     if (peek == PEEK_KEYWORD) {
       DEBUG("keyword boundary\n", 0);
       EMIT_RECOVERY_TOKENS(true);
-      // PERLY_SEMICOLON is always the last recovery token in the chain;
-      // no need to set recovery_emitted since nothing follows it.
-      if (valid_symbols[PERLY_SEMICOLON]) TOKEN(PERLY_SEMICOLON);
+      // Body block-close: only a structural OO keyword (method/class/role)
+      // closes a half-typed sub/method body.  Fires after any inner paren/
+      // bracket closers above; the enclosing class block can't accept this
+      // token, so the cascade stops at one body (no over-closing).
+      if (is_structural && valid_symbols[TOKEN_RECOVER_BLOCK_CLOSE]) {
+        DEBUG("body block recovery at structural keyword\n", 0);
+        // Re-arm the cascade so the next scan re-enters and can close the NEXT
+        // enclosing recover-aware block (e.g. an unclosed `if`/loop body inside
+        // the method: close the if-block, then the method body).
+        state->recovery_emitted = true;
+        TOKEN(TOKEN_RECOVER_BLOCK_CLOSE);
+      }
+      // A statement terminator may need to fire BEFORE the body block-close:
+      // after an inner closer (e.g. `my @x = [` -> `]`) completes an expression,
+      // the statement still needs `;` before the enclosing body can reduce and
+      // close.  Re-arm the recovery cascade (recovery_emitted) so the next scan
+      // re-enters here and can emit the block-close.  Harmless when nothing
+      // follows: the re-entry finds no further valid recovery token.
+      if (valid_symbols[PERLY_SEMICOLON]) {
+        state->recovery_emitted = true;
+        TOKEN(PERLY_SEMICOLON);
+      }
     }
     if (peek == PEEK_FAT_COMMA) {
-      // Fat comma — keyword followed by '='.  Bail to the autoquote
-      // handler's => check.  Peek left us at '=' with the word
-      // consumed and whitespace skipped (as true skip).  MARK_END
-      // covers just the word.  Same goto pattern as heredoc vs
-      // diamond disambiguation.
+      // A statement keyword used as a fat-comma key (`package => 1`).  We can't
+      // mark the word boundary here (peek preserved the caller's zero-width
+      // recovery mark for the keyword path, and re-marking would consume the
+      // keyword).  Instead emit a zero-width "autoquote ahead" marker at the
+      // word start: tree-sitter re-lexes the word via the normal autoquote
+      // path, which marks the word boundary correctly.  The recovery gate
+      // won't re-fire on re-entry (no newline precedes the word that scan), so
+      // there's no loop.  Falls back to the old (zero-width-span) emission if
+      // the marker isn't accepted in this state.
+      if (valid_symbols[TOKEN_FAT_COMMA_AUTOQUOTED_AHEAD])
+        TOKEN(TOKEN_FAT_COMMA_AUTOQUOTED_AHEAD);
       MARK_END;
+      c = lexer->lookahead;
+      goto fat_comma_check;
+    }
+    if (peek == PEEK_AUTOQUOTE_KEY) {
+      // A non-keyword bareword used as a fat-comma key (`name => 1`) on a
+      // continuation line where the recovery gate fired.  Peek already marked
+      // the token end at the word boundary (covering exactly the word), so do
+      // NOT MARK_END again — that would re-mark at '=' and emit a zero-width
+      // key.  Resume at the autoquote handler's => check.
       c = lexer->lookahead;
       goto fat_comma_check;
     }
@@ -1301,6 +1521,9 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
 
     // NOTE - TS is annoying about skipping chars after you've hit done
     // mark_end, so we have to do the regular advance so our token actually shows up
+    // The contextual-keyword block jumps here (after reading its word + MARK_END)
+    // to reuse this comment-skip + fat_comma_check instead of duplicating them.
+    kw_autoquote:
     while (is_tsp_whitespace(c) || c == '#') {
       while (is_tsp_whitespace(c)) ADVANCE_C;
       // now we need to skip comments - we get in a funny way if we have a quotelike
