@@ -13,6 +13,8 @@ module.exports = grammar({
 
   extras: $ => [$._NEWLINE],
 
+  conflicts: $ => [[$._value_run], [$._value_run_eq]],
+
   rules: {
     document: $ => repeat($.block_element),
     ...lists.rules,
@@ -24,43 +26,118 @@ module.exports = grammar({
           choice(
             $.document_title,
             $.document_attr,
-            $.section_block,
+            alias($._section1, $.section),
+            alias($._doc_block, $.section_block),
             $.line_comment,
             $.block_comment,
           ),
         ),
       ),
 
+    // Document-level sections nest by heading level: a level-1 section (`==`)
+    // contains its content plus any deeper sections, and each level closes
+    // when a heading of the same or higher level appears.  The heading node
+    // (`title1`..`title5`) is kept as-is inside the wrapping `section`.
+    // A section body allows content blocks plus any *deeper* section, so an
+    // illegal level skip (e.g. `==` straight to `====`) still nests instead of
+    // erroring; the innermost open section greedily claims a deeper heading.
+    _section1: $ =>
+      prec.right(
+        seq(
+          repeat(choice($.element_attr, $.block_title)),
+          $.title1,
+          repeat(
+            choice(
+              alias($._doc_block, $.section_block),
+              alias($._section2, $.section),
+              alias($._section3, $.section),
+              alias($._section4, $.section),
+              alias($._section5, $.section),
+            ),
+          ),
+        ),
+      ),
+    _section2: $ =>
+      prec.right(
+        seq(
+          repeat(choice($.element_attr, $.block_title)),
+          $.title2,
+          repeat(
+            choice(
+              alias($._doc_block, $.section_block),
+              alias($._section3, $.section),
+              alias($._section4, $.section),
+              alias($._section5, $.section),
+            ),
+          ),
+        ),
+      ),
+    _section3: $ =>
+      prec.right(
+        seq(
+          repeat(choice($.element_attr, $.block_title)),
+          $.title3,
+          repeat(
+            choice(
+              alias($._doc_block, $.section_block),
+              alias($._section4, $.section),
+              alias($._section5, $.section),
+            ),
+          ),
+        ),
+      ),
+    _section4: $ =>
+      prec.right(
+        seq(
+          repeat(choice($.element_attr, $.block_title)),
+          $.title4,
+          repeat(
+            choice(alias($._doc_block, $.section_block), alias($._section5, $.section)),
+          ),
+        ),
+      ),
+    _section5: $ =>
+      prec.right(
+        seq(
+          repeat(choice($.element_attr, $.block_title)),
+          $.title5,
+          repeat(alias($._doc_block, $.section_block)),
+        ),
+      ),
+
+    // A document-level content block (no section heading).
+    _doc_block: $ =>
+      seq(repeat(choice($.element_attr, $.block_title)), choice($.paragraph, $._block)),
+
+    // Container blocks (delimited/open/sidebar/quote/table cells) keep the flat
+    // `section_block`, which may still hold a (discrete) heading.
     section_block: $ => choice($._section_block_para, $._section_block),
     _section_block_para: $ =>
       seq(repeat(choice($.element_attr, $.block_title)), $.paragraph),
     _section_block: $ =>
       seq(
         repeat(choice($.element_attr, $.block_title)),
-        choice(
-          $.title1,
-          $.title2,
-          $.title3,
-          $.title4,
-          $.title5,
-          $.list,
-          $.description_list,
-          $.table_block,
-          $.csv_table_block,
-          $.dsv_table_block,
-          $.delimited_block,
-          $.listing_block,
-          $.literal_block,
-          $.ident_block,
-          $.open_block,
-          $.breaks,
-          $.admonition,
-          $.quoted_block,
-          $.quoted_md_block,
-          $.passthrough_block,
-          $.sidebar_block,
-          $.block_macro,
-        ),
+        choice($.title1, $.title2, $.title3, $.title4, $.title5, $._block),
+      ),
+    _block: $ =>
+      choice(
+        $.list,
+        $.description_list,
+        $.table_block,
+        $.csv_table_block,
+        $.dsv_table_block,
+        $.delimited_block,
+        $.listing_block,
+        $.literal_block,
+        $.ident_block,
+        $.open_block,
+        $.breaks,
+        $.admonition,
+        $.quoted_block,
+        $.quoted_md_block,
+        $.passthrough_block,
+        $.sidebar_block,
+        $.block_macro,
       ),
     // Description (labeled) lists: `term:: definition`.  The marker
     // (`::`/`:::`/`::::`/`;;`, always followed by whitespace or a line
@@ -115,13 +192,61 @@ module.exports = grammar({
     escaped_line: $ =>
       repeat1(choice(/[^/\n]/, /\/[^*]/, /\\\r?\n/, seq($.hard_wrap))),
     hard_wrap: $ => ' +',
+    // A block attribute list, e.g. `[source#id.role%opt,ruby,cols="1,2"]`.
+    // The first entry is the positional "style" slot and may carry the id
+    // (`#`), role (`.`) and option (`%`) shorthand; later entries are plain
+    // positional values or `name=value` pairs.  Commas separate entries
+    // except inside a quoted value.
     element_attr: $ =>
       seq(
         $.element_attr_marker,
-        alias(token(repeat(escaped_ch(']', true))), $.attr_value),
+        optional($._WHITE_SPACE),
+        optional(seq($._lead_attr, optional($._WHITE_SPACE))),
+        repeat(
+          seq(',', optional($._WHITE_SPACE), optional(seq($._attr, optional($._WHITE_SPACE)))),
+        ),
         alias(']', $.element_attr_marker),
         $._NEWLINE,
       ),
+    _lead_attr: $ =>
+      choice($.named_attr, alias($._lead_positional, $.positional_attr)),
+    _attr: $ => choice($.named_attr, $.positional_attr),
+    _lead_positional: $ =>
+      choice(
+        seq(alias($._attr_word, $.block_style), repeat($._shorthand)),
+        repeat1($._shorthand),
+      ),
+    _shorthand: $ =>
+      choice(
+        seq('#', alias($._attr_word, $.id)),
+        seq('.', alias($._attr_word, $.role)),
+        seq('%', alias($._attr_word, $.option)),
+      ),
+    named_attr: $ =>
+      seq(
+        alias($._attr_word, $.attribute_name),
+        '=',
+        optional(alias($._named_value, $.attribute_value)),
+      ),
+    // A named value may be quoted (allowing commas inside) or bare.  A bare
+    // value, unlike a positional, may contain `=` (e.g. a URL query string).
+    _named_value: $ =>
+      choice(
+        seq('"', optional(alias(repeat(escaped_ch('"', true)), $.value)), '"'),
+        seq("'", optional(alias(repeat(escaped_ch("'", true)), $.value)), "'"),
+        alias($._value_run_eq, $.value),
+      ),
+    positional_attr: $ => $._value_run,
+    // A value never starts or ends with whitespace (the run after a comma is the
+    // separator, and a trailing run is consumed before `]`), but interior
+    // spaces are allowed, as in `quote,Monty Python`.
+    _value_run: $ =>
+      seq($._value_token, repeat(seq(optional($._WHITE_SPACE), $._value_token))),
+    _value_run_eq: $ =>
+      seq($._value_token_eq, repeat(seq(optional($._WHITE_SPACE), $._value_token_eq))),
+    _value_token: $ => choice($._attr_word, '#', '.', '%'),
+    _value_token_eq: $ => choice($._attr_word, '#', '.', '%', '='),
+    _attr_word: _ => token(/[^,=#.%\]"'\s]+/),
     block_title: $ => seq($.block_title_marker, $.line),
 
     delimited_block: $ =>

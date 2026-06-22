@@ -83,9 +83,17 @@ const aliasMany = (to, tokens) => tokens.map(t => alias(t, to))
 const recoverParen = ($) => choice(')', alias($._RECOVER_PAREN_CLOSE, ')'))
 const recoverBracket = ($) => choice(']', alias($._RECOVER_BRACKET_CLOSE, ']'))
 const recoverBrace = ($) => choice('}', alias($._RECOVER_BRACE_CLOSE, '}'))
+// Block-body closer: a DISTINCT recovery token from recoverBrace's subscript
+// `}`.  Used only on sub/method bodies (`_body_block`).  The scanner emits
+// `_RECOVER_BLOCK_CLOSE` only when a `method`/`class`/`role` keyword opens the
+// next line — keywords that never legitimately nest inside a body (verified
+// against ~2.4k modern-OO modules) — so a half-typed body closes just itself.
+// Distinct from `_RECOVER_BRACE_CLOSE` so subscript-brace recovery is untouched.
+const recoverBlock = ($) => choice('}', alias($._RECOVER_BLOCK_CLOSE, '}'))
 
-// little helper just to keep things DRY
-const subExtensions = () => repeat(choice('extended', 'async'))
+// little helper just to keep things DRY.  `async` is a contextual keyword
+// emitted by the scanner (aliased so it stays queryable/highlightable).
+const subExtensions = ($) => repeat(choice('extended', alias($._KW_ASYNC, 'async')))
 
 /**
  *
@@ -171,6 +179,7 @@ module.exports = grammar({
     $._heredoc_middle,
     $.heredoc_end,
     $._fat_comma_autoquoted,
+    $._fat_comma_autoquoted_ahead,
     $._filetest,
     $._brace_autoquoted_token,
     /* zero-width lookahead tokens */
@@ -184,9 +193,24 @@ module.exports = grammar({
     $._RECOVER_BRACKET_CLOSE,
     $._RECOVER_BRACE_CLOSE,
     $._RECOVER_ARROW,
+    $._RECOVER_BLOCK_CLOSE,
+    /* opaque body of a `format NAME = ... .` declaration: from the line after
+     * `=` up to and including the lone-`.` terminator line */
+    $.format_content,
     /* `x` repetition operator glued to its count (`"ab"x3`) — emitted only when
      * an operator is expected, mirroring perl's XOPERATOR-state disambiguation */
     $._x_op,
+    /* `class`/`role` emitted as keywords by the scanner ONLY in declaration
+     * position (followed by a name); otherwise the word lexes as a bareword so
+     * `role { … }`, `class($x)`, `-role` parse as ordinary calls/terms. */
+    $._KW_CLASS,
+    $._KW_ROLE,
+    $._KW_METHOD,
+    /* `async` emitted as a keyword only before `{`/`sub`/`method`; `try` only
+     * before a block `{`.  Otherwise the words lex as ordinary barewords so
+     * `async(...)`/`try(1,2,3)`/`try => 1` parse as calls/terms. */
+    $._KW_ASYNC,
+    $._KW_TRY,
     /* error condition must always be last; we don't use this in the grammar */
     $._ERROR
   ],
@@ -225,10 +249,18 @@ module.exports = grammar({
 
     block: $ => seq($._PERLY_BRACE_OPEN, repeat($._fullstmt), '}'),
 
+    // Like `block`, but recovery-aware: accepts a synthetic `}` injected by the
+    // scanner when a `method`/`class`/`role` keyword starts the next line.  Used
+    // ONLY for sub/method bodies (aliased back to `block` so node names are
+    // identical).  Class/role bodies stay plain `block`, which bounds recovery:
+    // closing a body lands in the enclosing class block, which cannot accept the
+    // synthetic `}`, so the cascade stops (no over-closing).
+    _body_block: $ => seq($._PERLY_BRACE_OPEN, repeat($._fullstmt), recoverBlock($)),
+
     _fullstmt: $ => choice($._barestmt, $.statement_label),
 
     // perly.y calls this labfullstmt
-    statement_label: $ => seq(field('label', $.identifier), ':', field('statement', $._fullstmt)),
+    statement_label: $ => seq(field('label', choice($.identifier, alias($._PHASE_NAME, $.identifier))), ':', field('statement', $._fullstmt)),
     _semicolon: $ => choice(';', $._PERLY_SEMICOLON),
 
     _barestmt: $ => choice(
@@ -241,6 +273,7 @@ module.exports = grammar({
       $.subroutine_declaration_statement,
       $.method_declaration_statement,
       $.phaser_statement,
+      $.format_statement,
       $.conditional_statement,
       /* TODO: given/when/default */
       $.loop_statement,
@@ -257,28 +290,37 @@ module.exports = grammar({
       seq('package', field('name', $.package), optional(field('version', $._version)), $.block),
     ),
     class_statement: $ => choice(
-      seq('class',
+      seq(alias($._KW_CLASS, "class"),
         field('name', $.package),
         optional(field('version', $._version)),
         optseq(':', optional(field('attributes', $.attrlist))),
         $._semicolon),
-      seq('class',
+      seq(alias($._KW_CLASS, "class"),
         field('name', $.package),
         optional(field('version', $._version)),
         optseq(':', optional(field('attributes', $.attrlist))),
         $.block),
     ),
     role_statement: $ => choice(
-      seq('role',
+      seq(alias($._KW_ROLE, "role"),
         field('name', $.package),
         optional(field('version', $._version)),
         optseq(':', optional(field('attributes', $.attrlist))),
         $._semicolon),
-      seq('role',
+      seq(alias($._KW_ROLE, "role"),
         field('name', $.package),
         optional(field('version', $._version)),
         optseq(':', optional(field('attributes', $.attrlist))),
         $.block),
+    ),
+    /* `format NAME = <newline> BODY .` — NAME defaults to STDOUT and is
+     * optional. The body (picture/argument lines up to a lone `.`) is opaque
+     * content read by the external scanner. */
+    format_statement: $ => seq(
+      'format',
+      optional(field('name', $.bareword)),
+      '=',
+      $.format_content,
     ),
     class_phaser_statement: $ => seq(
       field('phase', choice('BUILD', 'ADJUST')),
@@ -340,17 +382,17 @@ module.exports = grammar({
       ')'
     ),
     subroutine_declaration_statement: $ => seq(
-      optional(field('lexical', 'my')),
-      subExtensions(),
+      optional(choice(field('lexical', choice('my', 'state')), 'our')),
+      subExtensions($),
       'sub',
       field('name', $.bareword),
       $._sub_decl_tail,
     ),
 
     method_declaration_statement: $ => seq(
-      optional(field('lexical', 'my')),
-      subExtensions(),
-      'method',
+      optional(choice(field('lexical', choice('my', 'state')), 'our')),
+      subExtensions($),
+      alias($._KW_METHOD, "method"),
       field('name', $.bareword),
       $._sub_decl_tail,
     ),
@@ -362,20 +404,20 @@ module.exports = grammar({
     _sub_decl_tail: $ => seq(
       optseq(':', optional(field('attributes', $.attrlist))),
       optional(choice($.prototype, $.signature)),
-      choice(field('body', $.block), $._semicolon),
+      choice(field('body', alias($._body_block, $.block)), $._semicolon),
     ),
 
     // perly.y's grammar just considers a phaser to be a `sub` with a special
     // name and lacking the `sub` keyword, but most tree consumers are likely
     // to care about distinguishing it
-    phaser_statement: $ => seq(field('phase', $._PHASE_NAME), $.block),
+    phaser_statement: $ => seq(field('phase', $._PHASE_NAME), alias($._body_block, $.block)),
 
     conditional_statement: $ =>
       seq($._conditionals, '(', field('condition', $._expr), ')',
-        field('block', $.block),
+        field('block', alias($._body_block, $.block)),
         optional($._else)
       ),
-    _loop_body: $ => seq(field('block', $.block), optseq('continue', field('continue', $.block))),
+    _loop_body: $ => seq(field('block', alias($._body_block, $.block)), optseq('continue', field('continue', alias($._body_block, $.block)))),
     loop_statement: $ => seq($._loops, '(', field('condition', $._expr), ')', $._loop_body),
     cstyle_for_statement: $ =>
       seq($._KW_FOR,
@@ -399,19 +441,19 @@ module.exports = grammar({
       ),
 
     try_statement: $ => seq(
-      'try',
-      field('try_block', $.block),
+      alias($._KW_TRY, 'try'),
+      field('try_block', alias($._body_block, $.block)),
       // regular perl only permits catch(VAR) but we get easy compatibility
       // with Syntax::Keyword::Try too by being a bit more flexible
       optseq('catch', optseq('(', field('catch_expr', $._expr), ')'),
-        field('catch_block', $.block)),
+        field('catch_block', alias($._body_block, $.block))),
       optseq('finally',
-        field('finally_block', $.block)),
+        field('finally_block', alias($._body_block, $.block))),
     ),
 
     defer_statement: $ => seq(
       'defer',
-      field('block', $.block),
+      field('block', alias($._body_block, $.block)),
     ),
 
     // perly.y calls this `sideff`
@@ -431,10 +473,10 @@ module.exports = grammar({
     yadayada: $ => '...',
 
     _else: $ => choice($.else, $.elsif),
-    else: $ => seq('else', field('block', $.block)),
+    else: $ => seq('else', field('block', alias($._body_block, $.block))),
     elsif: $ =>
       seq('elsif', '(', field('condition', $._expr), ')',
-        field('block', $.block),
+        field('block', alias($._body_block, $.block)),
         optional($._else)
       ),
 
@@ -458,10 +500,16 @@ module.exports = grammar({
       alias($._term_rightward, $.list_expression),
       prec.right($._term)
     ),
-    /* ensure that an entire list expression's contents appear in one big flat
-    * list, while permitting multiple internal commas and an optional trailing one */
+    /* one flat list: internal commas plus an optional trailing one.  The trailing
+     * slot is at the END, not an interior `optional` after every comma — an
+     * interior empty slot competes with a `++`/`--` after a comma and the
+     * `prec.right` gobble closes the list instead (so `push @a, ++$x` reads `++`
+     * as a postfix).  Slot-at-end forces `++` to shift as a prefix; `,,` empties
+     * (sitting before a comma) still reduce. */
     _term_rightward: $ => prec.right(seq(
-      $._term, repeat1(seq($._PERLY_COMMA, optional($._term))),
+      $._term, $._PERLY_COMMA,
+      repeat(seq(optional($._term), $._PERLY_COMMA)),
+      optional($._term),
     )),
 
     subscripted: $ => choice(
@@ -546,6 +594,7 @@ module.exports = grammar({
       $.anonymous_hash_expression,
       $.anonymous_subroutine_expression,
       $.anonymous_method_expression,
+      $.async_block_expression,
       $.do_expression,
       $.eval_expression,
       $.await_expression,
@@ -732,23 +781,33 @@ module.exports = grammar({
     ),
 
     anonymous_subroutine_expression: $ => seq(
-      subExtensions(),
+      subExtensions($),
       'sub',
       $._anon_sub_tail,
     ),
 
     anonymous_method_expression: $ => seq(
-      subExtensions(),
-      'method',
+      subExtensions($),
+      alias($._KW_METHOD, "method"),
       $._anon_sub_tail,
+    ),
+
+    // `async { … }` block (threads::async — a bare block run as an anon sub).
+    // The scanner emits `_KW_ASYNC` here only before a `{`, so `async`/`async(...)`
+    // as a plain sub stays an ordinary call.
+    async_block_expression: $ => seq(
+      alias($._KW_ASYNC, 'async'),
+      $.block,
     ),
 
     // do FILENAME is more of an eval, so we parse it as eval_expression w/ a filename
     // node inside
     do_expression: $ => choice(seq('do', $.block)),
-    eval_expression: $ => prec(TERMPREC.UNOP,
+    eval_expression: $ => prec.left(TERMPREC.UNOP,
       choice(
-        seq('eval', choice($.block, $._term)),
+        // bare `eval` (no arg) defaults to `$_` (`map { eval } @list`);
+        // `prec.left` resolves the resulting `eval` • term shift/reduce.
+        seq('eval', optional(choice($.block, $._term))),
         seq('do', alias($._term, $.filename))
       )
     ),
@@ -779,7 +838,10 @@ module.exports = grammar({
       seq(
         choice('my', 'state', 'our', 'field'),
         choice(
-          field('variable', $._declared_vars),
+          // typed lexical: `my Dog $spot` — an optional class/type name (a
+          // package name, possibly `::`-qualified) before the variable.
+          // Unambiguous: the variable always starts with a sigil, never a bareword.
+          seq(optional(field('type', $.package)), field('variable', $._declared_vars)),
           field('variable', $.refalias_variable),
           field('variables', $._decl_variable_list)),
         optseq(':', optional(field('attributes', $.attrlist))))
@@ -1483,7 +1545,7 @@ module.exports = grammar({
         // minus autoquoting
         prec(TERMPREC.PAREN, seq('-', $._bareword)),
       ),
-      seq(optional('-'), $._fat_comma_autoquoted)
+      seq(optional($._fat_comma_autoquoted_ahead), optional('-'), $._fat_comma_autoquoted)
     ),
     // NOTE - these have zw lookaheads so they override just being read as barewords
     _brace_autoquoted: $ => alias($._brace_autoquoted_token, $.autoquoted_bareword),
@@ -1502,9 +1564,10 @@ module.exports = grammar({
     _ident_special: $ => choice($._special_var_name, seq('$', $._dollar_ident_zw)),
 
     bareword: $ => prec.dynamic(1, $._bareword),
-    // _bareword is at the very end b/c the lexer prefers tokens defined earlier in the grammar
-    //_bareword: $ => choice($._identifier, unicode_ranges.bareword),
-    _bareword: $ => choice($._identifier, /((::)|([a-zA-Z_]\w*))+/),
+    // _bareword is at the very end b/c the lexer prefers tokens defined earlier in the grammar.
+    // unicode-aware (XID_Start/XID_Continue) dotted/qualified bareword, so package
+    // names allow unicode like the `_identifier` (sub name) path already does.
+    _bareword: $ => choice($._identifier, unicode_ranges.bareword),
     ...primitives,
   }
 })
