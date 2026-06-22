@@ -10,8 +10,7 @@
   "in"
 ] @keyword.control
 
-;; return/next/break -> brightmagenta (keyword.control)
-(return) @keyword.control
+;; next/break -> brightmagenta (keyword.control)
 (next) @keyword.control
 (break) @keyword.control
 
