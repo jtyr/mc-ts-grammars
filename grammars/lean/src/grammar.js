@@ -122,8 +122,62 @@ export default grammar({
       $.grind_pattern_cmd,
       $.alias_cmd,
       $.notation_decl_cmd,
+      $.syntax_cmd,
+      $.macro_cmd,
+      $.macro_rules_cmd,
+      $.elab_rules_cmd,
+      $.register_cmd,
+      $.unif_hint_cmd,
+      $.declare_syntax_cat_cmd,
+      $.mutual,
       $.declaration,
     ),
+
+    /* `mutual … end` groups mutually-recursive declarations. Like
+       `namespace`/`section`/`end`, it is modeled as a flat marker
+       rather than a nesting block: the inner declarations parse as
+       siblings and the closing `end` is the ordinary `end` command.
+       Pairing is left to tooling, consistent with the rest of the
+       grammar (and avoids an `end`-disambiguation conflict). */
+    mutual: _ => 'mutual',
+
+    /* `declare_syntax_cat name (behavior := both)?` — introduces a new
+       syntax category for the parser DSL. */
+    declare_syntax_cat_cmd: $ => seq(
+      'declare_syntax_cat',
+      field('name', $.identifier),
+      optional(seq(
+        '(', 'behavior', ':=', field('behavior', $.identifier), ')',
+      )),
+    ),
+
+    /* `register_builtin_option name : Type := value` and
+       `register_error_explanation name { … }` — coarse parse of
+       Lean's various registration commands. The body is either a
+       `:= expr` value or a `{ … }` struct literal. */
+    register_cmd: $ => prec.right(seq(
+      choice(
+        'register_builtin_option',
+        'register_option',
+        'register_error_explanation',
+      ),
+      field('name', $.identifier),
+      optional($._type_spec),
+      optional(choice(
+        seq(':=', field('value', $._term)),
+        $.struct_lit,
+      )),
+    )),
+
+    /* `unif_hint name (binders)? where lhs ⊢ rhs` — Lean's
+       unification-hint declaration. Body is intentionally permissive. */
+    unif_hint_cmd: $ => prec.right(seq(
+      'unif_hint',
+      optional(field('name', $.identifier)),
+      repeat($._bracketed_binder),
+      'where',
+      repeat($._term),
+    )),
 
     /* `assert_not_exists Name`, `assert_not_imported Name`, etc. —
        Lean's lightweight assertion commands taking a single ident. */
@@ -193,6 +247,105 @@ export default grammar({
       field('target', $._term),
     ),
 
+
+    /* `macro_rules | pat => body | …` — declares Lean macro rewrite
+       rules. Body is a match-alt list. The optional kind annotation
+       (`scoped`/`local`) modifies registration scope. */
+    macro_rules_cmd: $ => seq(
+      optional(choice('scoped', 'local')),
+      'macro_rules',
+      optional(seq(
+        token.immediate(':'),
+        field('prec', choice($.num_lit, $.identifier)),
+      )),
+      repeat1($.match_alt),
+    ),
+
+    /* `elab_rules : tactic | `(…) => body | …` — declares an
+       elaborator by rewrite rules for a syntax category. Mirrors
+       `macro_rules` but keyed on a `: category` instead of a prec.
+       Body terms are usually `do …` blocks or quotations. */
+    elab_rules_cmd: $ => seq(
+      optional(choice('scoped', 'local')),
+      'elab_rules',
+      optional($._named_attr),
+      ':',
+      field('category', $.identifier),
+      repeat1($.match_alt),
+    ),
+
+    /* `macro [prec]? [(name := X)]? "kw" arg* : category => body` —
+       coarse parse of Lean's macro-declaration command. The macro's
+       body after `=>` is a single term (typically a `(…)` quotation).
+       Argument list before `:` accepts any term-shaped tokens. */
+    macro_cmd: $ => prec.right(seq(
+      optional($.attributes),
+      optional(choice('scoped', 'local')),
+      'macro',
+      optional(seq(
+        token.immediate(':'),
+        field('prec', choice($.num_lit, $.identifier)),
+      )),
+      optional($._named_attr),
+      repeat($._term_atom),
+      ':',
+      field('category', $.identifier),
+      '=>',
+      field('body', $._term),
+    )),
+
+    /* `syntax [prec]? [(name := X)]? arg+ : category` — coarse parse
+       of Lean's syntax-declaration command, and also the abbreviation
+       form `syntax id := body`. Arguments are `_syntax_atom`s —
+       term-shaped tokens plus the syntax-DSL postfixes `*`/`?`/`+`. */
+    syntax_cmd: $ => prec.right(seq(
+      optional($.attributes),
+      optional(choice('scoped', 'local')),
+      'syntax',
+      optional(seq(
+        token.immediate(':'),
+        field('prec', choice($.num_lit, $.identifier)),
+      )),
+      optional($._named_attr),
+      choice(
+        seq(
+          field('name', $.identifier),
+          ':=',
+          repeat1($._syntax_atom),
+        ),
+        seq(
+          repeat1($._syntax_atom),
+          ':',
+          field('category', $.identifier),
+        ),
+      ),
+    )),
+
+    /* Coarse syntax-DSL atom for use inside `syntax`/`macro` headers.
+       Term atoms suffice for most cases (identifiers, string atoms,
+       parens contain richer sub-patterns). Plus the syntax-combinator
+       postfixes `*`/`?`/`+` and the `<|>` alternative combinator.
+       `&"trace"` marks a non-reserved symbol token. */
+    _syntax_atom: $ => choice(
+      $._term_atom,
+      $.syntax_postfix,
+      $.syntax_alt,
+      $.nonreserved_atom,
+    ),
+    syntax_postfix: $ => prec.left(seq(
+      field('inner', $._term_atom),
+      field('op', choice(
+        token.immediate('*'),
+        token.immediate('?'),
+        token.immediate('+'),
+      )),
+    )),
+    syntax_alt: $ => prec.right(seq(
+      field('lhs', choice($._term_atom, $.syntax_postfix, $.nonreserved_atom)),
+      '<|>',
+      field('rhs', $._syntax_atom),
+    )),
+    nonreserved_atom: $ => seq('&', field('lit', $.str_lit)),
 
     /* `deriving instance Foo, Bar for Baz` — standalone deriving. */
     deriving_cmd: $ => seq(
@@ -374,14 +527,15 @@ export default grammar({
       '}',
     ),
 
-    def: $ => seq(
+    def: $ => prec.right(seq(
       'def',
       field('name', $.identifier),
       optional($._decl_universes),
       optional($._binders),
       optional($._type_spec),
       $._decl_val,
-    ),
+      optional($._deriving_clause),
+    )),
 
     theorem: $ => seq(
       choice('theorem', 'lemma'),
@@ -399,14 +553,15 @@ export default grammar({
       $._decl_val,
     ),
 
-    abbrev: $ => seq(
+    abbrev: $ => prec.right(seq(
       'abbrev',
       field('name', $.identifier),
       optional($._decl_universes),
       optional($._binders),
       optional($._type_spec),
       $._decl_val,
-    ),
+      optional($._deriving_clause),
+    )),
 
     /* `(priority := N)` / `(name := myName)` — named-attribute prefix
        on instance declarations, before any binders. */
@@ -503,8 +658,10 @@ export default grammar({
       optional($._binders),
       optional($._type_spec),
       optional($._extends_clause),
-      optional(seq('where',
-        repeat($.ctor_alt))),
+      optional(choice(
+        seq(choice('where', ':='), repeat($.ctor_alt)),
+        repeat1($.ctor_alt),
+      )),
       optional($._deriving_clause),
     )),
 
@@ -673,7 +830,10 @@ export default grammar({
 
     explicit_binder: $ => seq(
       '(',
-      repeat1(field('name', $._binder_ident)),
+      choice(
+        repeat1(field('name', $._binder_ident)),
+        field('name', $.anon_ctor_binder),
+      ),
       optional($._type_spec),
       optional(field('default', seq(':=', $._term))),
       ')',
@@ -780,6 +940,8 @@ export default grammar({
       $.anon_ctor,
       $.anon_subterm,
       $.quotient_lit,
+      $.floor_lit,
+      $.ceil_lit,
       $.list_lit,
       $.range_lit,
       $.array_lit,
@@ -789,6 +951,7 @@ export default grammar({
       $.rest_pat,
       $.prec_annotated,
       $.pct_macro,
+      $.antiquot,
       $.explicit_mode,
       $.quotation,
     ),
@@ -814,6 +977,37 @@ export default grammar({
       field('name', $.identifier),
       token.immediate('%'),
     ),
+
+    /* `$ident`, `$(expr)`, `$[…]` — antiquotation marker inside a
+       Lean backtick-quotation, splicing a term into the quoted
+       syntax. Distinct from `$` as a binary operator (right-assoc
+       function application). The leading `$` is lexed as part of a
+       single token so `f $ x` (binary form) is unambiguous.
+
+       Antiquotations carry optional type annotations (`$kind:attrKind`)
+       and DSL-postfix repeaters (`$pre?`, `$bs*`, `$ids,*`). */
+    antiquot: $ => prec.right(seq(
+      choice(
+        $._antiquot_ident,
+        seq($._antiquot_open, $._term, ')'),
+        seq($._antiquot_obrack, $._term, ']'),
+      ),
+      optional(seq(
+        token.immediate(':'),
+        field('kind', $.identifier),
+      )),
+      optional(field('repeat', choice(
+        token.immediate('?'),
+        token.immediate('*'),
+        token.immediate('+'),
+        token.immediate(',*'),
+        token.immediate(',+'),
+        token.immediate(',?'),
+      ))),
+    )),
+    _antiquot_ident: _ => token(seq('$', /[A-Za-z_α-ωΑ-Ω][A-Za-z_α-ωΑ-Ω0-9]*/)),
+    _antiquot_open: _ => token(seq('$', '(')),
+    _antiquot_obrack: _ => token(seq('$', '[')),
 
     /* `@expr` — disables implicit-argument insertion (explicit args
        mode). Applies to arbitrary terms, not just identifiers
@@ -900,7 +1094,19 @@ export default grammar({
     /* `⟦x⟧` — quotient-class bracket (`Quotient.mk`). */
     quotient_lit: $ => seq('⟦', $._term, '⟧'),
 
-    list_lit: $ => seq('[', sep0($._term, ','), ']'),
+    /* `⌊x⌋` floor and `⌈x⌉` ceil, each with an optional `₊`
+       non-negative variant (`⌊x⌋₊`). These use distinct open/close
+       brackets, so they are safe delimited atoms. Norm `‖x‖` and abs
+       `|x|` are deliberately omitted: their open and close delimiter
+       is the SAME token, and a symmetric delimiter around an unbounded
+       `_term` blows up LR generation (norm was measured at 39 min,
+       non-converging). */
+    floor_lit: $ => seq('⌊', $._term, choice('⌋', '⌋₊')),
+    ceil_lit: $ => seq('⌈', $._term, choice('⌉', '⌉₊')),
+
+    /* `*` is valid as a simp-set element (`simp [*, foo]`). */
+    list_lit: $ => seq('[', sep0(choice($._term, $.star), ','), ']'),
+    star: _ => '*',
 
     /* `[a : b]` or `[a : b : step]` — range/subarray slice. */
     range_lit: $ => seq(
@@ -926,9 +1132,15 @@ export default grammar({
         seq(
           sep1(field('source', $._term), ','),
           'with',
-          optional(sep1($.struct_field, optional(','))),
+          optional(choice(
+            sep1($.struct_field, ','),
+            seq($._indent, sep1($.struct_field,
+              choice(',', $._newline)), $._dedent),
+          )),
         ),
-        sep1($.struct_field, optional(',')),
+        sep1($.struct_field, ','),
+        seq($._indent, sep1($.struct_field,
+          choice(',', $._newline)), $._dedent),
         sep1(field('elem', $._term), ','),
       )),
       '}',
@@ -959,15 +1171,21 @@ export default grammar({
        are accepted. Type ascription `name : T := value` is
        intentionally omitted because the leading `{ ident :` would
        conflict with `set_builder` / `subtype_lit`. */
-    struct_field: $ => seq(
+    struct_field: $ => choice(
+      seq(
+        field('name', $.identifier),
+        optional(alias(repeat1(choice(
+          $._binder_ident,
+          $.implicit_binder,
+          $.explicit_binder,
+        )), $.binders)),
+        ':=',
+        field('value', $._term),
+      ),
+      /* Field-name punning: `{ x, y }` abbreviates `{ x := x, y := y
+         }`. No binders on this branch — a bare name is a complete
+         field, so `x y := e` stays unambiguous (binders of `x`). */
       field('name', $.identifier),
-      optional(alias(repeat1(choice(
-        $._binder_ident,
-        $.implicit_binder,
-        $.explicit_binder,
-      )), $.binders)),
-      ':=',
-      field('value', $._term),
     ),
 
     /* `f x` — left-associative application. The argument can be an
@@ -1006,6 +1224,7 @@ export default grammar({
       field('op', choice(
         'ᵒᵖ', 'ᵐᵒᵖ', 'ᵒᵈ', '⁻¹', 'ᵀ', '†',
         'ᶜ', 'ˣ', '✝',
+        '⁺',  /* positive part (`a⁺`) */
       )),
     )),
 
@@ -1054,24 +1273,25 @@ export default grammar({
           '⇨',       /* Heyting implication */
           '⥤',       /* Mathlib functor arrow */
           '≌',       /* category equivalence */
+          '⟹',       /* natural transformation (`F ⟹ G`) */
         )),
         field('rhs', $._term),
       )),
       prec.right(PREC.iff, seq(
         field('lhs', $._op_term),
-        field('op', choice('↔', '<->')),
+        field('op', choice('↔', '<->', '⇔')),
         /* `p ↔ ∃ x, …` is extremely common in Mathlib. */
         field('rhs', $._term),
       )),
       prec.left(PREC.or, seq(
         field('lhs', $._op_term),
-        field('op', choice('∨', '||', '⊔')),
+        field('op', choice('∨', '||', '⊔', '⊻')),  /* ⊻ = xor */
         /* Lattice-sup RHS often holds a big-op or `if`. */
         field('rhs', $._term),
       )),
       prec.left(PREC.and, seq(
         field('lhs', $._op_term),
-        field('op', choice('∧', '&&', '⊓')),
+        field('op', choice('∧', '&&', '⊓', '⊼')),  /* ⊼ = nand */
         /* Lattice-inf RHS often holds a big-op or `if`. */
         field('rhs', $._term),
       )),
@@ -1083,8 +1303,12 @@ export default grammar({
           '>', '≥', '>=',
           '∈', '∉', '⊆', '⊂', '⊇', '⊃', '⊑', '⊒',
           '≡', '≢', '~', '≃', '≅', '≈', '≉',
+          '≍', '≃ₘ', '≃ᵤ',  /* heq, measureable-equiv, uniform-equiv */
           '∣', '∤',  /* divides, not-divides */
           '⋖', '⋗',  /* covby (atomic-cover) and its dual */
+          '⊨', '⇒',  /* entailment / relation-implication (Relator) */
+          '≺', '≼',  /* strict and non-strict order relations */
+          '⊣',       /* adjunction (`F ⊣ G`) */
         )),
         /* `a = fun x => …` and `a ≤ if p then x else y` are common
            enough that comparison RHS must allow lead terms. */
@@ -1092,7 +1316,7 @@ export default grammar({
       )),
       prec.right(PREC.append, seq(
         field('lhs', $._op_term),
-        field('op', '::'),
+        field('op', choice('::', '::ᵣ', '::ₘ')),
         field('rhs', $._op_term),
       )),
       /* `<;>` — tactic-combinator (run-on-all-goals); appears in
@@ -1111,6 +1335,8 @@ export default grammar({
         field('lhs', $._op_term),
         field('op', choice(
           '+', '-', '∪', '\\',
+          /* `∆` — set symmetric difference; `⊞` — boxplus. */
+          '∆', '⊞',
           /* Mathlib torsor & substitution operators. */
           '-ᵥ', '+ᵥ', '▸',
         )),
@@ -1120,11 +1346,20 @@ export default grammar({
         field('lhs', $._op_term),
         field('op', choice(
           '*', '/', '%', '∩', '×', "×'", '×ˢ', '×ₗ', '•', '∙',
+          /* `∫ x, f x ∂μ` — the measure marker binds the integrand
+             to its measure. */
+          '∂',
           /* Tensor and related Mathlib operators (without bracket
              param — `⊗ₜ[R]` parses as `⊗ₜ` + `[R]` consumed by app). */
           '⊗', '⊗ₜ', '⊗ₛ',
           /* Sum/direct-sum operators (Mathlib). */
           '⊕', '⊕ₗ',
+          /* Product, convolution/star, and matrix-dot products. */
+          '⨯', '∗', '⋆', '⬝',
+          /* Circled/boxed products (applicative seq, external product). */
+          '⊛', '⊠',
+          /* Kronecker product, matrix-vector dot, Hadamard product. */
+          '⊗ₖ', '⬝ᵥ', '⊙',
         )),
         field('rhs', $._op_term),
       )),
@@ -1139,8 +1374,13 @@ export default grammar({
           '∘',
           /* Mathlib's set image / preimage operators. */
           "''", "⁻¹'",
-          /* Category-theory morphism / functor composition (Mathlib). */
-          '≫', '⋙',
+          /* Category-theory morphism / functor / iso composition
+             (Mathlib). */
+          '≫', '⋙', '≪≫',
+          /* Whiskering (bicategory) and circle-composition. */
+          '◁', '⊚',
+          /* Linear-map composition. */
+          '∘ₗ',
         )),
         field('rhs', $._op_term),
       )),
@@ -1232,13 +1472,23 @@ export default grammar({
 
     /* `⨆ x, f x` / `⨅ x, f x` / `∑ x, f x` / `∏ x, f x` — big-operator
        binder notation. Mathlib also writes `⨆ x ∈ s, P x` (sugar),
-       `∑ x ∈ s, f x`, and `⨆ x : T, f x`. */
+       `∑ x ∈ s, f x`, and `⨆ x : T, f x`. Indexed unions/intersections
+       and lattice ops take the same shape, as do the measure-theoretic
+       quantifiers (`∀ᵐ x ∂μ, p x`) and integrals (`∫ x in s, f x ∂μ`,
+       where the binder range is spelled with `in`). */
     big_op_binder: $ => prec.right(seq(
-      choice('⨆', '⨅', '∑', '∏'),
+      choice(
+        '⨆', '⨅', '∑', '∏',
+        '⋃', '⋂', '⋀', '⋁', '⨁', '⨂', '∐',
+        '∀ᵐ', '∃ᵐ',
+        '∫', '∫⁻', '⨍',
+      ),
       $._binders,
       optional(choice(
         $._type_spec,
-        seq(choice('∈', '⊆', '⊂'), $._op_term),
+        seq(choice('∈', '⊆', '⊂', 'in'), $._op_term),
+        /* `∀ᵐ x ∂μ, p` — "for almost every x w.r.t. measure μ". */
+        seq('∂', $._op_term),
       )),
       ',',
       field('body', $._term),
@@ -1301,7 +1551,7 @@ export default grammar({
       $._type_spec,
     )),
 
-    /* `induction x [using ind]? [generalizing ys]? [with | … ]?` —
+/* `induction x [using ind]? [generalizing ys]? [with | … ]?` —
        Lean's structural-induction tactic. Same shape with `cases` for
        the case-analysis tactic. Both are written as terms inside a
        `by`-block, so they belong with the other lead terms. The
@@ -1317,13 +1567,21 @@ export default grammar({
     show: $ => prec.right(seq(
       'show',
       field('type', $._term),
-      choice(
+      /* Bare `show T` is the tactic form (re-states the goal);
+         `show T from e` / `show T by tac` are the term forms. */
+      optional(choice(
         seq('from', field('value', $._term)),
         $.by,
-      ),
+      )),
     )),
 
-    /* `if h : cond then a else b` — named hypothesis form. */
+    /* `if h : cond then a else b` — named hypothesis form. An
+       optional `else` (for do-block `if cond then stmt`) was tried
+       and abandoned twice: it splits LR states through the whole
+       term grammar and generate runs for tens of minutes at
+       multi-GB memory. Same for allowing `block_assign` in the
+       branches. Do-block `if … then` without `else` therefore
+       still parses with an error node. */
     if_then_else: $ => prec.right(seq(
       'if',
       optional(seq(field('hyp', $._binder_ident), ':')),
@@ -1380,7 +1638,8 @@ export default grammar({
     match_alt: $ => seq(
       '|',
       sep1(field('pattern', $._term), ','),
-      '=>',
+      /* Mathlib prefers `↦` over `=>` in match arms. */
+      choice('=>', '↦'),
       field('body', $._term),
     ),
 
