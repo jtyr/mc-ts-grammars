@@ -18,20 +18,18 @@
   "scripts": {
     "install": "node-gyp-build",
     "lint": "eslint grammars/*/grammar.js",
-    "generate": "for dir in grammars/ocaml grammars/interface grammars/type; do cd $dir; tree-sitter generate; cd -; done",
-    "prestart": "tree-sitter build grammars/ocaml --wasm -o grammars/ocaml/tree-sitter-ocaml.wasm",
-    "start": "tree-sitter playground --grammar-path grammars/ocaml",
-    "test": "node --test bindings/node/*_test.js",
-    "parse-examples": "test/parse-examples.sh"
+    "generate": "for dir in grammars/*/; do cd $dir; tree-sitter generate; cd -; done",
+    "prestart": "for dir in grammars/*/; tree-sitter build $dir --wasm -o $dir/out.wasm",
+    "test": "node --test bindings/node/binding_test.js"
   },
   "author": "foxy@teapot.ovh",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
-    "node-addon-api": "^8.3.0",
+    "node-addon-api": "^8.9.0",
     "node-gyp-build": "^4.8.4"
   },
   "peerDependencies": {
-    "tree-sitter": "^0.22.4"
+    "tree-sitter": "^0.25.0"
   },
   "peerDependenciesMeta": {
     "tree_sitter": {
@@ -52,11 +50,14 @@
   "devDependencies": {
     "eslint-config-treesitter": "^1.0.2",
     "prebuildify": "^6.0.1",
-    "tree-sitter-cli": "^0.24.6"
+    "tree-sitter-cli": "^0.26.10"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "tree-sitter-cli"
+    ],
+    "ignoredBuiltDependencies": [
+      "tree-sitter"
     ]
   }
 }
