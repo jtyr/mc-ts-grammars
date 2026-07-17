@@ -40,7 +40,7 @@ jobs:
       - name: Generate parsers
         uses: ./.github/actions/generate-grammar
         with:
-          languages: all
+          languages: release
           cacheParsers: "true"
           cacheKeyPrefix: release
 

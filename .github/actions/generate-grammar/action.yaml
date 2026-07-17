@@ -53,6 +53,8 @@ runs:
         args=""
         if [ "${{ inputs.languages }}" = "all" ]; then
           args="--all"
+        elif [ "${{ inputs.languages }}" = "release" ]; then
+          args="--release"
         else
           args="${{ inputs.languages }}"
         fi
