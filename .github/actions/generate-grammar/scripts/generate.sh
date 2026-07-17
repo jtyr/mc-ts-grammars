@@ -19,8 +19,19 @@ REPO_ROOT=$(realpath "$SCRIPT_DIR/../../../..")
 REGISTRY="$REPO_ROOT/grammars.yaml"
 CACHE_DIR=""
 
+# Get only grammars with release: true (same selection as build.sh)
+get_release_grammars() {
+    awk '
+        /^- language:/ { lang=$3; enabled=1; release=0 }
+        /^  enabled: false/ { enabled=0 }
+        /^  release: true/ { release=1 }
+        /^$/ || /^- / { if (lang && enabled && release) print lang; }
+        END { if (lang && enabled && release) print lang }
+    ' "$REGISTRY"
+}
+
 if [ $# -eq 0 ]; then
-    echo 'Usage: generate.sh [--all] [--clean] [--cache-dir=DIR] <language> [<language> ...]'
+    echo 'Usage: generate.sh [--all|--release] [--clean] [--cache-dir=DIR] <language> [<language> ...]'
     exit 1
 fi
 
@@ -46,6 +57,11 @@ while [ $# -gt 0 ]; do
                     basename "$(dirname "$(dirname "$d")")"
                 done | sort
             )
+            ;;
+        --release)
+            shift
+            # shellcheck disable=SC2046 # word splitting is intentional
+            set -- $(get_release_grammars | sort)
             ;;
         *)
             break
