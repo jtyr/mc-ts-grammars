@@ -27,7 +27,7 @@ runs:
         node-version: "24"
 
     - name: Cache npm packages
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
         path: ~/.npm
         key: npm-${{ hashFiles('grammars/*/src/package.json') }}
@@ -40,7 +40,7 @@ runs:
 
     - name: Restore parser cache
       if: inputs.cacheParsers == 'true'
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
         path: .parser-cache
         key: parsers-${{ inputs.cacheKeyPrefix }}-${{ hashFiles('grammars/*/src/grammar.js', 'grammars/*/src/src/scanner.c', 'grammars/*/src/src/scanner.cc', 'grammars/*/src/package.json') }}
