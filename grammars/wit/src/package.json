@@ -1,12 +1,13 @@
 {
   "name": "tree-sitter-wit",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "description": "WIT grammar for tree-sitter",
   "author": "Liam Woodleigh-Hardinge <liam.woodleigh@gmail.com>",
   "license": "Apache-2.0 WITH LLVM-exception",
   "maintainers": [
     "Liam Woodleigh-Hardinge <liam.woodleigh@gmail.com>"
   ],
+  "type": "module",
   "contributors": [
     "Liam Woodleigh-Hardinge <liam.woodleigh@gmail.com>"
   ],
@@ -35,7 +36,7 @@
     "src/**"
   ],
   "dependencies": {
-    "node-addon-api": "^8.6.0",
+    "node-addon-api": "^8.9.0",
     "node-gyp-build": "^4.8.4"
   },
   "peerDependencies": {
@@ -47,8 +48,8 @@
     }
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.3",
-    "eslint": "^9.39.3",
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
     "eslint-config-treesitter": "^1.0.2",
     "globals": "^16.5.0",
     "prebuildify": "^6.0.1",

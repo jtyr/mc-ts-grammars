@@ -2,7 +2,7 @@
 // https://code.qt.io/cgit/qt/qtdeclarative.git/tree/src/qml/
 //   compiler/qqmlirbuilder.cpp
 //   parser/{qqmljs.g,qqmljsast_p.h,qqmljslexer.cpp}
-// ad65c8d89fd67cc11f04d8d3019149e98466c9fc
+// 33f70416ebc6e22321786d222a1b48cac70bb4e9
 
 module.exports = grammar(require('../../typescript/src/typescript/grammar'), {
   name: 'qmljs',
@@ -176,8 +176,10 @@ module.exports = grammar(require('../../typescript/src/typescript/grammar'), {
     ui_property_modifier: $ => choice(
       'default',
       'final',
+      'override',
       'readonly',
       'required',
+      'virtual',
     ),
 
     _ui_binding_value: $ => choice(
@@ -318,6 +320,8 @@ module.exports = grammar(require('../../typescript/src/typescript/grammar'), {
       'on',
       'required',
       'component',
+      'final',
+      'virtual',
       // not QML keywords, but qmljs.g accepts them as JS expressions:
       'from',
       'of',
@@ -352,7 +356,7 @@ module.exports = grammar(require('../../typescript/src/typescript/grammar'), {
       // 'new', ('new {}' would conflict at property value position)
       'readonly',
 
-      // QML (see QmlIdentifier):
+      // QML (see QMLContextualKeyword):
       'property',
       'signal',
       'readonly',
@@ -361,6 +365,8 @@ module.exports = grammar(require('../../typescript/src/typescript/grammar'), {
       'of',
       'required',
       'component',
+      'final',
+      'virtual',
     ),
 
     // Patch up JavaScript string rules to support multi-line string literal.
