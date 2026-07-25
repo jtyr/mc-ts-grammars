@@ -1,8 +1,6 @@
 ; highlights.scm
 (comment) @comment @spell
-
 "variable" @variable.parameter
-
 ; built-in named values (palette presets, special color names)
 ; TODO: decide and collapse (bgnd & background same)
 ; black/viridis constant?
@@ -12,9 +10,7 @@
   "bgnd"
   "background"
 ] @variable.parameter.builtin
-
 (identifier) @variable
-
 [
   "["
   "]"
@@ -23,19 +19,14 @@
   "{"
   "}"
 ] @punctuation.bracket
-
 (operator) @operator
-
 [
   "="
   ","
   ":"
 ] @operator
-
 (keyword_op) @keyword.operator
-
 (ternary_op) @keyword.conditional.ternary
-
 ; TODO: collapse
 [
   "for"
@@ -43,53 +34,50 @@
   "do"
   "while"
 ] @keyword.repeat
-
 ; -----------------------------------------------------------------------
 ; Commands
 "cmd" @keyword
-
 ; TODO: decide and collapse
 [
   "newhistogram"
   "newspiderplot"
   "keyentry"
 ] @keyword
-
 ; TODO: decide inverse, sample
 [
   "inverse"
   "sample"
   "kw_fn"
 ] @keyword.function
-
 "kw_cond" @keyword.conditional
-
 ; TODO: decide and collapse
 [
   "front"
   "back"
   "depthorder"
   "clip"
+  "zclip"
   "font"
   "filled"
   "nofilled"
-  "parallel"
   ; coordinate systems (first/second/graph/screen/character/polar) — alias "coord"
   "coord"
 ] @keyword.directive
-
 ; on/off toggle flags ({no}X) — alias "flag" (@keyword.modifier)
 "flag" @keyword.directive
-
 ; enumerated VALUES / modes (alias "mod") — @constant
 ; TODO: decide, constant?
 "mod" @constant
-
+; binary rotate= angle-unit suffixes (rotate=90deg / rotate=0.5 pi);
+; the attached form 0.5pi folds into the number token instead
+[
+  "degrees"
+  "pi"
+] @constant
 ; plot/splot ELEMENT modifiers (alias "attr") — @property
 ; (title/notitle/with/using/index/every/axes/smooth in a plot command;
 ;  distinct from set-option names which are @variable.member)
 "attr" @property
-
 ; -----------------------------------------------------------------------
 ; TODO: decide and collapse
 [
@@ -108,28 +96,19 @@
   "skip"
   "expand"
   "title"
-  ; set/show argument keywords (all key("...", n, "arg") aliases)
+  ; set/show/unset option heads (alias "opt") and option-body suboption
+  ; keywords (alias "arg") — distinct clause families, same visual group
+  "opt"
   "arg"
 ] @variable.member
-
-
 ; -----------------------------------------------------------------------
 ; Option keywords
 ; TODO: decide and collapse
 [
   ; coordinate systems / axes
-  "unit"
   "axes_opts"
   ; time units (set xdata time / timefmt)
-  "seconds"
-  "minutes"
-  "hours"
-  "days"
-  "weeks"
-  "months"
-  "years"
   ; smooth subtypes still emitted as own token (value-modes csplines/bezier/… → "mod")
-  "kdensity"
   "closed"
   "between"
   "above"
@@ -169,15 +148,17 @@
   "origin"
   "dx"
   "dy"
-  "width"
   "level"
   "matrix"
+  "columnheaders"
+  "rowheaders"
   "nonuniform"
   "sparse"
   "volatile"
   "noautoscale"
   "zsort"
   "mask"
+  "sharpen"
   "transpose"
   ; endian options (binary)
   "endian"
@@ -190,7 +171,9 @@
   ; fit modifiers
   "unitweights"
   "errors"
-  ; pause endconditions
+  ; command-argument keywords (pause endconditions, exit forms)
+  "message"
+  "status"
   "mouse"
   "keypress"
   "button1"
@@ -216,10 +199,8 @@
   "angle"
   "length"
   "head"
-  "inout"
   ; offset / scale
   "offset"
-  "nooffset"
   "scale"
   ; orientation
   ; angle units
@@ -227,8 +208,6 @@
   "range"
   "missing"
   "interpolate"
-  "autofreq"
-  "autojustify"
   ; rotation
   "rotate"
   ; border / extend / range modifiers
@@ -245,20 +224,18 @@
   "s"
   ; data / fit extras
   "variables"
-  "logfile"
-  "nologfile"
   "datablocks"
   "commentschars"
   "functions"
+  ; save changes
+  "changes"
   ; misc
   ; coordinate planes / walls
-  "version"
   ; colorspec
   "rgbcolor"
   ; tics
   ; set size
   ; set fit
-  "maxiter"
   "default"
   ; label / style
   ; set view
@@ -271,24 +248,19 @@
   "primary"
   "specular"
   "spec2"
+  "rot_x"
+  "rot_z"
+  "Phong"
   ; dgrid3d subtype (gauss/… value-modes → "mod")
-  "splines"
   ; contour / cntrparam
   ; tics axes / modifiers
-  "add"
   ; text / font / encoding
-  "fontscale"
-  "utf8"
   ; fill / size style
   "empty"
   ; layout / spacing / multiplot
   "layout"
   "spacing"
   "frac"
-  ; color names in style contexts
-  "cb"
-  ; filledcurves axis coordinate (x1, x2, y1, y2 etc.)
-  "coordinate"
   ; watch-label / surface options
   "point"
   ; tics keyword (grid / paxis — covers xtics, ytics, ztics contexts)
@@ -300,15 +272,11 @@
   "label"
   ; polar coordinate system and grid option
   ; polar grid axis ranges
-  "theta"
-  "r"
   ; ellipses style
   "units"
   ; stats output prefix
   "prefix"
   ; palette formula option
-  ; pm3d z-clip
-  "z"
   ; grid mode
   ; datafile option
   ; textbox / multiplot margins (anonymous "margins" string)
@@ -316,9 +284,7 @@
   ; datafile lc/fc palette shorthand
   "palette"
   ; set fit quiet / results / verbose / brief
-  "fit_out"
 ] @variable.member
-
 ; -----------------------------------------------------------------------
 ; Presentation / style attributes
 ; TODO: decide and collapse
@@ -337,98 +303,143 @@
   "units_opt"
   ; fill / line style modes
   "solid"
-  "dashed"
   ; page orientation
-  "landscape"
-  "portrait"
   ; terminal options
   "animate"
   "input"
-  "colortext"
-  "blacktext"
   ; point type names (ps/tikz terminals)
-  "texpoints"
-  "normalpoints"
-  "mpoints"
-  "smallpoints"
-  "tinypoints"
-  "pspoints"
-  "nopspoints"
   ; key alignment (capitalised)
   ; layer / style misc
-
   "st_opt"
   "plt_st"
 ] @attribute
-
-
 ; binary filetype= value (png/jpg/gif/bin parsed as identifier in field)
 (binary_options
   filetype: (identifier) @attribute)
-
 ; -----------------------------------------------------------------------
 ; Macro / datablock identifiers
 (macro) @function.macro
-
 (datablock) @module
-
 [
   (datablock_start)
   (datablock_end)
 ] @label
-
 ; -----------------------------------------------------------------------
 ; Functions
+;
+; ORDERING: this file assumes Neovim's "last match wins" resolution.
+; Under the tree-sitter CLI, Helix, and Zed the FIRST match wins, so these
+; blocks must be reordered there or @function.builtin never fires.
+;
+; Definition head vs call site: `def_func` wraps a definition, but its RHS
+; body call is also a direct `function` child, so the definition rule must
+; anchor to the first child.
 (function
-  name: (identifier) @function)
+  name: (identifier) @function.call)
+
+(def_func
+  .
+  (function
+    name: (identifier) @function))
 
 ((function
   name: (identifier) @function.builtin)
   (#any-of? @function.builtin
-    "abs" "acos" "acosh" "airy" "arg" "asin" "asinh" "atan" "atan2" "atanh" "besj0" "besj1" "besjn"
-    "besy0" "besy1" "besyn" "besi0" "besi1" "besin" "cbrt" "ceil" "conj" "cos" "cosh" "EllipticK"
-    "EllipticE" "EllipticPi" "erf" "erfc" "exp" "expint" "floor" "gamma" "ibeta" "inverf" "igamma"
-    "imag" "int" "invnorm" "invibeta" "invigamma" "LambertW" "lambertw" "lgamma" "lnGamma" "log"
-    "log10" "norm" "rand" "real" "round" "sgn" "sin" "sinh" "sqrt" "SynchrotronF" "tan" "tanh"
-    "uigamma" "voigt" "zeta" "cerf" "cdawson" "faddeva" "erfi" "FresnelC" "FresnelS" "VP" "VP_fwhm"
-    "Ai" "Bi" "BesselH1" "BesselH2" "BesselJ" "BesselY" "BesselI" "BesselK" "gprintf" "sprintf"
-    "strlen" "strstrt" "substr" "strptime" "srtftime" "system" "trim" "word" "words" "time"
-    "timecolumn" "tm_hour" "tm_mday" "tm_min" "tm_mon" "tm_sec" "tm_wday" "tm_week" "tm_yday"
-    "tm_year" "weekday_iso" "weekday_cdc" "column" "columnhead" "exists" "hsv2rgb" "index" "palette"
-    "rgbcolor" "stringcolumn" "valid" "value" "voxel"))
+    ; real / complex math
+    "abs" "acos" "acosh" "airy" "arg" "asin" "asinh" "atan" "atan2" "atanh"
+    "besj0" "besj1" "besjn" "besy0" "besy1" "besyn" "besi0" "besi1" "besin"
+    "cbrt" "ceil" "conj" "cos" "cosh" "exp" "floor" "imag" "int" "log" "log10"
+    "norm" "rand" "real" "round" "sgn" "sin" "sinh" "sqrt" "tan" "tanh"
+    ; special functions
+    "EllipticK" "EllipticE" "EllipticPi" "erf" "erfc" "expint" "gamma" "ibeta"
+    "igamma" "inverf" "invibeta" "invigamma" "invnorm" "LambertW" "lgamma"
+    "lnGamma" "SynchrotronF" "uigamma" "voigt" "zeta"
+    ; libcerf
+    "cerf" "cdawson" "faddeeva" "erfi" "FresnelC" "FresnelS" "VP" "VP_fwhm"
+    ; libamos — complex Airy / Bessel
+    "Ai" "Bi" "BesselH1" "BesselH2" "BesselJ" "BesselY" "BesselI" "BesselK"
+    ; strings
+    "gprintf" "sprintf" "strlen" "strstrt" "substr" "split" "join" "trim"
+    "word" "words" "system"
+    ; arrays
+    "index"
+    ; time
+    "time" "timecolumn" "strftime" "strptime"
+    "tm_hour" "tm_mday" "tm_min" "tm_mon" "tm_sec" "tm_wday" "tm_week"
+    "tm_yday" "tm_year" "weekdate_iso" "weekdate_cdc"
+    ; using-specifier / plotting
+    "column" "columnhead" "stringcolumn" "strcol" "exists" "valid" "value"
+    "hsv2rgb" "palette" "rgbcolor" "voxel"))
 
 ; -----------------------------------------------------------------------
-; Built-in variables (stats output, GPVAL_*, etc.)
-((identifier) @variable.builtin
-  (#match? @variable.builtin
-    "^\\w+_(records|headers|outofrange|invalid|blank|blocks|columns|column_header|index_(min|max)(_x|_y)?|(min|max)(_x|_y)?|mean(_err)?(_x|_y)?|stddev(_err)?(_x|_y)?)$"))
+; Built-in constants
+((identifier) @constant.builtin
+  (#any-of? @constant.builtin "pi" "NaN" "Inf"))
 
-((identifier) @variable.builtin
-  (#match? @variable.builtin
-    "^\\w+_(sdd(_x|_y)?|(lo|up)_quartile(_x|_y)?|median(_x|_y)?|sum(sq)?(_x|_y)?|skewness(_err)?(_x|_y)?)$"))
+; -----------------------------------------------------------------------
+; Built-in variables (stats output, GPVAL_*, ARG*, vfill loop vars)
+;
+; REGEX DIALECT / GROUP BUDGET — read before editing any `#match?` here.
+;
+; Neovim evaluates `#match?` with `vim.regex()`, prepending `\v` (very magic)
+; whenever the pattern does not already start with `\v`/`\m`/`\M`/`\V`. Two
+; consequences, both of which have bitten this file:
+;
+;   1. Every bare `(` is a CAPTURING group, and Vim's NFA engine allows at
+;      most 9 of them. A tenth aborts the whole query with
+;      `E872: (NFA regexp) Too many '('` — highlighting then stops dead at
+;      that predicate and the rest of the buffer renders unhighlighted.
+;      A single combined alternation here once used 14 groups. It is now
+;      split into several patterns; the query engine ORs separate patterns,
+;      so the accepted set is unchanged. Keep each pattern well under 9.
+;
+;   2. Write `(`, `|`, `)`, `?` BARE. Do NOT write `\(` / `\|`: under the
+;      auto-prepended `\v` those are LITERAL characters, so the predicate
+;      would compile cleanly and then silently match nothing.
+;
+; This bare dialect is read identically by Vim's very-magic mode and by Rust
+; regex (tree-sitter CLI, Helix, Zed), so it stays portable across engines.
+;
+; The `\w+_` prefix is deliberate and must not be narrowed to `STATS_`: the
+; prefix is user-selectable (`stats … prefix "FOO"`, `set fit prefix`).
 
+; stats: moments — <prefix>_mean/_stddev/_skewness/_kurtosis (+_err) (+_x/_y)
 ((identifier) @variable.builtin
   (#match? @variable.builtin
-    "^\\w+_(kurtosis(_err)?(_x|_y)?|adev(_x|_y)?|correlation|slope(_err)?|intercept(_err)?|sumxy|pos_(min|max)_y|size(_x|_y))$"))
+    "^\\w+_(mean|stddev|skewness|kurtosis)(_err)?(_x|_y)?$"))
 
+; stats: distribution summaries (+_x/_y)
 ((identifier) @variable.builtin
   (#match? @variable.builtin
-    "^((GPVAL|MOUSE|FIT)_\\w+|GNUTERM|NaN|Inf|VoxelDistance|GridDistance|pi|ARG\\w+)$"))
+    "^\\w+_(min|max|sdd|adev|median|sum(sq)?|(lo|up)_quartile)(_x|_y)?$"))
+
+; stats: regression, extents, counts, column metadata
+((identifier) @variable.builtin
+  (#match? @variable.builtin
+    "^\\w+_((slope|intercept)(_err)?|size(_x|_y)|column(s|_header)|records|headers|outofrange|invalid|blank|blocks|correlation|sumxy)$"))
+
+; GPVAL_* / MOUSE_* / FIT_* / ARG*
+((identifier) @variable.builtin
+  (#match? @variable.builtin
+    "^((GPVAL|MOUSE|FIT)_|ARG)\\w+$"))
+
+; fixed-name built-ins — plain string comparison, never reaches a regex engine
+((identifier) @variable.builtin
+  (#any-of? @variable.builtin "GNUTERM" "VoxelDistance" "GridDistance"))
 
 ; -----------------------------------------------------------------------
 ; Array definitions
 (def_array
   "array" @keyword.function)
-
 (array
   (identifier) @function)
-
 ; -----------------------------------------------------------------------
 ; Literals
+"NaN" @constant.builtin
 (number) @number
-
 (string_literal) @string
-
 (escape_sequence) @string.escape
-
 (format_specifier) @string.special
+
+; watchpoint target (`watch y=50`): the axis/expression name being watched
+(plot_element target: (identifier) @variable.member)

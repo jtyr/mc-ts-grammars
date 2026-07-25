@@ -1,6 +1,6 @@
 {
   "name": "tree-sitter-gnuplot",
-  "version": "2.0.0",
+  "version": "2.0.4",
   "description": "Gnuplot grammar for tree-sitter",
   "main": "bindings/node",
   "types": "bindings/node",
@@ -10,6 +10,7 @@
   ],
   "files": [
     "grammar.js",
+    "keywords.json",
     "binding.gyp",
     "prebuilds/**",
     "bindings/node/*",
@@ -17,15 +18,15 @@
     "src/**"
   ],
   "scripts": {
+    "gen:keywords": "node scripts/gen-keywords.mjs",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "tree-sitter generate",
     "install": "node-gyp-build",
     "prebuildify": "prebuildify --napi --strip"
   },
   "author": "Dai López Jacinto",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
-    "node-addon-api": "^7.1.0",
+    "node-addon-api": "^8.9.0",
     "node-gyp-build": "^4.8.0"
   },
   "peerDependencies": {
@@ -37,7 +38,7 @@
     }
   },
   "devDependencies": {
-    "tree-sitter-cli": "^0.20.7",
+    "tree-sitter-cli": "^0.25.0",
     "prebuildify": "^6.0.0"
   }
 }
