@@ -8,8 +8,6 @@ module.exports = grammar(GO, {
     name: 'templ',
 
     externals: $ => [
-        $.css_property_value,
-        $.script_block_text,
         $.switch_element_text,
         $.element_text,
     ],
@@ -100,6 +98,7 @@ module.exports = grammar(GO, {
             $.component_if_statement,
             $.component_for_statement,
             $.component_switch_statement,
+            $.fallthrough_statement,
             $.component_import,
             $.rawgo_block,
             $.component_render,
@@ -519,6 +518,7 @@ module.exports = grammar(GO, {
             ';'
         ),
         css_property_name: $ => /[a-zA-Z\-]+/,
+        css_property_value: $ => token(prec(1, /[^\s;{}][^;{}]*/)),
 
         // This matches a dynamic class attribute.
         // See https://templ.guide/syntax-and-usage/css-style-management#dynamic-classes
@@ -549,6 +549,16 @@ module.exports = grammar(GO, {
             '{',
             optional($.script_block_text),
             '}',
+        ),
+        script_block_text: $ => repeat1(choice(
+            $._script_block_fragment,
+            $._script_brace_group,
+        )),
+        _script_block_fragment: _ => token.immediate(prec(1, /[^{}]+/)),
+        _script_brace_group: $ => seq(
+            token.immediate('{'),
+            repeat(choice($._script_block_fragment, $._script_brace_group)),
+            token.immediate('}'),
         ),
 
         // This matches a complete script element
@@ -633,9 +643,14 @@ module.exports = grammar(GO, {
         // Taken from https://github.com/tree-sitter/tree-sitter-html/blob/master/grammar.js
         attribute_name: _ => /[^<>"'/=\s]+/,
         attribute_value: _ => /[^{}<>"'=\s]+/,
+        // NOTE: the content is given a higher lexical precedence than Go's
+        // `comment` token (which is inherited as an extra). Without it, a value
+        // beginning with `//` or `/*` (e.g. title="// note") is swallowed by the
+        // comment extra, because the comment matches to end of line and beats
+        // the content token on longest match. prec(1) makes the content win.
         quoted_attribute_value: $ => choice(
-            seq('\'', optional(alias(/[^']+/, $.attribute_value)), '\''),
-            seq('"', optional(alias(/[^"]+/, $.attribute_value)), '"'),
+            seq('\'', optional(alias(token(prec(1, /[^']+/)), $.attribute_value)), '\''),
+            seq('"', optional(alias(token(prec(1, /[^"]+/)), $.attribute_value)), '"'),
         ),
         text: _ => /[^<>&{}\s]([^<>&{}]*[^<>&\s{}])?/,
 

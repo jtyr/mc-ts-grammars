@@ -34,8 +34,6 @@ const K = {
 	zaxes: /(x|y|z|x2|y2)?/,
 	l: reg("left", 1),
 	r: reg("right", 1),
-	t: reg("top", 1),
-	b: reg("bottom", 1),
 	c: reg("center", 1),
 	// Style attribute keywords (lw/lt/ls/lc/dt/dl/pt/ps/pi/pn/as/fs/fc/tc) live
 	// in the external scanner — see STYLE_KWS in scanner.c and the `_lw`..`_tc`
@@ -57,9 +55,9 @@ const dataSeparator = ($) =>
 // src/grammar.json). Pure refactor — each expands to the exact inline form it
 // replaces, so the generated parser is byte-identical. Centralizes the spelling
 // (e.g. change `offset`'s min_chars in one place).
-const fillStyleOpt = ($) => seq($._fs, $.fill_style); // `fs <fillstyle>` (×6)
-const atPos = ($) => seq(alias("at", "kw_fn"), $.position); //          `at <position>` (×6)
-const offsetPos = ($) => seq(key("offset", 3), $.position); // `offset <pos>` (×9)
+const fillStyleOpt = ($) => seq($._fs, $.fill_style); // `fs <fillstyle>`
+const atPos = ($) => seq(alias("at", "kw_fn"), $.position); //          `at <position>`
+const offsetPos = ($) => seq(key("offset", 3), $.position); // `offset <pos>`
 
 // All terminal names collapsed into ONE token (was 32 separate `key()` tokens).
 // `token(choice(...))` forces a single terminal symbol; abbreviation min_chars
@@ -117,7 +115,8 @@ module.exports = grammar({
 		// tagged with their highlight tier; the bodies themselves share the
 		// _gopts/_gopts_style rules. kw_g_axisflag is the (no)?m?<axis>tics
 		// family ((no)mxtics/x2tics/...), valid only in style-flavor bodies.
-		$.kw_g_arg, $.kw_g_flag, $.kw_g_mod, $.kw_g_coord, $.kw_g_axisflag,
+		// kw_g_argv is the value-REQUIRED flavor of kw_g_arg (see _gopt_item).
+		$.kw_g_arg, $.kw_g_argv, $.kw_g_flag, $.kw_g_mod, $.kw_g_coord, $.kw_g_axisflag,
 		// autoscale-only <axis>{min|max|fix|fixmin|fixmax}? words: private token
 		// so common variable names (rmax, xmin) stay identifiers elsewhere.
 		$.kw_g_axisrange,
@@ -147,7 +146,6 @@ module.exports = grammar({
 	word: ($) => $.identifier,
 
 	conflicts: ($) => [
-		[$._paxis_label],
 		[$.plot_element, $.style_opts],
 		// Companion to _plot_data_expr (plot_element's data: branch): an atom
 		// after the plot keyword reduces to _plot_data_expr (data) or to
@@ -168,7 +166,6 @@ module.exports = grammar({
 		[$._command, $.multiplot_block],
 		// palette `file "f" using 1:2 "fmt"`: using's trailing scanf format
 		// string vs a following string item in the generic palette body
-		[$.using],
 		// `set view 60,30`: full-slot comma lists parse as a _gexprs chain OR
 		// as _view_angles slots; dynamic prec on _view_angles picks the slot
 		// form, keeping the empty-slot shapes (`,,0.5`, `60,`) in one rule
@@ -240,6 +237,11 @@ module.exports = grammar({
 				// `contourfill auto FOO` keeps FOO in the body while an
 				// identifier on the NEXT line starts a fresh statement.
 				prec.right(seq(alias($.kw_g_arg, "arg"), optional(seq($._gval_bind, choice($._gexprs, $.tuple))))),
+				// Arg keywords whose value is REQUIRED — deliberately NOT wrapped in
+				// `optional`, so the state after the keyword admits only an
+				// expression and every keyword-table token drops out of
+				// valid_symbols at the value slot (e.g. `rotate by pi`).
+				seq(alias($.kw_g_argv, "arg"), $._gval_bind, choice($._gexprs, $.tuple)),
 				prec.right(seq(alias($.kw_g_coord, "coord"), optional(seq($._gval_bind, $._gexprs)))),
 				$._gexprs,
 				// bare label/position list: `set xtics ("NE" 72, "S" 42)`
@@ -407,7 +409,7 @@ module.exports = grammar({
 		// definition or assignment on the next line starts a fresh statement.
 		cmd_opt_expr: ($) =>
 			seq(
-				choice(alias($.kw_cmd_optexpr, "cmd"), alias("warn", "cmd")),
+				alias($.kw_cmd_optexpr, "cmd"),
 				optional(seq($._gval_sep, choice($._expression, alias("all", "mod")))),
 			),
 
@@ -529,7 +531,17 @@ module.exports = grammar({
 			),
 
 		endcondition: ($) =>
-			choice("keypress", "button1", "button2", "button3", "close", "any"),
+			// Enumerated values of `pause mouse` (gnuplot: "the possible end
+			// conditions are keypress, button1, button2, button3, close, any"),
+			// so they carry the `mod` tier rather than the option-name tier.
+			choice(
+				alias("keypress", "mod"),
+				alias("button1", "mod"),
+				alias("button2", "mod"),
+				alias("button3", "mod"),
+				alias("close", "mod"),
+				alias("any", "mod"),
+			),
 
 		cmd_plot: ($) =>
 			seq(alias($.cmd_plot_kw, "cmd"), optional("sample"), sep(",", $.plot_element)),
@@ -665,7 +677,7 @@ module.exports = grammar({
 		// Own UNANNOTATED rule: inside plot_style's prec.left span the
 		// offset shift/reduce against style_opts' offset would statically
 		// resolve toward closing plot_style; here it goes through the
-		// declared [$.plot_style, $.style_opts]-shaped GLR conflict and
+		// declared single-symbol [$.plot_style] GLR conflict and
 		// prec.dynamic(1) keeps the offset in the hsteps cluster when both
 		// parses survive.
 		_hsteps_opts: ($) =>
@@ -814,7 +826,7 @@ module.exports = grammar({
 		// the scanner's pr/pri/prin/print token.
 		cmd_print: ($) =>
 			seq(
-				choice(alias($.cmd_print_kw, "cmd"), alias("printerr", "cmd")),
+				alias($.cmd_print_kw, "cmd"),
 				// `print for [i=1:|A|] A[i]`. The runtime iterates the FIRST item
 				// only; any further comma-separated items are evaluated once after
 				// the loop ends (so `print for [i=1:2] i, "-"` prints `1 2 -`).
@@ -859,6 +871,10 @@ module.exports = grammar({
 		// whose tails carry the statement-start follow set, so per-token keyword
 		// merges here do NOT shrink the table — only the `_eos` redesign does.
 		//-------------------------------------------------------------------------
+		_gopt_body: ($) => seq($._gval_sep, $._gopts),
+
+		_gopt_body_style: ($) => seq($._gval_sep, $._gopts_style),
+
 		_argument_set_show: ($) =>
 			prec.right(
 				choice(
@@ -885,49 +901,49 @@ module.exports = grammar({
 					$.dummy,
 					seq(
 						key("encoding", 3, "opt"),
-						field("arg_opts", optional($.encoding)),
+						field("arg_opts", optional(alias($._gopt_body, $.encoding))),
 					),
 					seq(
 						key1("opt", "errorbars", /|/, reg("bars", 1)),
-						field("arg_opts", optional($.errorbars)),
+						field("arg_opts", optional(alias($._gopt_body_style, $.errorbars))),
 					),
-					seq(alias("fit", "opt"), field("arg_opts", optional($.fit))),
-					seq(key("format", 4, "opt"), field("arg_opts", optional($.format))),
+					seq(alias("fit", "opt"), field("arg_opts", optional(alias($._gopt_body, $.fit)))),
+					seq(key("format", 4, "opt"), field("arg_opts", optional(alias($._gopt_body_style, $.format)))),
 					$.grid,
 					seq(
 						key("hidden3d", 3, "opt"),
-						field("arg_opts", optional($.hidden3d)),
+						field("arg_opts", optional(alias($._gopt_body, $.hidden3d))),
 					),
-					seq(key("history", 3, "opt"), field("arg_opts", optional($.history))),
+					seq(key("history", 3, "opt"), field("arg_opts", optional(alias($._gopt_body, $.history)))),
 					seq(
 						key("isosamples", 3, "opt"),
-						field("arg_opts", optional($.isosamples)),
+						field("arg_opts", optional(alias($._gopt_body, $.isosamples))),
 					),
 					seq(
 						key("isosurface", 7, "opt"),
-						field("arg_opts", optional($.isosurface)),
+						field("arg_opts", optional(alias($._gopt_body, $.isosurface))),
 					),
 					alias("isotropic", "opt"),
-					seq(alias("jitter", "opt"), field("arg_opts", optional($.jitter))),
+					seq(alias("jitter", "opt"), field("arg_opts", optional(alias($._gopt_body, $.jitter)))),
 					$.key,
 					$.label,
 					$.linetype,
 					seq(alias("link", "opt"), field("arg_opts", optional($.link))),
 					$.loadpath,
-					seq(alias("locale", "opt"), field("arg_opts", optional($.locale))),
+					seq(alias("locale", "opt"), field("arg_opts", optional(alias($._gopt_body, $.locale)))),
 					$.logscale,
 					$.mapping,
 					$.margin,
 					seq(alias("micro", "opt"), field("arg_opts", optional($.micro))),
 					key("minussign", 5, "opt"),
 					$.monochrome,
-					seq(key("mouse", 2, "opt"), field("arg_opts", optional($.mouse))),
+					seq(key("mouse", 2, "opt"), field("arg_opts", optional(alias($._gopt_body, $.mouse)))),
 					$.mxtics,
 					$.nonlinear,
 					$.object,
-					seq(key("offsets", 3, "opt"), field("arg_opts", optional($.offsets))),
-					seq(key("origin", 2, "opt"), field("arg_opts", optional($.origin))),
-					seq(key("output", 1, "opt"), field("arg_opts", optional($.output))),
+					seq(key("offsets", 3, "opt"), field("arg_opts", optional(alias($._gopt_body, $.offsets)))),
+					seq(key("origin", 2, "opt"), field("arg_opts", optional(alias($._gopt_body, $.origin)))),
+					seq(key("output", 1, "opt"), field("arg_opts", optional(alias($._gopt_body, $.output)))),
 					seq(
 						alias("overflow", "opt"),
 						field("arg_opts", optional($.overflow)),
@@ -940,32 +956,32 @@ module.exports = grammar({
 					$.pointintervalbox,
 					$.pointsize,
 					seq(key("polar", 3, "opt"), field("arg_opts", optional($.polar))),
-					seq(key("print", 2, "opt"), field("arg_opts", optional($.print))),
-					seq(alias("psdir", "opt"), field("arg_opts", optional($.psdir))),
+					seq(key("print", 2, "opt"), field("arg_opts", optional(alias($._gopt_body, $.print)))),
+					seq(alias("psdir", "opt"), field("arg_opts", optional(alias($._gopt_body, $.psdir)))),
 					key("raxis", 2, "opt"),
-					seq(alias("rgbmax", "opt"), field("arg_opts", optional($.rgbmax))),
-					seq(key("samples", 3, "opt"), field("arg_opts", optional($.samples))),
-					seq(key("size", 2, "opt"), field("arg_opts", optional($.size))),
+					seq(alias("rgbmax", "opt"), field("arg_opts", optional(alias($._gopt_body, $.rgbmax)))),
+					seq(key("samples", 3, "opt"), field("arg_opts", optional(alias($._gopt_body, $.samples)))),
+					seq(key("size", 2, "opt"), field("arg_opts", optional(alias($._gopt_body, $.size)))),
 					key("spiderplot", 6, "opt"),
 					$.style,
-					seq(key("surface", 2, "opt"), field("arg_opts", optional($.surface))),
+					seq(key("surface", 2, "opt"), field("arg_opts", optional(alias($._gopt_body, $.surface)))),
 					$.table,
 					$.terminal,
 					seq(
 						alias("termoption", "opt"),
-						field("arg_opts", optional($.termoption)),
+						field("arg_opts", optional(alias($._gopt_body_style, $.termoption))),
 					),
-					seq(alias("theta", "opt"), field("arg_opts", optional($.theta))),
+					seq(alias("theta", "opt"), field("arg_opts", optional(alias($._gopt_body, $.theta)))),
 					seq(key("tics", -1, "opt"), field("arg_opts", optional($.tics))),
 					seq(
 						key("timestamp", 5, "opt"),
-						field("arg_opts", optional($.timestamp)),
+						field("arg_opts", optional(alias($._gopt_body_style, $.timestamp))),
 					),
-					seq(key("timefmt", 5, "opt"), field("arg_opts", optional($.timefmt))),
+					seq(key("timefmt", 5, "opt"), field("arg_opts", optional(alias($._gopt_body, $.timefmt)))),
 					$.title,
 					seq(alias("vgrid", "opt"), field("arg_opts", optional($.vgrid))),
 					seq(key("view", 2, "opt"), field("arg_opts", optional($.view))),
-					seq(key("walls", -1, "opt"), field("arg_opts", optional($.walls))),
+					seq(key("walls", -1, "opt"), field("arg_opts", optional(alias($._gopt_body_style, $.walls)))),
 					$.xdata,
 					$.xdtics,
 					$.xlabel,
@@ -973,7 +989,7 @@ module.exports = grammar({
 					$.xrange,
 					$.xtics,
 					$.xyplane,
-					seq(key("zero", 1, "opt"), field("arg_opts", optional($.zero))),
+					seq(key("zero", 1, "opt"), field("arg_opts", optional(alias($._gopt_body, $.zero)))),
 					$.zeroaxis,
 					// Fallback: unknown/future option words parse clean (plain
 					// identifier colour) instead of producing ERROR nodes. Known
@@ -1139,33 +1155,24 @@ module.exports = grammar({
 
 		// Generic body: encoding names (iso_8859_*, koi8*, cp*, sjis, utf8)
 		// parse as identifier items; defaults/locale are existing rows
-		encoding: ($) => seq($._gval_sep, $._gopts),
 
-		errorbars: ($) => seq($._gval_sep, $._gopts_style),
 
 		// Generic body (rows: logfile min 4 — bare `log` is a builtin —
 		// results/brief/errorvariables/covariancevariables/errorscaling/
 		// prescale/maxiter/limit/limit_abs/script/v4/v5; quiet/verbose/
 		// default rows exist). `start-lambda`/`lambda-factor` parse via the
 		// start row / identifier plus a minus-expression — permissive.
-		fit: ($) => seq($._gval_sep, $._gopts),
 
-		format: ($) => seq($._gval_sep, $._gopts_style),
 
 		// Generic body (GOPT_KWS rows: polar/layerdefault/front/back/vertical/
 		// spiderplot; the (no)?m?<axis>tics family is kw_g_axisflag).
 		grid: ($) =>
-			prec.right(seq(key("grid", 2, "opt"), optional(seq($._gval_sep, $._gopts_style)))),
+			prec.right(seq(key("grid", 1, "opt"), optional(seq($._gval_sep, $._gopts_style)))),
 
-		hidden3d: ($) => seq($._gval_sep, $._gopts),
 
-		history: ($) => seq($._gval_sep, $._gopts),
 
-		isosamples: ($) => seq($._gval_sep, $._gopts),
 
-		isosurface: ($) => seq($._gval_sep, $._gopts),
 
-		jitter: ($) => seq($._gval_sep, $._gopts),
 
 		key: ($) =>
 			prec.right(seq(key("key", 1, "opt"), optional(seq($._gval_sep, $._gopts_style)))),
@@ -1197,7 +1204,6 @@ module.exports = grammar({
 
 		// (the old body's head mistakenly read key("loadpath") — fixed by the
 		// generic body: `set locale "en_US"` now parses the string directly)
-		locale: ($) => seq($._gval_sep, $._gopts),
 
 		logscale: ($) => {
 			const axis = choice("x", "y", "z", "x2", "y2", "cb", "r");
@@ -1244,7 +1250,6 @@ module.exports = grammar({
 		monochrome: ($) =>
 			prec.left(seq(key("monochrome", 4, "opt"), optional($.line_style))),
 
-		mouse: ($) => seq($._gval_sep, $._gopts),
 
 		multiplot: ($) =>
 			seq(
@@ -1334,12 +1339,9 @@ module.exports = grammar({
 		object: ($) =>
 			prec.right(seq(key("object", 3, "opt"), optional(seq($._gval_sep, $._gopts_style)))),
 
-		offsets: ($) => seq($._gval_sep, $._gopts),
 
 		// set origin <x>,<y>  — lower-left corner of plot within terminal
-		origin: ($) => seq($._gval_sep, $._gopts),
 
-		output: ($) => seq($._gval_sep, $._gopts),
 
 		overflow: ($) => choice(alias("float", "mod"), "NaN", alias("undefined", "mod")),
 
@@ -1375,8 +1377,12 @@ module.exports = grammar({
 			),
 		),
 
+		// prec.right settles the dangling label_opts tail. It was a declared
+		// conflict, which licensed GLR forking across the whole rule for a
+		// single shift/reduce tie; associativity is the narrower tool and is
+		// byte-identical on the corpus, the oracle and 16 targeted probes.
 		_paxis_label: ($) =>
-			seq(key("label", 3), optional($.label_opts)),
+			prec.right(seq(key("label", 3), optional($.label_opts))),
 
 		paxis: ($) =>
 			prec.left(
@@ -1414,7 +1420,10 @@ module.exports = grammar({
 			// recycle code for pm3d plot_style
 			repeat1(
 				choice(
-					seq(alias("at", "kw_fn"), alias(repeat1(choice("b", "s", "t")), "position")),
+					// `at bst` — the layer letters are CONCATENATED into one word
+					// (bottom/surface/top, up to 6). gnuplot rejects the
+					// space-separated `at b t`, so this must not be a repeat.
+					seq(alias("at", "kw_fn"), alias(token(/[bst]{1,6}/), "mod")),
 					seq(
 						key("interpolate", 6),
 						field("steps", $._expression),
@@ -1490,15 +1499,10 @@ module.exports = grammar({
 		polar: ($) =>
 			prec.right(seq(alias("grid", "mod"), optional(seq($._gval_sep, $._gopts)))),
 
-		print: ($) => seq($._gval_sep, $._gopts),
 
-		psdir: ($) => seq($._gval_sep, $._gopts),
 
-		rgbmax: ($) => seq($._gval_sep, $._gopts),
 
-		samples: ($) => seq($._gval_sep, $._gopts),
 
-		size: ($) => seq($._gval_sep, $._gopts),
 
 		// Selector heads keep their st_opt alias (colour); tails are generic.
 		// data/function/line/ellipse keep structural tails (plot_style,
@@ -1556,7 +1560,6 @@ module.exports = grammar({
 				),
 			),
 
-		surface: ($) => seq($._gval_sep, $._gopts),
 
 		table: ($) =>
 			prec.right(
@@ -1609,20 +1612,19 @@ module.exports = grammar({
 		line_drawing_method: ($) => choice(key("rounded", -2, "mod"), alias("butt", "mod"), alias("square", "mod")),
 		background: ($) =>
 			choice(
-				seq(key("background", 5), field("color", $._expression)),
+				// Both `background rgb "gray75"` and the bare `background
+				// "#ffffff"` are accepted, so the value is a colorspec OR a
+				// plain expression.
+				seq(key("background", 5), field("color", choice($.colorspec, $._expression))),
 				key("nobackground", 7),
 				key("transparent", 5, "flag", 1), // NOTE: some need 6 instead of 5
 			),
 		// ----------------------------------------------------------------
-		termoption: ($) => seq($._gval_sep, $._gopts_style),
 
-		theta: ($) => seq($._gval_sep, $._gopts),
 
 		tics: ($) => seq($._gval_sep, $.tics_opts),
 
-		timestamp: ($) => seq($._gval_sep, $._gopts_style),
 
-		timefmt: ($) => seq($._gval_sep, $._gopts),
 
 		title: ($) =>
 			prec.right(seq(key("title", 3, "opt"), optional(seq($._gval_sep, $._gopts_style)))),
@@ -1648,7 +1650,6 @@ module.exports = grammar({
 		// choice would break same-line identifier angles (`set view rx, rz`).
 		_view_slot: ($) => prec.right(seq(",", optional($._expression))),
 
-		walls: ($) => seq($._gval_sep, $._gopts_style),
 
 		xdata: ($) =>
 			seq(key1("opt", K.axes, reg("data", 2)), optional(key("time", 1))),
@@ -1686,7 +1687,9 @@ module.exports = grammar({
 			// keep the kw_g_axisflag "flag" tier)
 			prec.left(
 				seq(
-					key1("opt", K.axes, reg("tics", -1)),
+					// probed 6.0.4: `set xti 5` is accepted, `set xt 5` is rejected.
+					// The m/d/xm variants have their own minima and are left alone.
+					key1("opt", K.axes, reg("tics", 2)),
 					optional(seq($._gval_sep, $.tics_opts)),
 				),
 			),
@@ -1694,7 +1697,6 @@ module.exports = grammar({
 		xyplane: ($) =>
 			prec.right(seq(key("xyplane", 3, "opt"), optional(seq($._gval_sep, $._gopts)))),
 
-		zero: ($) => seq($._gval_sep, $._gopts),
 
 		zeroaxis: ($) =>
 			seq(key1("opt", K.zaxes, reg("zeroaxis", 5)), optional($.style_opts)),
@@ -1730,12 +1732,14 @@ module.exports = grammar({
 				optional($.datafile_modifiers),
 				repeat(
 					choice(
-						seq(choice("name", "prefix"), $._expression),
+						// `name` and `prefix` are synonyms in gnuplot 6.0, valid on both
+						// stats forms. The field was previously declared only on a
+						// `"$vgridname"` branch — a doc placeholder no real input can
+						// reach, since a voxel grid name lexes as `datablock` — so
+						// node-types.json advertised a cmd_stats.name that no parse
+						// ever produced. Declaring it here matches the reachable shape.
+						seq(choice("name", "prefix"), field("name", $._expression)),
 						key("output", 3, "flag", 1),
-						seq(
-							"$vgridname",
-							optional(seq("name", field("name", $._expression))),
-						),
 					),
 				),
 			),
@@ -1948,8 +1952,10 @@ module.exports = grammar({
 						alias("fnormal", "mod"),
 						alias("cumulative", "mod"),
 						alias("cnormal", "mod"),
-						key("csplines", -1, "mod"),
-						key("acsplines", -1, "mod"),
+						// probed 6.0.4 minima by resolution: `smooth cs` and `smooth acs` produce
+						// output byte-identical to the full words and distinct from bezier.
+						key("csplines", 2, "mod"),
+						key("acsplines", 3, "mod"),
 						// probed 6.0.4 minimum: mcs (3); every longer prefix accepted.
 						key("mcsplines", 3, "mod"),
 						alias("path", "mod"),
@@ -2142,7 +2148,10 @@ module.exports = grammar({
 				),
 			),
 
-		fontspec: ($) => seq("font", field("font", $._expression)),
+		// `font` takes a value, so it is an option-body suboption name (`arg`),
+		// not a toggle. The scanner matches the literal text, not the alias, so
+		// the _gval_bind refusal for `font` is unaffected.
+		fontspec: ($) => seq(alias("font", "arg"), field("font", $._expression)),
 
 		_linecolor: ($) =>
 			seq($._lc, field("lc", choice($._expression, $.colorspec))),
@@ -2264,7 +2273,14 @@ module.exports = grammar({
 		using: ($) =>
 			field(
 				"using",
-				seq(
+				// prec.right binds the trailing scanf string into `using` as
+				// `format:`. Previously a declared conflict, which resolved the
+				// other way inside `set palette file` and left the string as a
+				// palette body item — gnuplot treats it as the using format, so
+				// that tree was wrong. Every non-palette `using` form is
+				// unchanged; the four affected inputs are pinned in
+				// test/corpus/datafile_using.txt.
+				prec.right(seq(
 					key("using", 1, "attr"),
 					sep(":", choice(
 						surround("()", sep(",", choice($.assignment, $._expression))),
@@ -2274,7 +2290,7 @@ module.exports = grammar({
 					// (gnuplot 6 docs p.138-139). The format-only form `using "%lf"`
 					// is already covered by the string as the sole entry above.
 					optional(field("format", $.string_literal)),
-				),
+				)),
 			),
 
 		position: ($) =>

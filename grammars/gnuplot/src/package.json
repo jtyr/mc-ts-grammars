@@ -1,9 +1,17 @@
 {
   "name": "tree-sitter-gnuplot",
-  "version": "2.0.4",
+  "version": "4.1.0",
   "description": "Gnuplot grammar for tree-sitter",
   "main": "bindings/node",
   "types": "bindings/node",
+  "homepage": "https://github.com/dpezto/tree-sitter-gnuplot#readme",
+  "bugs": {
+    "url": "https://github.com/dpezto/tree-sitter-gnuplot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dpezto/tree-sitter-gnuplot.git"
+  },
   "keywords": [
     "parser",
     "lexer"

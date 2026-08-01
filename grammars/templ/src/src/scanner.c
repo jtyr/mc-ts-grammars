@@ -83,8 +83,6 @@ static bool lookahead_buffer_find_keyword(LookaheadBuffer *buffer,
 //
 
 enum TokenType {
-  CSS_PROPERTY_VALUE,
-  SCRIPT_BLOCK_TEXT,
   SWITCH_ELEMENT_TEXT,
   ELEMENT_TEXT,
 };
@@ -109,27 +107,6 @@ static void deserialize(Scanner *scanner, const char *buffer, unsigned length) {
   } else {
     scanner->saw_at_symbol = false;
   }
-}
-
-static bool scan_css_property_value(Scanner *scanner, TSLexer *lexer) {
-  (void)scanner;
-
-  // If we encounter the start of a templ expression, bail
-  if (lexer->lookahead == '{') {
-    return false;
-  }
-
-  lexer->result_symbol = CSS_PROPERTY_VALUE;
-
-  // Consume everything until we find the end of the value;
-  while (!lexer->eof(lexer)) {
-    if (lexer->lookahead == ';') {
-      return true;
-    }
-    lexer->advance(lexer, false);
-  }
-
-  return false;
 }
 
 static bool is_element_text_terminator(int ch) {
@@ -168,9 +145,10 @@ const char *statement_keywords[] = {
     // Switch keywords
     "case ",
     "default:",
+    "fallthrough",
 };
 const size_t statement_keywords_count =
-    sizeof(statement_keywords) / sizeof(const char *) - 2;
+    sizeof(statement_keywords) / sizeof(const char *) - 3;
 const size_t switch_statement_keywords_count =
     sizeof(statement_keywords) / sizeof(const char *);
 
@@ -268,65 +246,9 @@ done:
   return has_marked;
 }
 
-static bool scan_script_block_text(Scanner *scanner, TSLexer *lexer) {
-  (void)scanner;
-
-  lexer->result_symbol = SCRIPT_BLOCK_TEXT;
-
-  // Start by marking the end so the following calls to advance don't
-  // increase the token size
-  lexer->mark_end(lexer);
-
-  if (lexer->eof(lexer)) {
-    return false;
-  }
-
-  bool has_marked = false;
-
-  int brace_count = 1;
-  int count = 0;
-
-  while (!lexer->eof(lexer)) {
-    switch (lexer->lookahead) {
-    case '{':
-      brace_count++;
-      break;
-    case '}':
-      brace_count--;
-      if (brace_count == 0) {
-        goto done;
-      }
-      break;
-    }
-
-    lexer->advance(lexer, false);
-    lexer->mark_end(lexer);
-
-    has_marked = true;
-    count++;
-  }
-
-done:
-
-  (void)count;
-  /* printf("done: %d, count: %d\n", has_marked, count); */
-
-  return has_marked;
-}
-
 static bool scan(Scanner *scanner, TSLexer *lexer, const bool *valid_symbols) {
   while (!lexer->eof(lexer) && iswspace(lexer->lookahead)) {
     lexer->advance(lexer, true);
-  }
-
-  if (valid_symbols[CSS_PROPERTY_VALUE] &&
-      scan_css_property_value(scanner, lexer)) {
-    return true;
-  }
-
-  if (valid_symbols[SCRIPT_BLOCK_TEXT] &&
-      scan_script_block_text(scanner, lexer)) {
-    return true;
   }
 
   if (valid_symbols[SWITCH_ELEMENT_TEXT] &&

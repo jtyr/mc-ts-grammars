@@ -1,6 +1,6 @@
 {
   "name": "tree-sitter-robot",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Tree-sitter parser for Robot Framework files",
   "main": "bindings/node",
   "types": "bindings/node",
@@ -39,8 +39,8 @@
   "dependencies": {
     "node-addon-api": "^8.2.2",
     "node-gyp-build": "^4.8.4",
-    "tree-sitter": "^0.25.0",
-    "tree-sitter-cli": "^0.26.6",
-    "prebuildify": "^6.0.1"
+    "prebuildify": "^6.0.1",
+    "tree-sitter": "^0.25.1",
+    "tree-sitter-cli": "^0.26.11"
   }
 }
