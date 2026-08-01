@@ -39,7 +39,11 @@ enum TokenType {
   // (GOPT_KWS) and tagged with their highlight tier. KW_G_AXISFLAG is the
   // (no)?m?<axis>tics family ((no)mxtics, x2tics, ...), only valid in
   // style-flavor bodies. Order MUST match the externals list in grammar.js.
-  KW_G_ARG, KW_G_FLAG, KW_G_MOD, KW_G_COORD, KW_G_AXISFLAG,
+  // KW_G_ARGV is the value-REQUIRED flavor of KW_G_ARG: its grammar branch has
+  // no `optional()` around the value, so the state right after the keyword
+  // admits only an expression and every keyword-table token drops out of
+  // valid_symbols there.
+  KW_G_ARG, KW_G_ARGV, KW_G_FLAG, KW_G_MOD, KW_G_COORD, KW_G_AXISFLAG,
   KW_G_AXISRANGE,  // autoscale-only: <axis>{min|max|fix|fixmin|fixmax}?
   // Zero-width separator between an arg/coord keyword and its value inside
   // generic bodies. Matches ONLY when the value is on the SAME logical line
@@ -158,6 +162,21 @@ static const StyleKwEntry STYLE_KWS[] = {
     {NULL, NULL, 0, 0},
 };
 
+// Words that are gnuplot built-in CONSTANTS, never option keywords.
+static bool is_expr_constant(const char* w, int len) {
+  return (len == 2 && memcmp(w, "pi", 2) == 0) ||
+         (len == 3 && memcmp(w, "NaN", 3) == 0) ||
+         (len == 3 && memcmp(w, "Inf", 3) == 0);
+}
+
+// True inside the generic _gopts/_gopts_style bodies, where a bare expression
+// item is always a valid alternative — so a keyword-table hit on a constant
+// word is never what the author meant.
+static bool in_generic_body(const bool* v) {
+  return v[KW_G_ARG] || v[KW_G_FLAG] || v[KW_G_MOD] || v[KW_G_COORD] ||
+         v[KW_G_AXISFLAG] || v[KW_G_AXISRANGE];
+}
+
 // Match word against STYLE_KWS, returning the token if a currently-valid one
 // matches, else -1.
 static int match_style_kw(const char* word, int wlen, const bool* valid_symbols) {
@@ -210,9 +229,31 @@ static const GoptKwEntry GOPT_KWS[] = {
     {"errorbars", 5, KW_G_ARG, 0},
     // watch/textbox labels boxed toggle
     {"boxed", 5, KW_G_FLAG, 1},
+    // `set encoding` values. Enumerated names, so KW_G_MOD. min_chars probed
+    // against gnuplot 6.0.4 by RESOLUTION, not acceptance: each prefix is fed
+    // to `set encoding <p>; show encoding` and kept only when gnuplot reports
+    // back this same keyword. gnuplot resolves an ambiguous prefix to the
+    // first entry of its own table, so `iso` is iso_8859_1 and `koi8` is
+    // koi8r; the losing members of each family need their full name.
+    {"iso_8859_1", 3, KW_G_MOD, 0},
+    {"iso_8859_15", 11, KW_G_MOD, 0},
+    {"iso_8859_2", 10, KW_G_MOD, 0},
+    {"iso_8859_9", 10, KW_G_MOD, 0},
+    {"koi8r", 4, KW_G_MOD, 0},
+    {"koi8u", 5, KW_G_MOD, 0},
+    {"cp437", 3, KW_G_MOD, 0},
+    {"cp850", 5, KW_G_MOD, 0},
+    {"cp852", 5, KW_G_MOD, 0},
+    {"cp950", 5, KW_G_MOD, 0},
+    {"cp1250", 6, KW_G_MOD, 0},
+    {"cp1251", 6, KW_G_MOD, 0},
+    {"cp1252", 6, KW_G_MOD, 0},
+    {"cp1254", 6, KW_G_MOD, 0},
+    {"sjis", 2, KW_G_MOD, 0},
+    {"utf8", 3, KW_G_MOD, 0},
     // colorbox
-    {"vertical", 1, KW_G_FLAG, 1},
-    {"horizontal", 1, KW_G_ARG, 0},
+    {"vertical", 3, KW_G_FLAG, 1},  // `ve` is not accepted by gnuplot; `ver` is
+    {"horizontal", 3, KW_G_ARG, 0},  // NOT 1: gnuplot resolves `h` to `height`
     {"invert", 3, KW_G_FLAG, 1},
     {"user", 1, KW_G_ARG, 0},
     {"default", 3, KW_G_ARG, 0},
@@ -330,7 +371,7 @@ static const GoptKwEntry GOPT_KWS[] = {
     // size
     {"ratio", 2, KW_G_ARG, 1},
     // pixmap
-    {"width", 5, KW_G_ARG, 0},
+    {"width", 3, KW_G_ARG, 0},  // gnuplot accepts `w`; kept at 3 so a bare `w` stays a variable
     {"height", 6, KW_G_ARG, 0},
     {"center", 6, KW_G_ARG, 0},
     {"behind", 6, KW_G_FLAG, 0},
@@ -421,7 +462,7 @@ static const GoptKwEntry GOPT_KWS[] = {
     {"opaque", 6, KW_G_FLAG, 1},
     {"reverse", 3, KW_G_FLAG, 1},
     {"samplen", 7, KW_G_ARG, 0},
-    {"spacing", 7, KW_G_ARG, 0},
+    {"spacing", 2, KW_G_ARG, 0},  // `set key sp 2` resolves to spacing
     {"keywidth", 4, KW_G_ARG, 0},
     {"columns", 7, KW_G_ARG, 0},
     {"maxcols", 6, KW_G_ARG, 0},
@@ -554,12 +595,12 @@ static const GoptKwEntry GOPT_KWS[] = {
     // (for-loop keyword / common variable — degrade to identifier items),
     // "log" alone (log() is a builtin: logscale min 4, like the no-int rule)
     {"axis", 4, KW_G_MOD, 0},
-    {"mirror", 6, KW_G_FLAG, 1},
+    {"mirror", 2, KW_G_FLAG, 1},  // `set xtics nomi` is valid; `min` stays builtin
     {"add", 3, KW_G_ARG, 0},
     {"autofreq", 4, KW_G_ARG, 0},
     // effective from "autoj": shorter prefixes hit the autotitle row first
     {"autojustify", 2, KW_G_ARG, 0},
-    {"by", 2, KW_G_ARG, 0},
+    {"by", 2, KW_G_ARGV, 0},
     {"format", 6, KW_G_ARG, 0},
     {"logscale", 4, KW_G_FLAG, 1},
     {"rangelimited", 5, KW_G_FLAG, 1},
@@ -698,6 +739,8 @@ static const CmdKwEntry CMD_KWS[] = {
     {"splot", 2, CMD_SPLOT_KW},
     {"pause", 2, CMD_PAUSE_KW},
     {"print", 2, CMD_PRINT_KW},
+    // Longer than "print", so the row above can never shadow it.
+    {"printerror", 8, CMD_PRINT_KW},
     {"help", 2, CMD_HELP_KW},
     {"load", 1, CMD_LOAD_KW},
     // Argument-less commands collapsed into one token:
@@ -714,6 +757,7 @@ static const CmdKwEntry CMD_KWS[] = {
     {"lower", 3, KW_CMD_OPTEXPR},
     {"vclear", 6, KW_CMD_OPTEXPR},
     {"toggle", 6, KW_CMD_OPTEXPR},
+    {"warn", 4, KW_CMD_OPTEXPR},
     {"exit", 2, KW_CMD_EXIT},
     {"quit", 1, KW_CMD_EXIT},
     // Commands followed by one required expression:
@@ -917,6 +961,14 @@ static bool scan_keywords(TSLexer* lexer, const bool* valid_symbols, bool any_cm
     return true;
   }
 
+  // Constant words decline every keyword table inside generic option bodies:
+  // there a bare expression is always a legal item, so `rotate by pi` means the
+  // number, not the `pi`(=pointinterval) abbreviation. Style bodies (plot
+  // elements, `set style line ...`) are unaffected — no KW_G_* is valid there,
+  // so `pi 5` keeps parsing as pointinterval.
+  if (in_generic_body(valid_symbols) && is_expr_constant(word, word_len))
+    return false;
+
   // Plot style names take priority over style attrs (e.g. "lines" is the style,
   // not linestyle).
   if (valid_symbols[KW_PLT_ST] && match_kw_table(word, word_len, PLT_STYLE_KWS)) {
@@ -1020,6 +1072,13 @@ bool tree_sitter_gnuplot_external_scanner_scan(void* payload, TSLexer* lexer, co
             }
             return false;
           }
+          // Same constant denylist as scan_keywords: inside a generic body a
+          // constant word is a value, so bind it as one instead of letting a
+          // keyword table steal it.
+          if (in_generic_body(valid_symbols) && is_expr_constant(peek, plen)) {
+            lexer->result_symbol = SEP;
+            return true;
+          }
           int s = match_style_kw(peek, plen, valid_symbols);
           if (s < 0 && valid_symbols[KW_G_AXISRANGE] && match_axis_word(peek, plen, 1))
             s = KW_G_AXISRANGE;
@@ -1110,8 +1169,8 @@ bool tree_sitter_gnuplot_external_scanner_scan(void* payload, TSLexer* lexer, co
       valid_symbols[KW_TC];
 
   bool any_gopt_valid =
-      valid_symbols[KW_G_ARG] || valid_symbols[KW_G_FLAG] || valid_symbols[KW_G_MOD] ||
-      valid_symbols[KW_G_COORD] || valid_symbols[KW_G_AXISFLAG] ||
+      valid_symbols[KW_G_ARG] || valid_symbols[KW_G_ARGV] || valid_symbols[KW_G_FLAG] ||
+      valid_symbols[KW_G_MOD] || valid_symbols[KW_G_COORD] || valid_symbols[KW_G_AXISFLAG] ||
       valid_symbols[KW_G_AXISRANGE];
 
   if ((any_cmd_valid || any_style_valid || any_gopt_valid || valid_symbols[UNIT_PI] ||
