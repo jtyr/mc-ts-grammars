@@ -255,36 +255,15 @@ module.exports = grammar({
 		// degrades to an identifier and ends the body early.
 		_gopts: ($) => prec.left(repeat1($._gopt_item)),
 		_gopts_style: ($) =>
-			prec.left(
-				repeat1(
-					choice(
-						$._gopt_item,
-						alias($.kw_g_axisflag, "flag"),
-						prec.right(seq($.style_opts, optional(seq(",", $.style_opts)))),
-						// terminal-flavored keepers (t_opts = this rule): words
-						// deliberately without GOPT_KWS rows — structured values,
-						// command collisions (reset/raise), common variable names
-						$.background,
-						$.mono_color,
-						$.line_drawing_method,
-						seq("position", $.position),
-						seq("name", $._expression),
-						key("eps", undefined, "mod"),
-						key("reset", undefined, "mod"),
-						key("raise", undefined, "flag", 1),
-						key("input", undefined),
-						seq(
-							key("animate", undefined),
-							repeat(choice(
-								seq(alias("delay", "arg"), $._expression),
-								seq(alias("loop", "arg"), $._expression),
-								seq(alias("quality", "arg"), $._expression),
-							)),
-						),
-						key("noanimate", undefined, "flag"),
-					),
-				),
-			),
+			prec.left(repeat1(choice($._gopt_item, alias($.kw_g_axisflag, "flag"), ...gopts_style_extras($)))),
+
+		// The style body minus the per-axis tics family. `set key` needs it:
+		// the axisflag matcher accepts a bare axis letter (`set grid x` is
+		// valid gnuplot), so inside the generic body it claimed the `t` of
+		// `set k t l` before the keyword table could read it as `top` — and
+		// gnuplot's key has no per-axis words at all.
+		_gopts_key: ($) =>
+			prec.left(repeat1(choice($._gopt_item, ...gopts_style_extras($)))),
 
 		_statement: ($) => choice($._command, $.assignment, $.macro),
 
@@ -373,14 +352,19 @@ module.exports = grammar({
 			prec.right(
 				seq(
 					alias("bind", "cmd"),
-					// `allwindows` (min "all") applies the binding to every plot
-					// window; bare `bind allwindows` just lists bindings, so the
-					// key is independent of the modifier.
-					optional(key("allwindows", 3, "mod")),
 					optional(
 						seq(
-							field("key", $._expression),
-							optional(field("commands", $._expression)),
+							$._gval_sep,
+							// `allwindows` (min "all") applies the binding to every plot
+							// window; bare `bind allwindows` just lists bindings, so the
+							// key is independent of the modifier.
+							optional(key("allwindows", 3, "mod")),
+							optional(
+								seq(
+									field("key", $._expression),
+									optional(field("commands", $._expression)),
+								),
+							),
 						),
 					),
 				),
@@ -414,21 +398,41 @@ module.exports = grammar({
 			),
 
 		// cd/evaluate — one scanner token + required expression.
-		cmd_expr: ($) => seq(alias($.kw_cmd_expr, "cmd"), $._expression),
+		cmd_expr: ($) =>
+			seq(
+				alias($.kw_cmd_expr, "cmd"),
+				optional(seq($._gval_sep, $._expression)),
+			),
 
 		cmd_call: ($) =>
-			prec.right(seq(alias("call", "cmd"), $._expression, repeat($._expression))),
+			prec.right(
+				seq(
+					alias("call", "cmd"),
+					optional(
+						seq($._gval_sep, $._expression, repeat($._expression)),
+					),
+				),
+			),
 
-		cmd_do: ($) => seq("do", $.for_block, surround("{}", repeat($._statement))),
+		cmd_do: ($) =>
+			seq(
+				"do",
+				optional(
+					seq($._gval_sep, $.for_block, surround("{}", repeat($._statement))),
+				),
+			),
 
 		cmd_exit: ($) =>
 			prec.left(
 				seq(
 					alias($.kw_cmd_exit, "cmd"),
 					optional(
-						choice(
-							alias("gnuplot", "mod"),
-							seq(choice("message", "status"), optional($._expression)),
+						seq(
+							$._gval_sep,
+							choice(
+								alias("gnuplot", "mod"),
+								seq(choice("message", "status"), optional($._expression)),
+							),
 						),
 					),
 				),
@@ -437,42 +441,56 @@ module.exports = grammar({
 		cmd_fit: ($) =>
 			seq(
 				alias($.cmd_fit_kw, "cmd"),
-				optional($.range_block),
-				field("func", $.function),
-				field("data", $._expression),
-				optional($.datafile_modifiers),
-				repeat(
-					choice(
-						"unitweights",
-						// yerr(o(r(s)?)?)? — plural forms (yerrors/xyerrors/zerrors) are
-						// the documented spellings; singular + prefix abbreviations down
-						// to yerr/xyerr/zerr probed on 6.0.4.
-						alias(/(y|xy|z)err(o(r(s)?)?)?/, "errors"),
-						seq("errors", sep(",", $._expression)),
+				optional(
+					seq(
+						$._gval_tail,
+						optional($.range_block),
+						field("func", $.function),
+						field("data", $._expression),
+						optional($.datafile_modifiers),
+						repeat(
+							choice(
+								"unitweights",
+								// yerr(o(r(s)?)?)? — plural forms (yerrors/xyerrors/zerrors) are
+								// the documented spellings; singular + prefix abbreviations down
+								// to yerr/xyerr/zerr probed on 6.0.4.
+								alias(/(y|xy|z)err(o(r(s)?)?)?/, "errors"),
+								seq("errors", sep(",", $._expression)),
+							),
+						),
+						alias("via", "kw_fn"),
+						choice(
+							field("parameter_file", $._expression),
+							field("var", seq($._expression, repeat1(seq(",", $._expression)))),
+						),
 					),
-				),
-				alias("via", "kw_fn"),
-				choice(
-					field("parameter_file", $._expression),
-					field("var", seq($._expression, repeat1(seq(",", $._expression)))),
 				),
 			),
 
-		cmd_help: ($) => prec.right(seq(alias($.cmd_help_kw, "cmd"), optional($._expression))),
+		cmd_help: ($) =>
+			prec.right(
+				seq(
+					alias($.cmd_help_kw, "cmd"),
+					optional(seq($._gval_sep, $._expression)),
+				),
+			),
 
 		cmd_history: ($) =>
 			prec.right(
 				seq(
 					key("history", 4, "cmd"),
 					optional(
-						repeat1(
-							choice(
-								$._expression,     // count or filename/pipe
-								key("append", 3),
-								key("quiet", 2),
-								key("numbers", 3),
-								key("trim", 2),
-								key("full", 4),
+						seq(
+							$._gval_sep,
+							repeat1(
+								choice(
+									$._expression,     // count or filename/pipe
+									key("append", 3),
+									key("quiet", 2),
+									key("numbers", 3),
+									key("trim", 2),
+									key("full", 4),
+								),
 							),
 						),
 					),
@@ -482,49 +500,68 @@ module.exports = grammar({
 		cmd_import: ($) =>
 			seq(
 				alias("import", "cmd"),
-				$.function,
-				alias("from", "kw_fn"),
-				$.string_literal,
+				optional(
+					seq(
+						$._gval_sep,
+						$.function,
+						alias("from", "kw_fn"),
+						$.string_literal,
+					),
+				),
 			),
 
 		cmd_if: ($) =>
 			prec.left(
 				seq(
 					alias("if", "kw_cond"),
-					field("conditions", surround("()", sep(",", choice($.assignment, $._expression)))),
-					choice(
-						repeat1($._statement),
+					optional(
 						seq(
-							surround("{}", repeat($._statement)),
-							repeat(
+							$._gval_sep,
+							field("conditions", surround("()", sep(",", choice($.assignment, $._expression)))),
+							choice(
+								repeat1($._statement),
 								seq(
-									alias("else", "kw_cond"),
-									alias("if", "kw_cond"),
-									repeat1(field("conditions", surround("()", $._expression))),
 									surround("{}", repeat($._statement)),
+									repeat(
+										seq(
+											alias("else", "kw_cond"),
+											alias("if", "kw_cond"),
+											repeat1(field("conditions", surround("()", $._expression))),
+											surround("{}", repeat($._statement)),
+										),
+									),
 								),
 							),
+							optional(seq(alias("else", "kw_cond"), surround("{}", repeat($._statement)))),
 						),
 					),
-					optional(seq(alias("else", "kw_cond"), surround("{}", repeat($._statement)))),
 				),
 			),
 
-		cmd_load: ($) => seq(alias($.cmd_load_kw, "cmd"), $._expression),
+		cmd_load: ($) =>
+			seq(
+				alias($.cmd_load_kw, "cmd"),
+				optional(seq($._gval_sep, $._expression)),
+			),
 
 		cmd_pause: ($) =>
 			prec.right(
 				seq(
 					alias($.cmd_pause_kw, "cmd"),
-					choice(
+					optional(
 						seq(
-							field("time", $._expression),
-							optional(field("str", $._expression)),
-						),
-						seq(
-							"mouse",
-							sep(",", $.endcondition),
-							optional(field("str", $._expression)),
+							$._gval_sep,
+							choice(
+								seq(
+									field("time", $._expression),
+									optional(field("str", $._expression)),
+								),
+								seq(
+									"mouse",
+									sep(",", $.endcondition),
+									optional(field("str", $._expression)),
+								),
+							),
 						),
 					),
 				),
@@ -544,7 +581,12 @@ module.exports = grammar({
 			),
 
 		cmd_plot: ($) =>
-			seq(alias($.cmd_plot_kw, "cmd"), optional("sample"), sep(",", $.plot_element)),
+			seq(
+				alias($.cmd_plot_kw, "cmd"),
+				optional(
+					seq($._gval_tail, optional("sample"), sep(",", $.plot_element)),
+				),
+			),
 
 		plot_element: ($) =>
 			// p. 125
@@ -827,40 +869,62 @@ module.exports = grammar({
 		cmd_print: ($) =>
 			seq(
 				alias($.cmd_print_kw, "cmd"),
-				// `print for [i=1:|A|] A[i]`. The runtime iterates the FIRST item
-				// only; any further comma-separated items are evaluated once after
-				// the loop ends (so `print for [i=1:2] i, "-"` prints `1 2 -`).
-				optional($.for_block),
-				sep(",", $._expression),
+				optional(
+					seq(
+						$._gval_sep,
+						// `print for [i=1:|A|] A[i]`. The runtime iterates the FIRST item
+						// only; any further comma-separated items are evaluated once after
+						// the loop ends (so `print for [i=1:2] i, "-"` prints `1 2 -`).
+						optional($.for_block),
+						sep(",", $._expression),
+					),
+				),
 			),
 
 		cmd_reset: ($) =>
-			prec.right(seq(alias("reset", "cmd"), optional(choice(alias("bind", "mod"), alias("errors", "mod"), alias("session", "mod"))))),
+			prec.right(
+				seq(
+					alias("reset", "cmd"),
+					optional(
+						seq(
+							$._gval_sep,
+							choice(alias("bind", "mod"), alias("errors", "mod"), alias("session", "mod")),
+						),
+					),
+				),
+			),
 
 		cmd_save: ($) =>
 			seq(
 				key("save", 2, "cmd"),
 				optional(
-					choice(
-						key("functions", 3),
-						key("variables", 3),
-						// `save changes` (6.0) — only settings changed from defaults;
-						// the runtime accepts "change" but not "chang", hence min 6.
-						key("changes", 6),
-						key("terminal", 3, "mod"),
-						alias("set", "mod"),
-						alias("fit", "mod"),
-						key("datablocks", 4),
+					seq(
+						$._gval_sep,
+						optional(
+							choice(
+								key("functions", 3),
+								key("variables", 3),
+								// `save changes` (6.0) — only settings changed from defaults;
+								// the runtime accepts "change" but not "chang", hence min 6.
+								key("changes", 6),
+								key("terminal", 3, "mod"),
+								alias("set", "mod"),
+								alias("fit", "mod"),
+								key("datablocks", 4),
+							),
+						),
+						field("filename", $._expression),
+						optional("append"),
 					),
 				),
-				field("filename", $._expression),
-				optional("append"),
 			),
 
 		cmd_set: ($) =>
 			seq(
-				seq(key("set", 2, "cmd"), optional($.for_block)),
-				$._argument_set_show,
+				key("set", 2, "cmd"),
+				optional(
+					seq($._gval_sep, optional($.for_block), $._argument_set_show),
+				),
 			),
 
 		//-------------------------------------------------------------------------
@@ -1175,7 +1239,7 @@ module.exports = grammar({
 
 
 		key: ($) =>
-			prec.right(seq(key("key", 1, "opt"), optional(seq($._gval_sep, $._gopts_style)))),
+			prec.right(seq(key("key", 1, "opt"), optional(seq($._gval_sep, $._gopts_key)))),
 
 
 
@@ -1307,9 +1371,10 @@ module.exports = grammar({
 				),
 			),
 
-		_set_multiplot: ($) => seq(key("set", 2, "cmd"), $.multiplot),
+		_set_multiplot: ($) => seq(key("set", 2, "cmd"), $._gval_sep, $.multiplot),
 
-		_unset_multiplot: ($) => seq(key("unset", 3, "cmd"), $.multiplot),
+		_unset_multiplot: ($) =>
+			seq(key("unset", 3, "cmd"), $._gval_sep, $.multiplot),
 
 		// Generic body (time-unit rows seconds/minutes min 4 — min() is a
 		// builtin — hours/days/weeks/months/years; `time` is a mod row (full
@@ -1704,51 +1769,77 @@ module.exports = grammar({
 		cmd_show: ($) =>
 			seq(
 				key("show", 2, "cmd"),
-				choice(
-					$._argument_set_show,
-					$.multiplot,
-					key("colornames", 6, "opt"),
-					key("functions", 3, "opt"),
-					key("plot", 1, "opt"),
-					// `show variables` — bare, `all` (include GPVAL_*), or a name
-					// prefix. The _gval_sep gate keeps the operand same-line, so an
-					// identifier on the next line starts a fresh statement.
+				optional(
 					seq(
-						key("variables", 1, "opt"),
-						optional(seq($._gval_sep, choice(alias("all", "mod"), $.identifier))),
+						$._gval_sep,
+						choice(
+							$._argument_set_show,
+							$.multiplot,
+							key("colornames", 6, "opt"),
+							key("functions", 3, "opt"),
+							key("plot", 1, "opt"),
+							// `show variables` — bare, `all` (include GPVAL_*), or a name
+							// prefix. The _gval_sep gate keeps the operand same-line, so an
+							// identifier on the next line starts a fresh statement.
+							seq(
+								key("variables", 1, "opt"),
+								optional(
+									seq($._gval_sep, choice(alias("all", "mod"), $.identifier)),
+								),
+							),
+							seq(key("version", 2, "opt"), optional(key("long", 1))),
+						),
 					),
-					seq(key("version", 2, "opt"), optional(key("long", 1))),
 				),
 			),
 
 		cmd_splot: ($) =>
-			seq(alias($.cmd_splot_kw, "cmd"), optional("sample"), sep(",", $.plot_element)),
+			seq(
+				alias($.cmd_splot_kw, "cmd"),
+				optional(
+					seq($._gval_tail, optional("sample"), sep(",", $.plot_element)),
+				),
+			),
 
 		cmd_stats: ($) =>
 			seq(
 				alias("stats", "cmd"),
-				field("ranges", repeat($.range_block)),
-				field("filename", $._expression),
-				optional($.datafile_modifiers),
-				repeat(
-					choice(
-						// `name` and `prefix` are synonyms in gnuplot 6.0, valid on both
-						// stats forms. The field was previously declared only on a
-						// `"$vgridname"` branch — a doc placeholder no real input can
-						// reach, since a voxel grid name lexes as `datablock` — so
-						// node-types.json advertised a cmd_stats.name that no parse
-						// ever produced. Declaring it here matches the reachable shape.
-						seq(choice("name", "prefix"), field("name", $._expression)),
-						key("output", 3, "flag", 1),
+				optional(
+					seq(
+						$._gval_tail,
+						field("ranges", repeat($.range_block)),
+						field("filename", $._expression),
+						optional($.datafile_modifiers),
+						repeat(
+							choice(
+								// `name` and `prefix` are synonyms in gnuplot 6.0, valid on both
+								// stats forms. The field was previously declared only on a
+								// `"$vgridname"` branch — a doc placeholder no real input can
+								// reach, since a voxel grid name lexes as `datablock` — so
+								// node-types.json advertised a cmd_stats.name that no parse
+								// ever produced. Declaring it here matches the reachable shape.
+								seq(choice("name", "prefix"), field("name", $._expression)),
+								key("output", 3, "flag", 1),
+							),
+						),
 					),
 				),
 			),
 
-		cmd_system: ($) => seq(alias(choice("system", "!"), "cmd"), $._expression),
+		cmd_system: ($) =>
+			seq(
+				alias(choice("system", "!"), "cmd"),
+				optional(seq($._gval_sep, $._expression)),
+			),
 
 		cmd_test: ($) =>
 			prec.left(
-				seq(alias("test", "cmd"), optional(choice("palette", alias("terminal", "mod")))),
+				seq(
+					alias("test", "cmd"),
+					optional(
+						seq($._gval_sep, choice("palette", alias("terminal", "mod"))),
+					),
+				),
 			),
 
 		cmd_undefine: ($) =>
@@ -1759,22 +1850,30 @@ module.exports = grammar({
 
 		cmd_unset: ($) =>
 			seq(
-				seq(key("unset", 3, "cmd"), optional($.for_block)),
-				$._argument_set_show,
+				key("unset", 3, "cmd"),
+				optional(
+					seq($._gval_sep, optional($.for_block), $._argument_set_show),
+				),
 			),
 
 		cmd_vfill: ($) =>
 			seq(
 				alias(/vg?fill/, "cmd"),
-				optional("sample"),
-				sep(",", $.plot_element),
+				optional(
+					seq($._gval_tail, optional("sample"), sep(",", $.plot_element)),
+				),
 			),
 
 		cmd_while: ($) =>
 			seq(
 				"while",
-				$.parenthesized_expression,
-				surround("{}", repeat($._statement)),
+				optional(
+					seq(
+						$._gval_sep,
+						$.parenthesized_expression,
+						surround("{}", repeat($._statement)),
+					),
+				),
 			),
 
 		//-------------------------------------------------------------------------
@@ -2610,6 +2709,35 @@ function surround(bracket, ...rules) {
 	return seq(open, ...rules, close);
 }
 // keyword
+// Choice items shared by _gopts_style and _gopts_key: everything the generic
+// style body accepts beyond _gopt_item and the per-axis tics family.
+// Terminal-flavored keepers (t_opts = these rules): words deliberately
+// without GOPT_KWS rows — structured values, command collisions
+// (reset/raise), common variable names.
+function gopts_style_extras($) {
+	return [
+		prec.right(seq($.style_opts, optional(seq(",", $.style_opts)))),
+		$.background,
+		$.mono_color,
+		$.line_drawing_method,
+		seq("position", $.position),
+		seq("name", $._expression),
+		key("eps", undefined, "mod"),
+		key("reset", undefined, "mod"),
+		key("raise", undefined, "flag", 1),
+		key("input", undefined),
+		seq(
+			key("animate", undefined),
+			repeat(choice(
+				seq(alias("delay", "arg"), $._expression),
+				seq(alias("loop", "arg"), $._expression),
+				seq(alias("quality", "arg"), $._expression),
+			)),
+		),
+		key("noanimate", undefined, "flag"),
+	];
+}
+
 function key1(aka, ...reg) {
 	const regStr = reg.map((reg) => (reg instanceof RegExp ? reg.source : reg));
 	return alias(new RegExp(regStr.join("")), aka);

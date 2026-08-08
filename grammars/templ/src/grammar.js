@@ -8,13 +8,17 @@ module.exports = grammar(GO, {
     name: 'templ',
 
     externals: $ => [
-        $.switch_element_text,
-        $.element_text,
+        $._switch_element_text_chunk,
+        $._element_text_chunk,
     ],
 
     conflicts: ($, original) => [
         ...original,
         [$._expression, $.dynamic_class_attribute_value],
+        // A '<' + void element name could open either a void_element
+        // (e.g. <br>) or a tag_start / self_closing_tag (e.g. <br/>). The
+        // closing token decides, so this is resolved by GLR.
+        [$.void_element, $._element_name],
     ],
 
     rules: {
@@ -77,11 +81,13 @@ module.exports = grammar(GO, {
         ),
         _component_node: $ => choice(
             $.element,
+            $.void_element,
             $.style_element,
             $.script_element,
             $.component_if_statement,
             $.component_for_statement,
             $.component_switch_statement,
+            $.component_type_switch_statement,
             $.component_import,
             $.rawgo_block,
             $.component_render,
@@ -93,11 +99,13 @@ module.exports = grammar(GO, {
         ),
         _switch_component_node: $ => choice(
             $.element,
+            $.void_element,
             $.style_element,
             $.script_element,
             $.component_if_statement,
             $.component_for_statement,
             $.component_switch_statement,
+            $.component_type_switch_statement,
             $.fallthrough_statement,
             $.component_import,
             $.rawgo_block,
@@ -226,6 +234,48 @@ module.exports = grammar(GO, {
             repeat($._switch_component_node),
         )),
 
+        // This matches a type switch statement in a component block.
+        //
+        // Example:
+        //
+        //  switch v := v.(type) {
+        //    case int:
+        //      <p>...</p>
+        //    case string:
+        //      <p>...</p>
+        //    default:
+        //      <p>...</p>
+        //  }
+        //
+        // Note: based on the $.type_switch_statement rule in the Go grammar,
+        // reusing its $._type_switch_header shape but with component-style case
+        // bodies (see $._switch_component_node).
+        component_type_switch_statement: $ => prec.right(seq(
+            'switch',
+            optional(seq(
+                field('initializer', $._simple_statement),
+                ';'
+            )),
+            optional(seq(field('alias', $.expression_list), ':=')),
+            field('value', $._expression),
+            '.',
+            '(',
+            'type',
+            ')',
+            '{',
+            repeat(choice(
+                $.component_switch_type_case,
+                $.component_switch_default_case,
+            )),
+            '}',
+        )),
+        component_switch_type_case: $ => prec.right(seq(
+            'case',
+            field('type', commaSep1($._type)),
+            ':',
+            repeat($._switch_component_node),
+        )),
+
         // This matches an import statement:
         //
         //     @Foobar(a, b, c)
@@ -245,9 +295,9 @@ module.exports = grammar(GO, {
               '.',
             )),
             field('name', $._component_member),
-            repeat(seq(
-              '.',
-              field('name', $._component_member)
+            repeat(choice(
+              seq('.', field('name', $._component_member)),
+              field('call', $.argument_list),
             )),
             optional(field('body', $.component_block)),
         )),
@@ -262,7 +312,25 @@ module.exports = grammar(GO, {
                 optional(field('type_arguments', $.type_arguments)),
                 field('arguments', $.argument_list)
             )),
+            // An index/subscript applied to a component identifier, e.g.
+            // `components[0]` in `@components[0].Render()` or
+            // `components[getKey()]`. The operand is constrained to a
+            // component identifier so it does not clash with the existing
+            // call and type-argument forms above. It is given a lower
+            // dynamic precedence than `type_arguments` so that an expression
+            // like `@GenericFoo[int](200)` keeps parsing as a generic call.
+            prec.dynamic(1, $.component_index_expression),
             prec.right(-1, $._component_identifier)
+        ),
+
+        // The `operand[index]` subscript form usable as a component member.
+        // This mirrors Go's `index_expression` but constrains the operand to
+        // a component identifier (see the note on `_component_member`).
+        component_index_expression: $ => seq(
+            field('operand', $._component_identifier),
+            '[',
+            field('index', $._expression),
+            ']',
         ),
 
         // This matches a render statement:
@@ -307,20 +375,43 @@ module.exports = grammar(GO, {
         ),
         tag_start: $ => seq(
             '<',
-            field('name', $.element_identifier),
+            field('name', $._element_name),
             repeat($._attribute),
             '>',
         ),
         tag_end: $ => seq(
             '</',
-            field('name', $.element_identifier),
+            field('name', $._element_name),
             '>',
         ),
         self_closing_tag: $ => seq(
             '<',
-            field('name', $.element_identifier),
+            field('name', $._element_name),
             repeat($._attribute),
             '/>',
+        ),
+
+        // This matches a void HTML element, which never has a closing tag.
+        //
+        // Example:
+        //
+        //    <br>
+        //    <input name="q">
+        //    <hr>
+        //
+        // The name is restricted to the set of HTML void elements (the same
+        // set the templ parser treats as self-closing, see parser/v2/types.go)
+        // so that normal open/close elements (e.g. <div></div>) keep working.
+        void_element: $ => seq(
+            '<',
+            field('name', alias($._void_element_name, $.element_identifier)),
+            repeat($._attribute),
+            '>',
+        ),
+        _void_element_name: $ => choice(
+            'area', 'base', 'br', 'col', 'command', 'embed',
+            'hr', 'img', 'input', 'keygen', 'link', 'meta',
+            'param', 'source', 'track', 'wbr',
         ),
 
         doctype: $ => seq(
@@ -517,7 +608,7 @@ module.exports = grammar(GO, {
             )),
             ';'
         ),
-        css_property_name: $ => /[a-zA-Z\-]+/,
+        css_property_name: $ => /[a-zA-Z\-][a-zA-Z0-9\-]*/,
         css_property_value: $ => token(prec(1, /[^\s;{}][^;{}]*/)),
 
         // This matches a dynamic class attribute.
@@ -638,7 +729,19 @@ module.exports = grammar(GO, {
         _css_identifier: $ => alias($.identifier, $.css_identifier),
         _script_identifier: $ => alias($.identifier, $.script_identifier),
 
-        element_identifier: $ => /[a-zA-Z0-9\-]+/,
+        element_identifier: $ => /[a-zA-Z0-9\-:]+/,
+
+        // Accepts any element name, including the HTML void element names.
+        // The void names are aliased to element_identifier so the parse tree
+        // stays consistent, but they remain a distinct token. This lets the
+        // void_element rule (which only matches void names) coexist with
+        // tag_start / self_closing_tag via GLR: both paths can consume the same
+        // name token, and the closing ('>', '/>' or a paired '</name>') decides
+        // which form wins.
+        _element_name: $ => choice(
+            $.element_identifier,
+            alias($._void_element_name, $.element_identifier),
+        ),
 
         // Taken from https://github.com/tree-sitter/tree-sitter-html/blob/master/grammar.js
         attribute_name: _ => /[^<>"'/=\s]+/,
@@ -652,6 +755,21 @@ module.exports = grammar(GO, {
             seq('\'', optional(alias(token(prec(1, /[^']+/)), $.attribute_value)), '\''),
             seq('"', optional(alias(token(prec(1, /[^"]+/)), $.attribute_value)), '"'),
         ),
+        element_text: $ => prec.right(choice(
+            $._element_text_chunk,
+            seq(
+                repeat1($._element_text_import_punctuation),
+                optional($._element_text_chunk),
+            ),
+        )),
+        switch_element_text: $ => prec.right(choice(
+            $._switch_element_text_chunk,
+            seq(
+                repeat1($._element_text_import_punctuation),
+                optional($._switch_element_text_chunk),
+            ),
+        )),
+        _element_text_import_punctuation: _ => token(prec(-1, /[.()\[\]]/)),
         text: _ => /[^<>&{}\s]([^<>&{}]*[^<>&\s{}])?/,
 
         // Taken from https://github.com/tree-sitter/tree-sitter-go/blob/master/grammar.js
