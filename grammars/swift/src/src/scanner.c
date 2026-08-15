@@ -172,7 +172,7 @@ const uint64_t OP_SYMBOL_SUPPRESSOR[OPERATOR_COUNT] = {
     0, // EQ_EQ,
     0, // PLUS_THEN_WS,
     0, // MINUS_THEN_WS,
-    1UL << FAKE_TRY_BANG, // BANG,
+    1ULL << FAKE_TRY_BANG, // BANG,
         0, // THROWS_KEYWORD,
         0, // RETHROWS_KEYWORD,
         0, // DEFAULT_KEYWORD,
@@ -846,6 +846,20 @@ static enum ParseDirective eat_whitespace(
     }
 
     if (semi_is_valid && ws_directive != CONTINUE_PARSING_NOTHING_FOUND) {
+        // If the upcoming token is a compiler directive (`#if`/`#elseif`/`#else`/`#endif`) that is
+        // valid in this parse state, prefer emitting the directive over an implicit semicolon. This
+        // matters when a directive is the *first* member of a type body (e.g. a `#if` directly after
+        // a `{`): there both a separator-style semi and the directive are valid, but the semi has no
+        // slot in the grammar, so emitting it produces a spurious error. Suppressing the semi here
+        // lets the directive be scanned instead. In a genuine separator position (e.g. between two
+        // members) the directive tokens are not valid until the semi has been consumed, so this does
+        // not interfere with using a newline as a member/statement separator.
+        bool directive_is_valid = valid_symbols[DIRECTIVE_IF] || valid_symbols[DIRECTIVE_ELSEIF] ||
+            valid_symbols[DIRECTIVE_ELSE] || valid_symbols[DIRECTIVE_ENDIF];
+        if (lookahead == '#' && directive_is_valid) {
+            return CONTINUE_PARSING_NOTHING_FOUND;
+        }
+
         *symbol_result = lookahead == ';' ? EXPLICIT_SEMI : IMPLICIT_SEMI;
         return ws_directive;
     }
