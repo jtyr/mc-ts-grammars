@@ -4,9 +4,11 @@ const PREC = {
 };
 
 const LEAF = {
-  // https://en.wikipedia.org/wiki/Unicode_character_property#Whitespace
-  whitespace: /[ \t\n\v\f\r\u{0085}\u{00A0}\u{1680}\u{2000}-\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}]+/u,
+  // Unicode whitespace, plus U+FEFF. BOM is not Unicode whitespace, but the
+  // reader treats it like whitespace where comments are allowed.
+  whitespace: /[ \t\n\v\f\r\u{0085}\u{00A0}\u{1680}\u{2000}-\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}\u{FEFF}]+/u,
   newline: /[\r\n\u{85}\u{2028}\u{2029}]/,
+  non_newline: /[^\r\n\u{85}\u{2028}\u{2029}]/,
   delimiter: /[ \t\n\v\f\r\u{0085}\u{00A0}\u{1680}\u{2000}-\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}\u{FEFF}\(\)\{\}",'`;\[\]]/u,
   non_delimiter: /[^ \t\n\v\f\r\u{0085}\u{00A0}\u{1680}\u{2000}-\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}\u{FEFF}\(\)\{\}",'`;\[\]]/u,
 
@@ -64,7 +66,7 @@ module.exports = grammar({
 
     comment: $ =>
       choice(
-        token(/;.*/),
+        token(seq(";", repeat(LEAF.non_newline))),
         $._line_comment),
 
     block_comment: $ =>
@@ -84,8 +86,8 @@ module.exports = grammar({
       token(
         seq(
           choice("#! ", "#!/"),
-          repeat(seq(/.*/, "\\", LEAF.newline)),
-          /.*/)),
+          repeat(seq(repeat(LEAF.non_newline), "\\", LEAF.newline)),
+          repeat(LEAF.non_newline))),
 
     // comment }}}
 
@@ -196,11 +198,12 @@ module.exports = grammar({
             LEAF.symbol_start,
             repeat(LEAF.symbol_remain)))),
 
+    // Empty #: is not documented, but Racket still allows it.
     keyword: _ =>
       token(
         seq(
           "#:",
-          repeat1(LEAF.symbol_remain))),
+          repeat(LEAF.symbol_remain))),
 
     box: $ =>
       seq(
@@ -226,21 +229,27 @@ module.exports = grammar({
         "#s",
         $.list),
 
+    // Spec shows lowercase prefixes. Racket still allows other letter cases.
     hash: $ =>
       seq(
-        choice("#hash", "#hasheq", "#hasheqv"),
+        token(
+          seq(
+            /#[hH][aA][sS][hH]/,
+            optional(
+              choice(
+                /[aA][lL][wW]/,
+                /[eE][qQ][vV]/,
+                /[eE][qQ]/)))),
         $.list),
 
+    // # plus 1-8 digits plus = or # (The Racket Reader, 1.3.17).
     graph: $ =>
-      seq(
-        "#",
-        $.decimal,
-        choice(
-          "#",
-          seq(
-            "=",
-            repeat($._skip),
-            $._datum))),
+      choice(
+        token(/#[0-9]{1,8}#/),
+        seq(
+          token(/#[0-9]{1,8}=/),
+          repeat($._skip),
+          $._datum)),
 
     quote: $ =>
       seq(
@@ -300,7 +309,12 @@ module.exports = grammar({
           choice("#lang ", "#!"),
           $.lang_name)),
 
-    lang_name: _ => /[a-zA-Z0-9+_/-]+/,
+    // Must not start or end with / (The Racket Reader, 1.3.18).
+    lang_name: _ =>
+      token(
+        choice(
+          /[a-zA-Z0-9+_-]/,
+          /[a-zA-Z0-9+_-][a-zA-Z0-9+_/-]*[a-zA-Z0-9+_-]/)),
 
   }
 })

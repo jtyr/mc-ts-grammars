@@ -533,12 +533,25 @@ module.exports = grammar({
       seq("&{", optional(" "), $.variable_name, optional(" "), "}"),
 
     inline_python_expression: ($) =>
-      prec.left(
-        seq(
-          "${{",
-          alias(repeat(choice("}", /[^\r\n}]+/)), $.python_expression),
-          "}}",
-        ),
+      seq("${{", $.python_expression, "}}"),
+
+    python_expression: ($) =>
+      repeat1(
+        choice(
+          alias($._python_string, $.python_string),
+          alias(token(/[^()\[\]{}'"]+/), $.python_chunk),
+          seq("(", $.python_expression, ")"),
+          seq("[", $.python_expression, "]"),
+          seq("{", $.python_expression, "}")
+        )
+      ),
+
+    _python_string: ($) =>
+      token(
+        choice(
+          /"[^"\\]*(\\.[^"\\]*)*"/,
+          /'[^'\\]*(\\.[^'\\]*)*'/
+        )
       ),
 
     variable_name: ($) => /[^{}\[\]]+/,
