@@ -53,7 +53,7 @@ module.exports = grammar({
 
     _method_declaration: $ =>
       seq(
-        optional($.pragma),
+        optional(seq($.pragma, optional($.documentation))),
         $.method,
       ),
 
@@ -304,7 +304,7 @@ module.exports = grammar({
         $.vector,
       ),
 
-    character_literal: $ => seq('%', choice($._identifier, /./, ' ')),
+    character_literal: $ => seq('%', choice(/\p{L}[\p{L}\p{N}]*/u, /./, ' ')),
 
     string_literal: $ =>
       choice(
@@ -313,7 +313,7 @@ module.exports = grammar({
       ),
 
     // /<pattern>/<flags>
-    regex_literal: $ => token(/\/.*?\/[qisdlmuCX]*/),
+    regex_literal: $ => token(/\/.*?\/[qisdlmucx]*/),
 
     call: $ =>
       prec.right(PREC.CALL,
@@ -432,7 +432,7 @@ module.exports = grammar({
 
     _global_assignment: $ =>
       seq(
-        optional($.pragma),
+        optional(seq($.pragma, optional($.documentation))),
         alias(/_global/i, '_global'), optional(alias(/_constant/i, '_constant')), choice($.identifier, $.dynamic_variable), '<<', $._expression),
 
     constant: $ =>
