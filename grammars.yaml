@@ -448,7 +448,7 @@
 
 - language: cfengine
   url: https://github.com/olehermanse/tree-sitter-cfengine
-  ref: 88366b2e1d174d016867027c7b4f2667a5828e6a
+  ref: 39440694afa15764839fc833a1454c9390800db7
   metadata:
     hasParser: true
     abi: 15
@@ -1167,7 +1167,7 @@
 
 - language: fluentbit
   url: https://github.com/sh-cho/tree-sitter-fluentbit
-  ref: 6ca164f83348ca0a3df82ca8bd3a78b1ce0854e8
+  ref: d7a62f57a4c8f5ad070c42a3eec6cfb04be92615
   metadata:
     hasParser: true
     hasHighlights: true
@@ -2634,7 +2634,7 @@
 - language: mlir
   url: https://github.com/artagnon/tree-sitter-mlir
   branch: master
-  ref: e9f60f952a8807f5769c51de14e44625c24a00f8
+  ref: 7b122fe9c346bd5826c8a53e344435bd2036de44
   metadata:
     hasParser: true
     hasHighlights: true
@@ -3569,7 +3569,7 @@
 - language: roc
   url: https://github.com/faldor20/tree-sitter-roc
   branch: master
-  ref: 68f405426d030a7625392aabf41836c1aad05d33
+  ref: 2760de95b87004ed537151f2467377a6ddafdef0
   metadata:
     hasParser: true
     hasScanner: true
@@ -3982,7 +3982,7 @@
 
 - language: ssh_client_config
   url: https://github.com/metio/tree-sitter-ssh-client-config
-  ref: 5d53f06e9d126a578a74bb3ebc2fffd581820068
+  ref: 54e220ceb4d7895302779f5a7ef2d3a5b9ba1e5a
   metadata:
     hasParser: true
     hasHighlights: true
@@ -4136,7 +4136,7 @@
 
 - language: swift
   url: https://github.com/alex-pinkus/tree-sitter-swift
-  ref: 172ada1cc4117d0260d9340680b4134adba2bc2c
+  ref: 45e8dcdf09d67e63b6e1f7d47e9ac7d123a34269
   release: true
   generate: true
   metadata:
@@ -4467,7 +4467,7 @@
 
 - language: twig
   url: https://github.com/gbprod/tree-sitter-twig
-  ref: f9cb122b42894a38bef0fb2783be1ad9885f2ed7
+  ref: 123604ae41362be81061ddf9dc984757a7b1bd38
   ignoreFiles:
     - queries/injections.scm
   note: injections.scm references node types from a different grammar
