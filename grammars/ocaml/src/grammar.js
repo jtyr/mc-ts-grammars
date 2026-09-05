@@ -280,7 +280,15 @@ export default grammar({
     ),
 
     value_definition: $ => seq(
-      choice(seq('let', optional($._attribute), optional('rec')), $.let_operator),
+      choice(
+        seq(
+          'let',
+          optional($._attribute),
+          optional('mutable'),
+          optional('rec'),
+        ),
+        $.let_operator,
+      ),
       sep1(choice('and', $.let_and_operator), $.let_binding),
     ),
 
@@ -604,12 +612,14 @@ export default grammar({
     module_type_constraint: $ => prec.right(seq(
       field('module_type', $._module_type),
       'with',
-      sep1('and', choice(
-        $.constrain_type,
-        $.constrain_module,
-        $.constrain_module_type,
+      choice(
         $.extended_module_path,
-      )),
+        sep1('and', choice(
+          $.constrain_type,
+          $.constrain_module,
+          $.constrain_module_type,
+        )),
+      ),
     )),
 
     constrain_type: $ => seq(
@@ -1372,32 +1382,31 @@ export default grammar({
       field('field', $.field_path),
     )),
 
-    array_get_expression: $ => prec('dot', seq(
-      field('array', $._simple_expression),
-      '.',
-      optional(field('operator', $.indexing_operator_path)),
+    _indexing_prefix: $ => prec('dot', seq(
+      field('sequence', $._simple_expression),
+      choice('.', $.indexing_operator_path),
+    )),
+
+    array_get_expression: $ => seq(
+      $._indexing_prefix,
       '(',
       field('index', $._sequence_expression),
       ')',
-    )),
+    ),
 
-    string_get_expression: $ => prec('dot', seq(
-      field('string', $._simple_expression),
-      '.',
-      optional(field('operator', $.indexing_operator_path)),
+    string_get_expression: $ => seq(
+      $._indexing_prefix,
       '[',
       field('index', $._sequence_expression),
       ']',
-    )),
+    ),
 
-    bigarray_get_expression: $ => prec('dot', seq(
-      field('array', $._simple_expression),
-      '.',
-      optional(field('operator', $.indexing_operator_path)),
+    bigarray_get_expression: $ => seq(
+      $._indexing_prefix,
       '{',
       field('index', $._sequence_expression),
       '}',
-    )),
+    ),
 
     set_expression: $ => prec('set', seq(
       choice(
@@ -1419,7 +1428,7 @@ export default grammar({
       seq(choice('.', '.#'), field('field', $.field_path)),
       seq(
         '.',
-        choice('idx_imm', 'idx_mut'),
+        $._block_access_type,
         parenthesize(field('index', $._sequence_expression)),
       ),
     ),
@@ -2237,10 +2246,13 @@ export default grammar({
     assign_operator: $ => /:=/,
 
     indexing_operator: $ => token(
-      seq(/[!$%&*+\-/:=>?@^|]/, repeat(OP_CHAR)),
+      seq('.', /[!$%&*+\-/:=>?@^|]/, repeat(OP_CHAR)),
     ),
 
-    indexing_operator_path: $ => path($.module_path, $.indexing_operator),
+    indexing_operator_path: $ => choice(
+      $.indexing_operator,
+      seq('.', $.module_path, $.indexing_operator),
+    ),
 
     let_operator: $ => token(
       seq('let', /[$&*+\-/<=>@^|]/, repeat(OP_CHAR)),
@@ -2273,7 +2285,6 @@ export default grammar({
       $._infix_operator,
       $.hash_operator,
       seq(
-        '.',
         $.indexing_operator,
         choice(
           seq('(', optional(seq(';', '..')), ')'),
@@ -2337,6 +2348,11 @@ export default grammar({
     _constructor_name: $ => choice(
       $._simple_constructor_name,
       $._extra_constructor,
+    ),
+
+    _block_access_type: $ => alias(
+      choice($._uppercase_identifier, $._lowercase_identifier),
+      $.block_access_type,
     ),
 
     _extra_constructor: $ => choice(

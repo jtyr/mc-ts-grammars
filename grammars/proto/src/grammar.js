@@ -52,7 +52,7 @@ module.exports = grammar({
     // edition  = "edition" "=" quote numeric quote ";"
     edition: $ => seq('edition', '=', field('year', $.string), ';'),
     // syntax = "syntax" "=" quote "proto3" quote ";"
-    syntax: $ => seq('syntax', '=', choice('"proto3"', '"proto2"'), ';'),
+    syntax: $ => seq('syntax', '=', field('version', $.string), ';'),
 
     // import = "import" [ "weak" | "public" | "option" ] strLit ";"
     import: $ => seq(
@@ -79,14 +79,19 @@ module.exports = grammar({
       ';',
     ),
 
+    // optionName = ( ident | "(" [ "." ] fullIdent ")" )
+    //              { "." ( ident | "(" [ "." ] fullIdent ")" ) }
     _option_name: $ => seq(
       choice(
         $.identifier,
-        seq('(', $.full_ident, ')'),
+        seq('(', optional('.'), $.full_ident, ')'),
       ),
       repeat(seq(
         '.',
-        $.identifier,
+        choice(
+          $.identifier,
+          seq('(', optional('.'), $.full_ident, ')'),
+        ),
       )),
     ),
 
@@ -165,13 +170,16 @@ module.exports = grammar({
 
     message_name: $ => $.identifier,
 
+    // extend = "extend" messageType "{" {field | group | emptyStatement} "}"
+    // messageType = [ "." ] { ident "." } messageName
     extend: $ => seq(
       'extend',
+      optional('.'),
       $.full_ident,
       $.message_body,
     ),
 
-    // group = label "group" groupName "=" fieldNumber messageBody
+    // group = label "group" groupName "=" fieldNumber [ "[" fieldOptions "]" ] messageBody
     // label = "required" | "optional" | "repeated"
     // Proto2 only; deprecated but still valid.
     group: $ => seq(
@@ -180,6 +188,7 @@ module.exports = grammar({
       $.message_name,
       '=',
       $.field_number,
+      optional(seq('[', $.field_options, ']')),
       $.message_body,
     ),
 
@@ -220,17 +229,20 @@ module.exports = grammar({
       repeat(choice(
         $.option,
         $.oneof_field,
+        $.group,
         $.empty_statement,
       )),
       '}',
     ),
 
+    // oneofField = type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
     oneof_field: $ => seq(
       $.type,
       $.identifier,
       '=',
       $.field_number,
       optional(seq('[', $.field_options, ']')),
+      ';',
     ),
 
     // mapField = "map" "<" keyType "," type ">" mapName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
@@ -297,9 +309,11 @@ module.exports = grammar({
       ';',
     ),
 
+    // extensions = "extensions" ranges [ "[" fieldOptions "]" ] ";"
     extensions: $ => seq(
       'extensions',
       $.ranges,
+      optional(seq('[', $.field_options, ']')),
       ';',
     ),
 
@@ -398,21 +412,32 @@ module.exports = grammar({
     // based on the "a bit of everything" grpc-gateway example which has
     // wildly inconsistent syntax and yet it actually parses and compiles
     // with protoc.
-    block_lit: $ => seq(
-      '{',
-      repeat(seq(
-        choice(
-          $.identifier,
-          seq('[', $.full_ident, ']'),
-        ),
-        optional(':'),
-        choice(
-          $.constant,
-          array_of($.constant),
-        ),
-        optional(choice(',', ';')),
-      )),
-      '}',
+    block_lit: $ => choice(
+      seq('{', repeat($._block_field), '}'),
+      // Text format also permits angle brackets to delimit a message value.
+      seq('<', repeat($._block_field), '>'),
+    ),
+
+    _block_field: $ => seq(
+      choice(
+        $.identifier,
+        $.extension_name,
+      ),
+      optional(':'),
+      choice(
+        $.constant,
+        array_of($.constant),
+      ),
+      optional(choice(',', ';')),
+    ),
+
+    // An extension name, or an Any type URL: [type.googleapis.com/foo.Bar]
+    extension_name: $ => seq(
+      '[',
+      optional('.'),
+      field('name', $.full_ident),
+      optional(seq('/', field('type', $.full_ident))),
+      ']',
     ),
 
     // identifier = letter { letter | decimalDigit | "_" }
