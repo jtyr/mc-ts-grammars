@@ -67,7 +67,13 @@ module.exports = grammar({
         ),
 
         commodity_directive: $ => seq(
-            seq('commodity', $.whitespace, $.commodity, '\n'),
+            seq(
+              'commodity', $.whitespace, $.commodity,
+              choice(
+                seq($.whitespace, $.comment), // includes newline
+                '\n'
+              )
+            ),
             repeat(choice(
                 seq($.whitespace, $.comment),
                 $.commodity_subdirective,
@@ -81,7 +87,7 @@ module.exports = grammar({
             $.note_subdirective,
             singleKeywordDirective($, 'nomarket'),
       ),
-        
+
         payee_directive: $ => seq(
             seq('payee', $.whitespace, $.payee, '\n'),
             repeat(choice(
@@ -96,7 +102,7 @@ module.exports = grammar({
         ),
 
         tag_directive: $ => seq(
-            seq('tag', $.whitespace, /\p{L}+\n/),
+            seq('tag', $.whitespace, /(\p{L}|\p{N})+\n/),
             repeat(choice(
                 seq($.whitespace, $.comment),
                 $.assert_subdirective,
@@ -343,7 +349,7 @@ module.exports = grammar({
             $.account,
             optional(seq(
                 $.spacer,
-                optional(seq(optional($.whitespace), $.amount)),
+                optional(seq(optional($.whitespace), $._posting_amount)),
                 optional(seq(optional($.whitespace), $.lot_price)),
                 optional(seq(optional($.whitespace), $.price)),
                 optional(seq(optional($.whitespace), $.balance_assertion)),
@@ -358,6 +364,38 @@ module.exports = grammar({
         ), ''),
 
         account_name: $ => /[^ ;\n](\S \S \S|\S \S|\S)*/,
+
+        _posting_amount: $ => choice($.amount, $.expression_amount),
+
+        // expression amounts must be wrapped in parens
+        expression_amount: $ => seq(
+            '(',
+            optional($.whitespace),
+            $._expression_amount,
+            optional($.whitespace),
+            ')',
+        ),
+
+        // parens within expression amounts denote grouping and must be matched
+        _expression_amount: $ => prec.left(2, choice(
+            seq(
+              '(',
+              optional($.whitespace),
+              choice($.amount, $._expression_amount),
+              optional($.whitespace),
+              ')',
+            ),
+            $.amount,
+            $.binary_expression_amount,
+        )),
+
+        binary_expression_amount: $ => prec.left(1, seq(
+            field('left', choice($._expression_amount, $.amount)),
+            optional($.whitespace),
+            field('operator', choice('+', '-', '*', '/')),
+            optional($.whitespace),
+            field('right', choice($._expression_amount, $.amount)),
+        )),
 
         amount: $ => {
             const quantity = seq(optional('+'), $.quantity);
@@ -395,7 +433,7 @@ module.exports = grammar({
         price: $ => seq(
             choice('@', '@@'),
             optional($.whitespace),
-            $.amount,
+            choice($.amount, $.expression_amount)
         ),
 
         balance_assertion: $ => seq(
