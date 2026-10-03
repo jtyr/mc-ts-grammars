@@ -955,7 +955,7 @@ const rules = {
 
   constraint_set: $ => prec('constraint_set', choice(
     $.constraint_expression,
-    seq('{', repeat($.constraint_expression), '}')
+    seq('{', repeat(choice($.constraint_expression, $._directives)), '}') // _directives: allow ifdef/endif inside inline constraint blocks (if/foreach bodies)
   )),
 
   expression_or_dist: $ => prec('expression_or_dist', seq(
@@ -3706,10 +3706,17 @@ const rules = {
 
   list_of_arguments: $ => list_of_args($, 'list_of_arguments', $.expression),
 
-  method_call: $ => seq(
-    $._method_call_root,
-    choice('.', '::'), // :: Out of LRM: Needed to support static method calls
-    $.method_call_body
+  method_call: $ => choice(
+    seq($._method_call_root, '.', $.method_call_body),
+    seq($._method_call_root, '::', alias($.static_method_call_body, $.method_call_body)) // Out of LRM
+  ),
+
+  // Out of LRM: Added to remove ambiguity between member access and static
+  //             method call by enforcing usage of parenthesis for the latter.
+  static_method_call_body: $ => seq(
+    field('name', $.method_identifier),
+    repeat($.attribute_instance),
+    field('arguments', seq('(', optional($.list_of_arguments), ')'))
   ),
 
   method_call_body: $ => prec.right(choice(
@@ -3751,7 +3758,10 @@ const rules = {
     optseq('with', optseq('(', optional($.identifier_list), ')'), $.constraint_block)
   )),
 
-  variable_identifier_list: $ => commaSep1($.variable_identifier),
+  variable_identifier_list: $ => commaSep1(choice(
+    $.variable_identifier,
+    $.hierarchical_variable_identifier, // Out of LRM: std::randomize() accepts hierarchical variables
+  )),
 
   identifier_list: $ => commaSep1($._identifier),
 
@@ -5653,6 +5663,9 @@ module.exports = grammar({
     //   1:  module_nonansi_header  'initial'  (hierarchical_identifier  _identifier)  •  '.'  …       (precedence: 'hierarchical_identifier')
     //   2:  module_nonansi_header  'initial'  (hierarchical_identifier_repeat1  _identifier  •  '.')  (precedence: 'hierarchical_identifier')
     [$.hierarchical_identifier],
+    // std::randomize()'s variable_identifier_list allows hierarchical names,
+    // causing an LR conflict with hierarchical_identifier at _identifier ','.
+    [$.hierarchical_identifier, $.variable_identifier_list],
 
 
     // From the LRM:
