@@ -29,8 +29,11 @@ export default grammar({
   ],
 
   supertypes: $ => [
-    $._gate_item,
-    $._typedef_item,
+    $.gate_item,
+    $.statement,
+    $.typedef_item,
+    $.world_definition,
+    $.package_items,
   ],
 
   conflicts: $ => [
@@ -44,16 +47,16 @@ export default grammar({
   rules: {
     source_file: ($) =>
       seq(
-        repeat($._statement),
+        repeat($.statement),
       ),
 
-    _statement: $ => choice(
+    statement: $ => choice(
       $.package_decl,
       $.nested_package_definition,
-      $._package_items,
+      $.package_items,
     ),
 
-    _package_items: $ => choice(
+    package_items: $ => choice(
       $.toplevel_use_item,
       $.world_item,
       $.interface_item,
@@ -63,7 +66,7 @@ export default grammar({
       seq(
         $.decl_head,
         '{',
-        repeat($._package_items),
+        repeat($.package_items),
         '}',
       ),
 
@@ -131,14 +134,14 @@ export default grammar({
       seq(optional($._gate), 'world', field('name', $.id), alias($._world_body, $.body)),
 
     _world_body: ($) =>
-      seq('{', repeat(seq(optional($._gate), $._world_items)), '}'),
+      seq('{', repeat(seq(optional($._gate), $.world_definition)), '}'),
 
-    _world_items: ($) =>
+    world_definition: ($) =>
       choice(
         $.export_item,
         $.import_item,
         $.use_item,
-        $._typedef_item,
+        $.typedef_item,
         $.include_item,
       ),
 
@@ -187,16 +190,15 @@ export default grammar({
       seq(optional($._gate), 'interface', field('name', $.id), alias($._interface_body, $.body)),
 
     _interface_body: ($) =>
-      seq('{', repeat(seq(optional($._gate), $._interface_items)), '}'),
+      seq('{', repeat(seq(optional($._gate), $._interface_definition)), '}'),
 
-    _interface_items: ($) =>
+    _interface_definition: ($) =>
       choice(
         $.use_item,
-        seq(optional($.external_id), $._typedef_item),
-        seq(optional($.external_id), $.func_item),
+        seq(optional($.external_id), choice($.typedef_item, $.func_item)),
       ),
 
-    _typedef_item: ($) =>
+    typedef_item: ($) =>
       choice(
         $.resource_item,
         $.variant_items,
@@ -318,7 +320,7 @@ export default grammar({
 
     tuple_list: ($) => commaSeparatedList($.ty),
 
-    uint: _ =>/[1-9][0-9]*/,
+    uint: _ => /[1-9][0-9]*/,
     list: ($) => seq('list',
       '<',
       $.ty,
@@ -396,8 +398,8 @@ export default grammar({
     //
     // feature-field ::= 'feature' '=' id
     // version-field ::= 'version' '=' <valid semver>
-    _gate: $ => repeat1($._gate_item),
-    _gate_item: $ => choice(
+    _gate: $ => repeat1($.gate_item),
+    gate_item: $ => choice(
       $.unstable_gate,
       $.since_gate,
       $.deprecated_gate,
@@ -405,7 +407,7 @@ export default grammar({
 
     external_id: $ => seq('@', 'external-id', '(', field('id', $.string_literal), ')'),
 
-    unstable_gate: $ => seq( '@', 'unstable', '(', $._feature_field, ')'),
+    unstable_gate: $ => seq('@', 'unstable', '(', $._feature_field, ')'),
     _feature_field: $ => seq('feature', '=', field('feature', $.id)),
 
     since_gate: $ => seq('@', 'since', '(', $._version_field, ')'),

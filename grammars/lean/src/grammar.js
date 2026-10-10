@@ -45,6 +45,14 @@ export default grammar({
     $._indent,
     $._dedent,
     $._newline,
+    /* Norm bars `‖ … ‖`. The same `‖` glyph opens and closes, so a plain
+       grammar rule (symmetric delimiter over an unbounded term) blows up
+       LR table generation. The external scanner emits these as DISTINCT
+       open/close tokens — disambiguated by `valid_symbols` (close when the
+       parser expects a close, else open) — so the grammar stays as
+       unambiguous as the asymmetric `⌊ … ⌋`. */
+    $._norm_open,
+    $._norm_close,
     $.error_sentinel,
   ],
 
@@ -942,6 +950,8 @@ export default grammar({
       $.quotient_lit,
       $.floor_lit,
       $.ceil_lit,
+      $.norm_lit,
+      $.dbl_angle_lit,
       $.list_lit,
       $.range_lit,
       $.array_lit,
@@ -1096,13 +1106,19 @@ export default grammar({
 
     /* `⌊x⌋` floor and `⌈x⌉` ceil, each with an optional `₊`
        non-negative variant (`⌊x⌋₊`). These use distinct open/close
-       brackets, so they are safe delimited atoms. Norm `‖x‖` and abs
-       `|x|` are deliberately omitted: their open and close delimiter
-       is the SAME token, and a symmetric delimiter around an unbounded
-       `_term` blows up LR generation (norm was measured at 39 min,
-       non-converging). */
+       brackets, so they are safe delimited atoms. */
     floor_lit: $ => seq('⌊', $._term, choice('⌋', '⌋₊')),
     ceil_lit: $ => seq('⌈', $._term, choice('⌉', '⌉₊')),
+
+    /* `‖x‖` norm / `‖x‖₊` non-negative norm. The `‖` open and close
+       are external scanner tokens (see externals) so the symmetric
+       glyph doesn't blow up generation. The scanner folds the optional
+       trailing `₊` into the close token. */
+    norm_lit: $ => seq($._norm_open, $._term, $._norm_close),
+
+    /* `⟪x, y⟫` — double-angle-bracket constructor (inner products,
+       spans, pairings). Distinct open/close brackets, so safe. */
+    dbl_angle_lit: $ => seq('⟪', sep0($._term, ','), '⟫'),
 
     /* `*` is valid as a simp-set element (`simp [*, foo]`). */
     list_lit: $ => seq('[', sep0(choice($._term, $.star), ','), ']'),
@@ -1335,8 +1351,10 @@ export default grammar({
         field('lhs', $._op_term),
         field('op', choice(
           '+', '-', '∪', '\\',
-          /* `∆` — set symmetric difference; `⊞` — boxplus. */
-          '∆', '⊞',
+          /* `∆` — set symmetric difference; `⊞` — boxplus;
+             `↾` — restriction. (`⨁` is a big_op_binder prefix, not
+             an infix operator — adding it here conflicts.) */
+          '∆', '⊞', '↾',
           /* Mathlib torsor & substitution operators. */
           '-ᵥ', '+ᵥ', '▸',
         )),
@@ -1358,8 +1376,9 @@ export default grammar({
           '⨯', '∗', '⋆', '⬝',
           /* Circled/boxed products (applicative seq, external product). */
           '⊛', '⊠',
-          /* Kronecker product, matrix-vector dot, Hadamard product. */
-          '⊗ₖ', '⬝ᵥ', '⊙',
+          /* Kronecker product, matrix-vector dot, Hadamard product,
+             box product. */
+          '⊗ₖ', '⬝ᵥ', '⊙', '◫',
         )),
         field('rhs', $._op_term),
       )),

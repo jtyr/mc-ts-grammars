@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const {
 	kv_pair,
+	pair,
 	item,
 	call,
 	colon_string,
@@ -8,6 +9,8 @@ const {
 	list,
 	sequence,
 	table,
+	sexp_members,
+	literal_members,
 } = require('./grammar-lib/dsl.js');
 const {
 	require_dir,
@@ -20,6 +23,7 @@ const {
 const {
 	READER_MACROS,
 	SPECIAL_STANDALONE_SYMBOLS,
+	TABLE_METADATA_KEYS,
 } = require('./grammar-lib/constants.js');
 const {
 	reader_macro_nodes,
@@ -42,6 +46,8 @@ module.exports = grammar({
 
 		$.__colon_string_start_mark,
 		$.__colon_string_end_mark,
+
+		$.__form_follows,
 
 		$.shebang,
 
@@ -70,16 +76,7 @@ module.exports = grammar({
 		)),
 
 		_sexp: $ => choice(
-			$._reader_macro,
-			$._special_override_symbol,
-			$.symbol_option,
-			$.symbol,
-			$.multi_symbol,
-			$.multi_symbol_method,
-			$._form,
-			$.list,
-			$.sequence,
-			$.table,
+			...sexp_members($),
 			$._literal,
 		),
 
@@ -100,7 +97,7 @@ module.exports = grammar({
 
 		sequence: $ => sequence(repeat(item($._sexp))),
 
-		table_pair: $ => kv_pair($),
+		table_pair: $ => prec.right(pair($, { lhs: choice($.string, $._non_string_sexp), field: 'key' }, { rhs: $._sexp, field: 'value' })),
 
 		table: $ => prec(PREC_LAST_RESORT, table(repeat(item($.table_pair)))),
 
@@ -108,10 +105,7 @@ module.exports = grammar({
 		// literal-specific syntax (mostly strings), like with metadata `:fnl/docstring`
 		// in a function form.
 		_literal: $ => prec.right(PREC_LAST_RESORT, choice(
-			$.string,
-			$.number,
-			$.boolean,
-			$.nil,
+			...Object.values(literal_members($)),
 		)),
 
 		nil: $ => 'nil',
@@ -130,6 +124,7 @@ module.exports = grammar({
 				// Dynamic precedence could probably eliminate this HACK, but
 				// I would prefer to stray away from it.
 				...SPECIAL_STANDALONE_SYMBOLS,
+				...Object.values(TABLE_METADATA_KEYS),
 				'nil',
 				'true',
 				'false',
@@ -137,7 +132,10 @@ module.exports = grammar({
 			].map(tk => token.immediate(tk))
 		)),
 
-		_double_quote_string_content: $ => prec.right(PREC_IMPORTANT, token.immediate(/[^"\\]+/)),
+		_double_quote_string_content: $ => choice(
+			prec.right(PREC_IMPORTANT, token.immediate(/[^"\\]+/)),
+			...Object.values(TABLE_METADATA_KEYS).map(tk => token.immediate(tk)),
+		),
 		_double_quote_string: $ => double_quote_string($,
 			repeat(choice(
 				$._double_quote_string_content,
@@ -195,19 +193,21 @@ module.exports = grammar({
 				special,
 			);
 
-			// HACK: Mark number rule precedence as important,
-			// because special_literal is misparsed as multi_symbol
-			return prec(PREC_IMPORTANT, token(choice(
+			return token(choice(
 				decimal_literal,
 				hexadecimal_literal,
 				special_literal,
-			)));
+			));
 		},
 
 		multi_symbol: $ => seq(
 			field('base', alias($.symbol, $.symbol_fragment)),
 			repeat1(seq(
-				token.immediate('.'),
+				// NOTE: Lexical precedence is required here, otherwise
+				// `.inf`/`.nan` special literals are lexed as numbers even
+				// when they are a member of a multi-symbol (e.g. `t.info`),
+				// since the number token is a longer match than a lone `.`.
+				token.immediate(prec(PREC_IMPORTANT, '.')),
 				field('member', $._multi_symbol_fragment),
 			)),
 		),

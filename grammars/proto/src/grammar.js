@@ -448,10 +448,13 @@ module.exports = grammar({
       optional(':'),
       choice(
         $.constant,
-        array_of($.constant),
+        $.array_lit,
       ),
       optional(choice(',', ';')),
     ),
+
+    // A repeated field's values in an aggregate option value: { f: [1, 2] }
+    array_lit: $ => array_of($.constant),
 
     // An extension name, or an Any type URL: [type.googleapis.com/foo.Bar]
     extension_name: $ => seq(
@@ -573,7 +576,7 @@ module.exports = grammar({
         seq(
           '"',
           repeat(choice(
-            token.immediate(prec(1, /[^"\\]+/)),
+            alias(token.immediate(prec(1, /[^"\\]+/)), $.string_content),
             $.escape_sequence,
           )),
           '"',
@@ -582,7 +585,7 @@ module.exports = grammar({
         seq(
           '\'',
           repeat(choice(
-            token.immediate(prec(1, /[^'\\]+/)),
+            alias(token.immediate(prec(1, /[^'\\]+/)), $.string_content),
             $.escape_sequence,
           )),
           '\'',

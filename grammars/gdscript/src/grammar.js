@@ -3,8 +3,11 @@ const PREC = {
   conditional: -1,
 
   parenthesized_expression: 1,
-  or: 3,
-  and: 4,
+  or: 2,
+  and: 3,
+  // `not` sits between the and/or keywords and comparison operators, so that
+  // `not a == 0` parses as `not (a == 0)` and `not a and b` as `(not a) and b`.
+  not: 4,
   in: 5,
   compare: 6,
   bitwise_or: 7,
@@ -97,15 +100,6 @@ module.exports = grammar({
     false: ($) => "false",
     null: ($) => "null",
     static_keyword: ($) => "static",
-    remote_keyword: ($) =>
-      choice(
-        "remote",
-        "master",
-        "puppet",
-        "remotesync",
-        "mastersync",
-        "puppetsync",
-      ),
 
     escape_sequence: ($) =>
       token(
@@ -115,9 +109,8 @@ module.exports = grammar({
             /u[a-fA-F\d]{4}/,
             /U[a-fA-F\d]{6}/,
             /x[a-fA-F\d]{2}/,
-            /o\d{3}/,
             /\r\n/,
-            /[^uxo]/,
+            /[^ux]/,
           ),
         ),
       ),
@@ -145,9 +138,9 @@ module.exports = grammar({
     integer: ($) =>
       token(
         choice(
-          seq(choice("0x", "0X"), repeat1(/_?[A-Fa-f0-9]+/)),
-          seq(choice("0o", "0O"), repeat1(/_?[0-7]+/)),
-          seq(choice("0b", "0B"), repeat1(/_?[0-1]+/)),
+          seq(choice("0x", "0X"), repeat1(/[A-Fa-f0-9]+_?/)),
+          seq(choice("0o", "0O"), repeat1(/[0-7]+_?/)),
+          seq(choice("0b", "0B"), repeat1(/[0-1]+_?/)),
           repeat1(/[0-9]+_?/),
         ),
       ),
@@ -164,29 +157,17 @@ module.exports = grammar({
         repeat(choice($.escape_sequence, $._string_content)),
         alias($._string_end, '"'),
       ),
+    // the $ and % syntax supports strings between segments like $Sprite2D/"Timer"
+    _node_path_segment: ($) => choice($._identifier, alias($.string, "value")),
     get_node: ($) =>
       prec.right(
         seq(
           choice(
-            seq(
-              "$",
-              choice(
-                alias($.string, "value"),
-                seq(
-                  optional("/"),
-                  $._identifier,
-                  repeat(seq("/", $._identifier)),
-                ),
-              ),
-            ),
-            seq(
-              "%",
-              choice(
-                alias($.string, "value"),
-                seq($._identifier, repeat(seq("/", $._identifier))),
-              ),
-            ),
+            seq("$", optional("%"), optional("/")),
+            "%",
           ),
+          $._node_path_segment,
+          repeat(seq("/", $._node_path_segment)),
         ),
       ),
 
@@ -237,8 +218,6 @@ module.exports = grammar({
         $.class_name_statement,
         $.extends_statement,
         $.expression_statement,
-        $.export_variable_statement,
-        $.onready_variable_statement,
         $.variable_statement,
         $.const_statement,
         $.return_statement,
@@ -319,14 +298,7 @@ module.exports = grammar({
 
     setter: ($) => $._identifier,
     getter: ($) => $._identifier,
-    setget: ($) =>
-      choice(
-        $._setget_body,
-        seq(
-          "setget",
-          choice($.setter, seq($.setter, ",", $.getter), seq(",", $.getter)),
-        ),
-      ),
+    setget: ($) => $._setget_body,
 
     _variable_statement: ($) =>
       seq(
@@ -344,18 +316,7 @@ module.exports = grammar({
         optional(field("setget", $.setget)),
       ),
 
-    variable_statement: ($) =>
-      seq(optional($.remote_keyword), $._variable_statement),
-
-    export_variable_statement: ($) =>
-      seq(
-        "export",
-        optional(field("arguments", $.arguments)),
-        optional(choice("onready", $.remote_keyword)),
-        $._variable_statement,
-      ),
-
-    onready_variable_statement: ($) => seq("onready", $._variable_statement),
+    variable_statement: ($) => $._variable_statement,
 
     const_statement: ($) =>
       seq(
@@ -389,7 +350,6 @@ module.exports = grammar({
         optional($.annotations),
         "class_name",
         field("name", $.name),
-        optional(seq(",", field("icon_path", $.string))),
         field("extends", optional($.extends_statement)),
       ),
 
@@ -550,9 +510,12 @@ module.exports = grammar({
         // as match blocks are expressions, we need to explicitly allow them
         // here. The pattern section body itself supports statements (thus annotations).
         repeat1(
-          seq(
-            optional(repeat(seq($.annotation, optional($._newline)))),
-            $.pattern_section,
+          choice(
+            seq(
+              optional(repeat(seq($.annotation, optional($._newline)))),
+              $.pattern_section,
+            ),
+            $.pass_statement,
           ),
         ),
         $._dedent,
@@ -591,7 +554,7 @@ module.exports = grammar({
     // with pairs. This is also only valid in patterns and keeps the grammar a
     // bit simpler.
     pattern_binding: ($) => seq("var", $.identifier),
-    pattern_open_ending: ($) => "..",
+    pattern_open_ending: ($) => seq("..", optional(",")),
 
     // -----------------------------------------------------------------------------
     // -                                  Expressions                              -
@@ -703,7 +666,7 @@ module.exports = grammar({
 
     unary_operator: ($) =>
       choice(
-        prec(PREC.unary, seq(choice("not", "!"), $._primary_expression)),
+        prec(PREC.not, seq(choice("not", "!"), $._primary_expression)),
         prec(PREC.unary, seq("-", $._primary_expression)),
         prec(PREC.unary, seq("+", $._primary_expression)),
         prec(PREC.unary, seq("~", $._primary_expression)),
@@ -879,7 +842,7 @@ module.exports = grammar({
     function_definition: ($) =>
       seq(
         optional($.annotations),
-        optional(choice($.static_keyword, $.remote_keyword)),
+        optional($.static_keyword),
         "func",
         optional(field("name", $.name)),
         field("parameters", $.parameters),
