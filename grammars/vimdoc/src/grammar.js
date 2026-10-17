@@ -15,12 +15,33 @@
 const _uppercase_word = /[A-Z0-9.()][-A-Z0-9.()_]+/;
 // Listitem (incl. numbered items).
 const _li_token = /([-•]|([0-9]{1,3}\.))[ ]+/;
+const _keycode = choice(
+  /<[-a-zA-Z0-9_]+>/,
+  /<[SCMAD]-.>/,
+  /CTRL-./,
+  /CTRL-SHIFT-./,
+  /CTRL-(Break|PageUp|PageDown|Insert|Del)/,
+  'CTRL-{char}',
+  /META-./,
+  /ALT-./,
+);
+
+// Text without surrounding delimiters. Used by "NOT …" cases too.
+//
+// prec(1): after the opening delimiter, prefer this over a same-length plaintext
+// token, so `|` is a codespan, not "`" "|" "`".
+//
+const _tag_text = prec(1, /[^*\n\t ]+/);
+const _codespan_text = prec(1, /[^`\n\t]+/); // Excludes TAB (delimits table cells, see README).
+const _argument_text = /[^}\n\t ]+/;
+const _optionlink_text = /[a-z][a-z]+/;
 
 module.exports = grammar({
   name: 'vimdoc',
 
   conflicts: $ => [
-    [$._line_noli, $._column_heading],
+    [$._line_noli, $._line_cb, $._column_heading],
+    [$._line_any, $._line_noli],
     [$._column_heading],
   ],
 
@@ -37,6 +58,10 @@ module.exports = grammar({
         repeat($.modeline),
       ),
 
+    // Single-char uppercase word, e.g. "A" in "USING A COUNT". Same precedence as `word`, so
+    // "Hello" stays a word. Defined before `word` to win a same-length tie (rule order).
+    _uppercase_char: () => token(prec(-1, /[A-Z0-9]/)),
+
     _atom: ($) => choice(
       $.word,
       $._atom_common,
@@ -48,6 +73,9 @@ module.exports = grammar({
 
     _atom_noli: ($) => choice(
       alias($.word_noli, $.word),
+      // XXX: treesitter (undocumented) prefers an immediate token (uppercase_name) to tie-break
+      // e.g. "CTRL-W s". So use immediate() here too, then rule order decides.
+      alias(token.immediate(_keycode), $.keycode),
       $._atom_common,
     ),
     // Word NOT matching (numbered) listitem.
@@ -70,12 +98,23 @@ module.exports = grammar({
         $.note,
       ),
 
-    // Explicit special cases: these are plaintext, not errors.
-    _word_common: () => choice(
-      // NOT tag: isolated "*".
-      '*',
-      // NOT optionlink: '
-      "'",
+    // NOT tag: "*", "*foo", "*foo*bar". The closing "*" must be followed by
+    // whitespace/EOL, because the lexer prefers the longer "*bar" token.
+    _not_tag: () => seq('*', optional(seq(
+      // Aliased so it stays visible: error recovery skips hidden tokens, so
+      // e.g. "===…" + blank line reports ERROR instead of MISSING.
+      alias(token.immediate(_tag_text), 'word'),
+      optional(token.immediate(/\*[^\n\t ]+/)),
+    ))),
+
+    // Explicit special cases: these are plaintext, not errors. Unclosed cases alias
+    // their text token to 'word' (see _not_tag).
+    _word_common: ($) => choice(
+      $._not_tag,
+      // NOT codespan: unclosed (same line) "`", "`foo".
+      seq('`', optional(alias(token.immediate(_codespan_text), 'word'))),
+      // NOT optionlink: ', 'foo
+      seq("'", optional(alias(token.immediate(_optionlink_text), 'word'))),
       // NOT optionlink: 'x
       seq("'", token.immediate(/[^'\n\t ]/)),
       // NOT optionlink: 'X (non-lowercase char).
@@ -85,8 +124,8 @@ module.exports = grammar({
       // NOT taglink: "||", "|"
       /\|\|+/,
       '|', "'|'",
-      // NOT argument:
-      '{',
+      // NOT argument: {, {foo, {}
+      seq('{', optional(alias(token.immediate(_argument_text), 'word'))),
       '{}',
       /\{\{+[0-9]*/,
 
@@ -107,39 +146,46 @@ module.exports = grammar({
       'Deprecated', 'DEPRECATED:'
     ),
 
-    keycode: () => choice(
-      /<[-a-zA-Z0-9_]+>/,
-      /<[SCMAD]-.>/,
-      /CTRL-./,
-      /CTRL-SHIFT-./,
-      /CTRL-(Break|PageUp|PageDown|Insert|Del)/,
-      'CTRL-{char}',
-      /META-./,
-      /ALT-./,
-    ),
+    keycode: () => _keycode,
 
     // First part (minus tags) of h3 or column_heading.
-    uppercase_name: () => seq(
+    uppercase_name: ($) => seq(
       token.immediate(_uppercase_word),  // No whitespace before heading.
-      repeat(_uppercase_word),
+      repeat(choice(_uppercase_word, $._uppercase_char)),
     ),
     // Line (plaintext) can start with uppercase words; don't flag as "invalid h3".
     _uppercase_words: ($) => prec.left(-1, seq(
       alias(token.immediate(_uppercase_word), $.word),
-      alias(repeat(_uppercase_word), $.word),
+      alias(repeat(choice(_uppercase_word, $._uppercase_char)), $.word),
     )),
 
     // Text block/paragraph: adjacent lines followed by blank line(s).
-    block: ($) => seq(
-      choice(
-        repeat1($.line),
+    block: ($) => {
+      const lines = choice(
+        repeat1($._line_any),
         repeat1($.line_li),
-        seq(repeat1($.line), repeat1($.line_li)),
-      ),
-      choice(
-        token.immediate('<'),  // Treat codeblock-terminating "<" as whitespace.
-        $._blank),
-      repeat($._blank),
+        seq(repeat1($._line_any), repeat1($.line_li)),
+      );
+      return seq(
+        choice(seq(alias($._line_h, $.line), optional(lines)), lines),
+        choice(
+          token.immediate('<'),  // Treat codeblock-terminating "<" as whitespace.
+          $._blank),
+        repeat($._blank),
+      );
+    },
+    // Heading (h1/h2/h3) starts a block (ie preceded by a blank line), or follows a codeblock (which
+    // consumes blank lines). So "-----" or "FOO" inside a block is plaintext.
+    _line_any: ($) => choice(
+      $.line,
+      seq(alias($._line_cb, $.line), alias($._line_h, $.line)),
+    ),
+    _line_h: ($) => choice(
+      $.h1,
+      $.h2,
+      // Prefer h3 over UPPERCASE line or column_heading (see `conflicts`), like at block start,
+      // e.g. "FOO *tag* ~".
+      prec.dynamic(2, $.h3),
     ),
 
     // Codeblock: preformatted block of lines starting with ">" or ">language" at EOL
@@ -157,10 +203,6 @@ module.exports = grammar({
     _blank: () => field('blank', /\n/),
     line: ($) => choice(
       $.column_heading,
-      $.h1,
-      $.h2,
-      $.h3,
-      $.codeblock,
       $._line_noli,
     ),
     // Listitem: consumes prefixed line and all adjacent non-prefixed lines.
@@ -171,15 +213,24 @@ module.exports = grammar({
         alias(seq(repeat1($._atom), /\n/), $.line),
         seq(alias(repeat1($._atom), $.line), $.codeblock),
       ),
-      repeat(alias($._line_noli, $.line)),
+      repeat(choice(
+        alias($._line_noli, $.line),
+        // Codeblock-terminating "<" followed by indented text (same or next line): listitem
+        // continues. #163
+        token.immediate(/<([\t ]*\n)?[\t ]+/),
+      )),
     )),
     // Codeblock lines: must be indented by at least 1 space/tab.
     // Line content (incl. whitespace) is captured as a single atom.
     line_code: () => choice(/\n/, /[\t ]+[^\n]+\n/),
-    _line_noli: ($) => seq(
-      choice($._atom_noli, $._uppercase_words),
-      repeat($._atom),
-      choice($.codeblock, /\n/)
+    _line_noli: ($) => choice(
+      seq(choice($._atom_noli, $._uppercase_words), repeat($._atom), /\n/),
+      $._line_cb,
+    ),
+    // Line ending with a codeblock. Also a codeblock-only line abutting a listitem. #118
+    _line_cb: ($) => seq(
+      optional(seq(choice($._atom_noli, $._uppercase_words), repeat($._atom))),
+      $.codeblock,
     ),
 
     // Modeline: must start with "vim:" (optionally preceded by whitespace)
@@ -219,13 +270,12 @@ module.exports = grammar({
     h3: ($) =>
       seq(
         alias($.uppercase_name, $.heading),
-        optional(seq($.tag, repeat($._atom))),
+        optional(seq(choice($.tag, alias($._not_tag, $.word)), repeat($._atom))),
         /\n/,
       ),
 
-    tag: ($) => _word($,
-      prec(1, /[^*\n\t ]+/),  // Tag text without surrounding "*".
-      '*', '*'),
+    // Tag: *foo* (see _not_tag).
+    tag: ($) => _word($, _tag_text, '*', '*'),
 
     // URL without surrounding (), [], etc.
     url_word: () => /https?:\/\/[^\n\t\] ]*[^\n\t )\].,:]/,
@@ -236,13 +286,13 @@ module.exports = grammar({
     ),
 
     // Link to option: 'foo'. Lowercase non-digit ASCII, minimum 2 chars. #14
-    optionlink: ($) => _word($, /[a-z][a-z]+/, "'", "'"),
+    optionlink: ($) => _word($, _optionlink_text, "'", "'"),
     // Link to tag: |foo|
     taglink: ($) => _word($, prec(1, /[^|\n\t ]+/), '|', '|'),
     // Inline code (may contain whitespace!): `foo bar`
-    codespan: ($) => _word($, /[^``\n]+/, '`', '`'),
+    codespan: ($) => _word($, _codespan_text, '`', '`'),
     // Argument: {arg} (no whitespace allowed)
-    argument: ($) => seq(_word($, /[^}\n\t ]+/, '{', '}'), optional(token.immediate('?'))),
+    argument: ($) => seq(_word($, _argument_text, '{', '}'), optional(token.immediate('?'))),
   },
 });
 
