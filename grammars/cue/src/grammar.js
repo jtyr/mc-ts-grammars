@@ -130,6 +130,17 @@ module.exports = grammar({
     $._raw_bytes_content,
     $._multi_raw_str_content,
     $._multi_raw_bytes_content,
+    $._raw_str_start,
+    $._raw_bytes_start,
+    $._multi_raw_str_start,
+    $._multi_raw_bytes_start,
+    $._raw_end,
+    $._raw_interpolation_start,
+    $._closed_hash,
+    $._spread_int,
+    $.multiplier,
+    $._line_start,
+    $._error_sentinel,
   ],
 
   inline: $ => [
@@ -146,6 +157,15 @@ module.exports = grammar({
     [$._embedding, $._label_alias_expr],
     [$._label_name, $.primary_expression],
     [$._label_name, $.string],
+    [$.comprehension],
+    [$._label_name, $._keyword_reference],
+    [$._keyword_reference, $.try_clause],
+    [$._keyword_reference, $.guard_clause],
+    [$._keyword_reference, $.for_clause],
+    [$._keyword_reference, $.let_clause],
+    [$._label_name, $._keyword_reference, $.guard_clause],
+    [$.primary_expression, $.parameter],
+    [$._attr_item],
   ],
 
   word: $ => $.identifier,
@@ -153,7 +173,12 @@ module.exports = grammar({
   rules: {
     source_file: $ => prec(1, seq(
       optionalCommaSep($.attribute),
-      optional($.package_clause),
+      optional(seq(
+        $.package_clause,
+        // Attributes between the package clause and the imports are file
+        // attributes.
+        optionalCommaSep($.attribute),
+      )),
       optionalCommaSep($.import_declaration),
       optionalCommaSep($._declaration),
     )),
@@ -202,7 +227,10 @@ module.exports = grammar({
         'if',
         'for',
         'else',
+        'otherwise',
+        'fallback',
         'try',
+        'func',
         ...primitive_types,
       ),
       $.identifier,
@@ -213,21 +241,23 @@ module.exports = grammar({
       field('name', $.identifier),
       '(',
       optional(choice(',', '-')),
-      repeat(
-        prec.right(choice(
-          commaSep1($._attr_token),
-          seq('(', commaSep($._attr_token), ')'),
-          seq('[', commaSep($._attr_token), ']'),
-          seq('{', commaSep($._attr_token), '}'),
-          seq('<', commaSep($._attr_token), '>'),
-        )),
-      ),
+      repeat($._attr_group),
       ')',
     ),
-    _attr_token: $ => prec.right(choice(
+    // Brackets nest in the body of an attribute, as in @foo((x)),
+    // @foo(a=b(c)) and @foo(a=[1, 2]). Only (), [] and {} nest, as in CUE:
+    // < and > are ordinary characters, as in @test(eq, <4).
+    _attr_group: $ => prec.right(choice(
       $._attr_item,
-      seq($._attr_item, '=', choice($._attr_item, $.attr_path)),
-      seq('(', $._attr_item, ')', '=', choice($._attr_item, $.attr_path)),
+      ',',
+      prec.right(seq('=', optional(choice($._attr_item, $.attr_path, $._attr_brackets)))),
+      $._attr_brackets,
+    )),
+
+    _attr_brackets: $ => prec.right(choice(
+      seq('(', repeat($._attr_group), ')'),
+      seq('[', repeat($._attr_group), ']'),
+      seq('{', repeat($._attr_group), '}'),
     )),
 
     _attr_item: $ => choice(
@@ -241,7 +271,8 @@ module.exports = grammar({
       $.bottom,
       $.primitive_type,
       seq('[', ']', alias($._attr_item, $.slice_type)),
-      seq('*', alias($._attr_item, $.pointer_type)),
+      // A * may stand alone, as in @foo(*[1] | [2]).
+      seq('*', optional(prec.dynamic(1, alias($._attr_item, $.pointer_type)))),
       $.package_path,
       $.identifier,
       prec(-1, /[^0-9_]/),
@@ -281,13 +312,21 @@ module.exports = grammar({
       ),
     )),
 
-    list_lit: $ => seq('[', repeat($._list_elem), ']'),
+    // A '#' directly before the opening bracket or brace makes the list or
+    // struct closed, as in #[1, 2] and #{a: 1}.
+    // A list may start with the '[' that directly follows a word, as in
+    // if[x][0] {...}, where the guard of a comprehension and an index on a
+    // reference to if both begin; the clause wins.
+    list_lit: $ => seq(optional($._closed), choice('[', token.immediate('[')), repeat($._list_elem), ']'),
 
     struct_lit: $ => seq(
+      optional($._closed),
       '{',
       optionalCommaSep($._declaration),
       '}',
     ),
+
+    _closed: $ => alias($._closed_hash, '#'),
 
     ellipsis: $ => prec.left(seq(
       '...',
@@ -304,22 +343,26 @@ module.exports = grammar({
       prec(1, $.keyword_identifier),
       prec(1, alias($.primitive_type, $.identifier)),
       prec(1, alias($.builtin_function, $.identifier)),
+      prec(1, alias(choice('null', 'true', 'false', '_'), $.identifier)),
       prec.dynamic(1, alias($._simple_string_lit, $.string)),
+      prec.dynamic(1, alias($._simple_raw_string_lit, $.string)),
       prec.dynamic(1, $.selector_expression),
       prec.dynamic(1, alias($.parenthesized_expression, $.dynamic)),
     ),
 
     _label_alias_expr: $ => alias($._alias_expr, $.optional),
 
-    required: $ => seq($._label_name, '!'),
+    // A postfix alias comes before the optional or required marker, as in
+    // a~(X)?: int.
+    required: $ => seq($._label_name, optional($.postfix_alias), '!'),
 
-    optional: $ => seq($._label_name, '?'),
+    optional: $ => seq($._label_name, optional($.postfix_alias), '?'),
 
     _label_expr: $ => choice(
-      $._label_name,
+      seq($._label_name, optional($.postfix_alias)),
       $.optional,
       $.required,
-      seq('[', $._label_alias_expr, ']'),
+      seq(choice('[', token.immediate('[')), $._label_alias_expr, ']', optional($.postfix_alias)),
     ),
 
     label: $ => seq(
@@ -334,44 +377,54 @@ module.exports = grammar({
       '~',
       choice(
         field('field', $.identifier),
+        seq('(', field('field', $.identifier), ')'),
         seq('(', field('label', $.identifier), ',', field('field', $.identifier), ')'),
       ),
     ),
 
     field: $ => prec.right(seq(
-      repeat1(seq($.label, optional($.postfix_alias), ':')),
+      repeat1(seq($.label, ':')),
       $._value,
-      optional($.attribute),
+      repeat($.attribute),
     )),
 
     _value: $ => alias($._alias_expr, $.value),
 
-    for_clause: $ => seq(
+    // if, for and let may also be references followed by the next
+    // declaration, as in if and then b: 1 on the next line, so the parser
+    // keeps both readings until a token decides, as for try.
+    for_clause: $ => prec(-3, seq(
       'for',
       choice($.identifier, '_'),
       optional(seq(',', choice($.identifier, '_'))),
       'in', $.expression,
-    ),
+    )),
 
-    guard_clause: $ => seq('if', field('condition', $.expression)),
+    guard_clause: $ => prec(-3, seq('if', field('condition', $.expression))),
 
-    let_clause: $ => seq('let', field('left', $.identifier), '=', field('right', $.expression)),
+    let_clause: $ => prec(-3, seq('let', field('left', $.identifier), '=', field('right', $.expression))),
 
     _clause: $ => choice($.for_clause, $.guard_clause, $.let_clause, $.try_clause),
 
-    try_clause: $ => seq(
+    // try may also be a reference followed by the next declaration, as in
+    // try and then b: 1 on the next line, so the parser keeps both readings
+    // until a token decides.
+    try_clause: $ => prec(-3, seq(
       'try',
-      optional(seq(field('left', $.identifier), '=', field('right', $.expression))),
-    ),
+      optional(seq(field('left', choice($.identifier, '_')), '=', field('right', $.expression))),
+    )),
 
-    comprehension: $ => prec.right(seq(
+    // A word after the struct may start an else clause or, when CUE ends
+    // the comprehension at a newline, the label of the next field, so the
+    // parser keeps both readings until the next token decides.
+    comprehension: $ => seq(
       choice($.for_clause, $.guard_clause, $.try_clause),
       repeat(seq(optional(','), $._clause)),
       $.struct_lit,
       optional($.else_clause),
-    )),
+    ),
 
-    else_clause: $ => seq('else', $.struct_lit),
+    else_clause: $ => seq(choice('else', 'otherwise', 'fallback'), $.struct_lit),
 
     _alias_expr: $ => seq(
       optional(seq(field('alias', $.identifier), '=')),
@@ -385,11 +438,15 @@ module.exports = grammar({
     )),
 
     primary_expression: $ => choice(
+      $.function,
+      $._keyword_reference,
+      $._builtin_reference,
       $.parenthesized_expression,
       $.selector_expression,
       $.index_expression,
       $.call_expression,
       $.postfix_expression,
+      $.spread_expression,
       $.identifier,
       $.literal,
     ),
@@ -397,6 +454,16 @@ module.exports = grammar({
     postfix_expression: $ => prec(PREC.call, seq(
       $.primary_expression,
       '?',
+    )),
+
+    // The spread operator, as in #A...: the ellipsis directly follows its
+    // operand. An ellipsis after whitespace, such as one on its own line in
+    // a struct, is a separate declaration. The external scanner recognizes
+    // an integer operand, as in 1..., which would otherwise lex as the float
+    // 1. followed by "..".
+    spread_expression: $ => prec(PREC.call, seq(
+      choice($.primary_expression, alias($._spread_int, $.number)),
+      token.immediate('...'),
     )),
 
     binary_expression: $ => {
@@ -422,42 +489,122 @@ module.exports = grammar({
     },
 
     unary_expression: $ => {
-      const unary_operators = ['+', '-', '!', '*', '!=', '<', '<=', '>', '>=', '=~', '!~'];
+      const unary_operators = ['+', '-', '!', '*', '==', '!=', '<', '<=', '>', '>=', '=~', '!~'];
 
+      // The external scanner marks an operator at the start of a line, which
+      // CUE reads as unary, so that it does not continue the line before.
       return choice(...unary_operators.map((operator) => prec(PREC.unary, seq(
+        optional($._line_start),
         field('operator', operator),
         field('argument', $.expression),
       ))));
     },
 
-    parenthesized_expression: $ => seq('(', $.expression, ')'),
+    // A keyword used as a reference, as in x: otherwise or x: if, outside
+    // the construct the keyword starts. Where the keyword can also start a
+    // clause, as otherwise and a struct after a comprehension, or if, for
+    // and let at the start of a declaration, the parser prefers the clause.
+    _keyword_reference: $ => prec(-3, prec.dynamic(-1, alias(
+      choice('func', 'otherwise', 'fallback', 'try', 'else', 'if', 'for', 'let'),
+      $.identifier,
+    ))),
 
+    // The name of a builtin function used as a reference, as in x: len,
+    // rather than called.
+    _builtin_reference: $ => alias($.builtin_function, $.identifier),
+
+    // A parenthesized expression may start with the '(' that directly
+    // follows a word, as in if(x) {...}, where the guard of a comprehension
+    // and a call of a reference to if both begin; the clause wins.
+    parenthesized_expression: $ => seq(choice('(', token.immediate('(')), $.expression, ')'),
+
+    // A function literal, as in func(a: int) -> int: a + 1, or a function
+    // type, as in func(int) -> int.
+    function: $ => prec.right(seq(
+      'func',
+      $.parameters,
+      optional(choice(
+        seq(
+          '->',
+          field('result', $.expression),
+          optional(seq(':', field('body', $.expression))),
+        ),
+        seq(':', field('body', $.expression)),
+      )),
+    )),
+
+    // A trailing ellipsis makes the signature open, as in func(int, ...).
+    // The parameters directly follow func, as cue fmt writes them, so that
+    // a dynamic label such as (k) on the line after a reference to func is
+    // not taken as parameters.
+    parameters: $ => seq(
+      token.immediate('('),
+      commaSep(choice($.parameter, $.ellipsis), true),
+      ')',
+    ),
+
+    parameter: $ => seq(
+      optional(choice(
+        seq(
+          field('name', $.identifier),
+          optional($.postfix_alias),
+          optional(choice('?', '!')),
+          ':',
+        ),
+        // An anonymous parameter, as in _~x: int, cannot be optional or
+        // required.
+        seq(
+          field('name', alias('_', $.identifier)),
+          optional($.postfix_alias),
+          ':',
+        ),
+      )),
+      field('type', $.expression),
+      optional(seq('=', field('default', $.expression))),
+      repeat($.attribute),
+    ),
+
+    // A call applies to any operand, as in f(1), int(1) and [1](0),
+    // including a keyword used as a reference, as in otherwise(1). func(
+    // starts a function literal instead.
     call_expression: $ => prec(PREC.call, seq(
       field('function', choice(
         $.builtin_function,
-        $.selector_expression,
-        $.identifier,
+        $.primary_expression,
       )),
       $.arguments,
     )),
 
-    index_expression: $ => seq(
+    // A selector or an index binds tighter than the end of a function's
+    // body or result, as in func(s: int): s.x.
+    index_expression: $ => prec(PREC.call, seq(
       $.primary_expression,
       token.immediate('['),
       field('index', $.expression),
+      optional(','),
       ']',
-    ),
+    )),
 
-    selector_expression: $ => seq(
+    selector_expression: $ => prec(PREC.call, seq(
       $.primary_expression,
       '.',
       choice($.identifier, alias($._simple_string_lit, $.string)),
+    )),
+
+    // A trailing ellipsis applies a function partially, as in f(1, ...).
+    // The arguments directly follow the function, as cue fmt writes them,
+    // so that a dynamic label such as (k) on the next line is not taken as
+    // a call.
+    arguments: $ => seq(
+      token.immediate('('),
+      commaSep(optional(choice($.expression, $.labeled_argument, $.ellipsis))),
+      ')',
     ),
 
-    arguments: $ => seq(
-      '(',
-      commaSep(optional($.expression)),
-      ')',
+    labeled_argument: $ => seq(
+      field('label', $.identifier),
+      ':',
+      field('value', $.expression),
     ),
 
     literal: $ =>
@@ -485,25 +632,24 @@ module.exports = grammar({
 
     null: _ => 'null',
 
+    // A number has no sign: -1 is a unary expression, as in CUE.
     number: _ => {
       const binary_literal = seq(
-        /0[bB]/,
+        /0[bB]_?/,
         /[01](_?[01])*/,
       );
 
       const hex_literal = seq(
-        /0[xX]/,
+        /0[xX]_?/,
         /[\da-fA-F](_?[\da-fA-F])*/,
       );
 
       const octal_literal = seq(
-        optional(choice('-', '+')),
-        /0[oO]/,
+        /0[oO]_?/,
         /[0-7](_?[0-7])*/,
       );
 
       const decimal_digits = /\d(_?\d)*/;
-      const signed_integer = seq(optional(choice('-', '+')), decimal_digits);
 
       const decimal_integer_literal = choice(
         '0',
@@ -511,9 +657,8 @@ module.exports = grammar({
       );
 
       const decimal_literal = choice(
-        seq(optional(choice('-', '+')), decimal_integer_literal),
+        decimal_integer_literal,
         decimal_digits,
-        signed_integer,
       );
 
 
@@ -534,7 +679,7 @@ module.exports = grammar({
       const decimal_exponent = seq(choice('e', 'E'), optional(choice('+', '-')), decimal_digits);
 
       const decimal_float_literal = choice(
-        seq(optional('-'), optional(decimal_digits), '.', optional(decimal_digits), optional(decimal_exponent)),
+        seq(optional(decimal_digits), '.', optional(decimal_digits), optional(decimal_exponent)),
         seq(decimal_digits, decimal_exponent),
       );
 
@@ -549,14 +694,12 @@ module.exports = grammar({
       return token(choice(decimal_float_literal, hex_float_literal));
     },
 
+    // A number with a multiplier, as in 1Ki and 1.5G. The external scanner
+    // recognizes the multiplier only directly after the number, so that a
+    // label on the next line, such as Pi, is not taken as one.
     si_unit: $ => seq(
-      $.float,
-      field('unit',
-        token.immediate(seq(
-          choice('K', 'M', 'G', 'T', 'P'),
-          optional('i'),
-        )),
-      ),
+      choice($.float, $.number),
+      field('unit', $.multiplier),
     ),
 
     escape_char: _ => token.immediate(seq(
@@ -586,6 +729,10 @@ module.exports = grammar({
       $.escape_unicode,
       ),
     ),
+
+    // In a multiline literal, a backslash at the end of a line escapes the
+    // newline.
+    _escape_newline: _ => token.immediate(seq('\\', repeat('#'), /\r?\n/)),
 
     string: $ => choice(
       $._simple_string_lit,
@@ -625,6 +772,7 @@ module.exports = grammar({
         $._multi_str_content,
         $.interpolation,
         $._escape_unicode,
+        alias($._escape_newline, $.escape_char),
       )),
       token('"""'),
     ),
@@ -636,55 +784,60 @@ module.exports = grammar({
         $.interpolation,
         $.escape_byte,
         $._escape_unicode,
+        alias($._escape_newline, $.escape_char),
       )),
       token('\'\'\''),
     ),
 
+    // Raw literals take any number of '#'; the external scanner matches the
+    // delimiters, which keep the names of their one-'#' forms.
     _simple_raw_string_lit: $ => seq(
-      '#"',
+      alias($._raw_str_start, '#"'),
       repeat(choice(
         $._raw_str_content,
         $.raw_interpolation,
         $._escape_unicode,
       )),
-      '"#',
+      alias($._raw_end, '"#'),
     ),
 
     _simple_raw_bytes_lit: $ => seq(
-      '#\'',
+      alias($._raw_bytes_start, '#\''),
       repeat(choice(
         $._raw_bytes_content,
         $.raw_interpolation,
         $.escape_byte,
         $._escape_unicode,
       )),
-      '\'#',
+      alias($._raw_end, '\'#'),
     ),
 
     _multiline_raw_string_lit: $ => seq(
-      token('#"""'),
+      alias($._multi_raw_str_start, '#"""'),
       repeat(choice(
         $._multi_raw_str_content,
         $.raw_interpolation,
         $._escape_unicode,
+        alias($._escape_newline, $.escape_char),
       )),
-      token('"""#'),
+      alias($._raw_end, '"""#'),
     ),
 
     _multiline_raw_bytes_lit: $ => seq(
-      token('#\'\'\''),
+      alias($._multi_raw_bytes_start, '#\'\'\''),
       repeat(choice(
         $._multi_raw_bytes_content,
         $.raw_interpolation,
         $.escape_byte,
         $._escape_unicode,
+        alias($._escape_newline, $.escape_char),
       )),
-      token('\'\'\'#'),
+      alias($._raw_end, '\'\'\'#'),
     ),
 
     interpolation: $ => seq('\\(', $.expression, ')'),
 
-    raw_interpolation: $ => seq('\\#(', $.expression, ')'),
+    raw_interpolation: $ => seq(alias($._raw_interpolation_start, '\\#('), $.expression, ')'),
 
     comment: _ => token(seq('//', /.*/)),
   },
