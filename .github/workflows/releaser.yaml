@@ -45,7 +45,7 @@ jobs:
           cacheKeyPrefix: release
 
       - name: Upload generated sources
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: generated-sources
           path: grammars/*/src/src/
@@ -108,13 +108,13 @@ jobs:
           tag: ${{ github.event_name == 'push' && github.ref_name || needs.check-changes.outputs.tag }}
 
       - name: Upload tarball
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-${{ matrix.platform }}
           path: release/*.tar.gz
 
       - name: Upload checksum
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: checksum-${{ matrix.platform }}
           path: release/mc-ts-grammars.sha256
