@@ -22,12 +22,12 @@ runs:
   using: composite
   steps:
     - name: Set up Node.js
-      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
       with:
         node-version: "24"
 
     - name: Cache npm packages
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ~/.npm
         key: npm-${{ hashFiles('grammars/*/src/package.json') }}
@@ -40,7 +40,7 @@ runs:
 
     - name: Restore parser cache
       if: inputs.cacheParsers == 'true'
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: .parser-cache
         key: parsers-${{ inputs.cacheKeyPrefix }}-${{ hashFiles('grammars/*/src/grammar.js', 'grammars/*/src/src/scanner.c', 'grammars/*/src/src/scanner.cc', 'grammars/*/src/package.json') }}
