@@ -192,7 +192,8 @@ variable.builtin=brightred/blue
 The `[grammar]` section holds file matching rules, display name, and
 optional fields like `symbol` (override for the
 `tree_sitter_<name>()` function) and `wrapper` (for template
-languages like `gotmpl`).
+languages like `gotmpl`). A `filenames` entry containing `*` or `?`
+is a glob pattern matched against the basename (e.g. `Dockerfile.*`).
 
 The `[colors]` section maps tree-sitter capture names to MC terminal
 colors (16 ANSI colors plus MC extras `brown` and `lightgray`). Each
