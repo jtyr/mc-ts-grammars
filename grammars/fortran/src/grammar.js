@@ -56,14 +56,17 @@ module.exports = grammar({
     $._integer_literal,
     $._float_literal,
     $._boz_literal,
-    $._string_literal,
-    $._string_literal_kind,
     $._external_end_of_statement,
     $._preproc_unary_operator,
     $.hollerith_constant,
     $._do_label,
     $.do_label_virtual,
     $._do_label_continue,
+    $._string_literal_kind,
+    $.string_literal_start,
+    $.string_content,
+    $.string_literal_quote,
+    $.string_literal_end,
   ],
 
   extras: $ => [
@@ -83,6 +86,7 @@ module.exports = grammar({
 
   conflicts: $ => [
     [$._expression, $.complex_literal],
+    [$._expression, $._type_name],
     [$._argument_list, $.parenthesized_expression],
     [$.case_statement],
     [$.data_set, $._expression],
@@ -107,6 +111,7 @@ module.exports = grammar({
     [$.cray_pointer_declaration, $.identifier],
     [$.unit_identifier, $.identifier],
     [$.format_identifier, $.identifier],
+    [$._string_literal_content],
   ],
 
   supertypes: $ => [
@@ -478,8 +483,7 @@ module.exports = grammar({
       prec.right(1, choice(
         $.procedure_attributes,
         $.procedure_qualifier,
-        field('type', $.intrinsic_type),
-        field('type', $.derived_type)
+        field('type', $._decl_type_spec),
       ))),
 
     procedure_attributes: $ => prec(1, seq(
@@ -621,10 +625,7 @@ module.exports = grammar({
       caseInsensitive('implicit'),
       choice(
         commaSep1(seq(
-          choice(
-            $.intrinsic_type,
-            $.derived_type
-          ),
+          $._decl_type_spec,
           '(',
           commaSep1($.implicit_range),
           ')'
@@ -776,8 +777,6 @@ module.exports = grammar({
 
     end_type_statement: $ => blockStructureEnding1($, 'type', $._name),
 
-    _type_name: $ => alias($.identifier, $.type_name),
-
     derived_type_procedures: $ => seq(
       $.contains_statement,
       repeat(choice(
@@ -867,8 +866,7 @@ module.exports = grammar({
 
     variable_declaration: $ => seq(
       field('type', choice(
-        $.intrinsic_type,
-        $.derived_type,
+        $._decl_type_spec,
         alias($.procedure_declaration, $.procedure),
         $.declared_type,
       )),
@@ -893,8 +891,7 @@ module.exports = grammar({
         optional(
           choice(
             alias($.identifier, $.procedure_interface),
-            $.intrinsic_type,
-            $.derived_type,
+            $._decl_type_spec,
           )
         ),
         ')'
@@ -979,12 +976,31 @@ module.exports = grammar({
       optional(field('kind', $.kind)),
     ),
 
+    _type_name: $ => alias($.identifier, $.type_name),
+
+    // These next few nodes are very similar, the difference is whether or not
+    // derived types require the `type(..)` keyword or not. There are a couple
+    // of contexts where it's not used, because Fortran.
+
+    _derived_type: $ => seq(
+      field('name', $._type_name),
+      optional(field('kind', $.kind))
+    ),
+
+    // Derived type doesn't use `type(..)`
+    _non_decl_type_spec: $ => choice(
+      $.intrinsic_type,
+      alias($._derived_type, $.derived_type),
+    ),
+
     derived_type: $ => seq(
       choice(caseInsensitive('type'), caseInsensitive('class')),
       '(',
       // Strictly, only `class` can be unlimited polymorphic
       choice(
         seq(
+          // We don't use one of the type-spec nodes here so that we get the
+          // `kind` node as a _sibling_ rather than a child
           field('name', choice(
             prec.dynamic(1, alias($._intrinsic_type, $.intrinsic_type)),
             $._type_name,
@@ -994,6 +1010,12 @@ module.exports = grammar({
         $.unlimited_polymorphic
       ),
       ')'
+    ),
+
+    // Derive type requires `type(..)`
+    _decl_type_spec: $ => choice(
+      $.intrinsic_type,
+      $.derived_type,
     ),
 
     declared_type: $ => seq(
@@ -1086,6 +1108,7 @@ module.exports = grammar({
       caseInsensitive('elemental'),
       caseInsensitive('impure'),
       caseInsensitive('module'),
+      caseInsensitive('non_recursive'),
       caseInsensitive('pure'),
       caseInsensitive('recursive'),
       caseInsensitive('simple'),
@@ -1630,7 +1653,7 @@ module.exports = grammar({
             whiteSpacedKeyword('class', 'is')
           ),
           choice(
-            seq('(', field('type', choice($.intrinsic_type, $.identifier)), ')'),
+            seq('(', field('type', $._non_decl_type_spec), ')'),
           ),
         ),
         seq(
@@ -1713,7 +1736,7 @@ module.exports = grammar({
     _transfer_items: $ => sep1($._transfer_item, optional(',')),
 
     // H is not a valid edit descriptor because it clashes with Hollerith constants
-    edit_descriptor: $ => choice('/', /[a-gi-zA-GI-Z0-9:.*$]+/),
+    edit_descriptor: $ => choice('/', /[-a-gi-zA-GI-Z0-9:.*$]+/),
 
     _io_arguments: $ => seq(
       '(',
@@ -1883,13 +1906,7 @@ module.exports = grammar({
     allocate_statement: $ => seq(
       caseInsensitive('allocate'),
       '(',
-      optional(field('type', seq(
-        choice(
-          $.intrinsic_type,
-          $.identifier,
-        ),
-        '::'
-      ))),
+      optional(field('type', seq($._non_decl_type_spec, '::'))),
       commaSep1(field('allocation', choice(
         $.identifier,
         $.derived_type_member_expression,
@@ -1985,10 +2002,10 @@ module.exports = grammar({
 
     logical_expression: $ => {
       const table = [
-        [caseInsensitive('.or.'), PREC.LOGICAL_OR],
-        [caseInsensitive('.and.'), PREC.LOGICAL_AND],
-        [caseInsensitive('.eqv.'), PREC.LOGICAL_EQUIV],
-        [caseInsensitive('.neqv.'), PREC.LOGICAL_EQUIV]
+        [caseInsensitiveSpliced('.or.'), PREC.LOGICAL_OR],
+        [caseInsensitiveSpliced('.and.'), PREC.LOGICAL_AND],
+        [caseInsensitiveSpliced('.eqv.'), PREC.LOGICAL_EQUIV],
+        [caseInsensitiveSpliced('.neqv.'), PREC.LOGICAL_EQUIV]
       ]
 
       return choice(...table.map(([operator, precedence]) => {
@@ -1999,7 +2016,7 @@ module.exports = grammar({
         ))
       }).concat(
         [prec.left(PREC.LOGICAL_NOT, seq(
-          field('operator', caseInsensitive('.not.')),
+          field('operator', caseInsensitiveSpliced('.not.')),
           field('argument', $._expression)))])
       )
     },
@@ -2007,17 +2024,17 @@ module.exports = grammar({
     relational_expression: $ => {
       const operators = [
         '<',
-        caseInsensitive('.lt.'),
+        caseInsensitiveSpliced('.lt.'),
         '>',
-        caseInsensitive('.gt.'),
+        caseInsensitiveSpliced('.gt.'),
         '<=',
-        caseInsensitive('.le.'),
+        caseInsensitiveSpliced('.le.'),
         '>=',
-        caseInsensitive('.ge.'),
+        caseInsensitiveSpliced('.ge.'),
         '==',
-        caseInsensitive('.eq.'),
+        caseInsensitiveSpliced('.eq.'),
         '/=',
-        caseInsensitive('.ne.')
+        caseInsensitiveSpliced('.ne.')
       ]
 
       return choice(...operators.map((operator) => {
@@ -2150,12 +2167,10 @@ module.exports = grammar({
 
     _array_constructor_f2003: $ => seq('[', $._ac_value_list, ']'),
 
-    _type_spec: $ => seq(choice($.intrinsic_type, $.derived_type), '::'),
-
     _ac_value_list: $ => choice(
-      field('type', $._type_spec),
+      seq(field('type', $._non_decl_type_spec), '::'),
       seq(
-        optional(field('type', $._type_spec)),
+        optional(seq(field('type', $._non_decl_type_spec), '::')),
         commaSep1($._expression)
       )
     ),
@@ -2219,7 +2234,14 @@ module.exports = grammar({
         // also need to *capture* it here
         token.immediate('_'),
       )),
-      $._string_literal,
+      alias($.string_literal_start, '"'),
+      repeat($._string_literal_content),
+      alias($.string_literal_end, '"'),
+    ),
+
+    _string_literal_content: $ => seq(
+      optional(alias($.string_literal_quote, '\\')),
+      repeat1($.string_content),
     ),
 
     // Coarrays
@@ -2421,6 +2443,33 @@ module.exports.PREC = PREC
 // always use alias, as a regexp is used to compare case-insensitively,
 // default is to use the keyword itself, but a rule/named node $.my_name
 // can be provided optionally
+// Like caseInsensitive, but additionally allows a free-form line
+// continuation ("&" newline "&") between any two characters of the
+// keyword. The standard (F2018 6.3.2.4) allows splitting any lexical
+// token this way; in legacy code it shows up mainly in spliced dotted
+// operators, e.g.:
+//
+//     if (i .ne. 30000.&
+//          &and. j .lt. 5) ...
+//
+// where the leading '.' of `.and.` ends the first line. Comment lines are
+// also allowed between the two continuation markers, e.g. `.&\n!comment\n&and.`.
+function caseInsensitiveSpliced (keyword, aliasValue = keyword) {
+  const continuation = '(?:&[ \\t]*\\r?\\n(?:[ \\t]*![^\\r\\n]*\\r?\\n)*[ \\t]*&)?'
+  const pattern = keyword
+    .split('')
+    .map(l => {
+      if (l.match(/[a-zA-Z]/)) return `[${l.toLowerCase()}${l.toUpperCase()}]`
+      if (l.match(/[0-9_]/))   return l
+      if (l === '.')           return '\\.'
+      throw new Error(`caseInsensitiveSpliced: unhandled character '${l}' in keyword '${keyword}'`)
+    })
+    .join(continuation)
+
+  // default: aliasValue = keyword
+  return alias(new RegExp(pattern), aliasValue)
+}
+
 function caseInsensitive (keyword, aliasValue = keyword) {
   const pattern = keyword
     .split('')
