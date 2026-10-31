@@ -1,7 +1,8 @@
 #include <string.h>
-#include <tree_sitter/alloc.h>
-#include <tree_sitter/parser.h>
 #include <wctype.h>
+
+#include "tree_sitter/alloc.h"
+#include "tree_sitter/parser.h"
 
 enum TokenType {
   BRACKET_ARGUMENT_OPEN,
@@ -106,7 +107,7 @@ static bool is_close_brackets(struct TreeSitterCMakeState *state,
 }
 
 void *tree_sitter_cmake_external_scanner_create() {
-  return ts_malloc(sizeof(struct TreeSitterCMakeState));
+  return ts_calloc(1, STATE_SIZE);
 }
 
 void tree_sitter_cmake_external_scanner_destroy(void *payload) {

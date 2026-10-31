@@ -30,13 +30,17 @@ module.exports = grammar({
       'merge',
       'binary_comparison',
       'binary_equality',
-      'logical_and',
-      'logical_or',
+      'logical', // `&&` and `||` share one level, as in VRL's parser
       'error_coalesce',
     ],
     [
       'assign',
     ],
+  ],
+
+  // `}` NEWLINE `else` continues an if; a bare NEWLINE ends it
+  conflicts: $ => [
+    [$.if_statement],
   ],
 
   word: $ => $.ident,
@@ -56,6 +60,7 @@ module.exports = grammar({
       $.if_statement,
       $.abort,
       $.return,
+      $.break,
       $._assignment_expr,
     ),
 
@@ -69,8 +74,8 @@ module.exports = grammar({
     binary_expression: $ => choice(
       ...[
         ['??', 'error_coalesce'],
-        ['||', 'logical_or'],
-        ['&&', 'logical_and'],
+        ['||', 'logical'],
+        ['&&', 'logical'],
 
         ['!=', 'binary_equality'],
         ['==', 'binary_equality'],
@@ -123,13 +128,14 @@ module.exports = grammar({
       $.object,
     ),
 
-    if_statement: $ => prec.left(seq(
+    if_statement: $ => prec.dynamic(1, seq(
       'if',
       field('condition', $.predicate),
       repeat($._non_terminal_newline),
       $.block,
 
       repeat(seq(
+        repeat($._non_terminal_newline),
         'else',
         repeat($._non_terminal_newline),
         'if',
@@ -138,7 +144,7 @@ module.exports = grammar({
         $.block,
       )),
 
-      optional(seq('else', repeat($._non_terminal_newline), $.block)),
+      optional(seq(repeat($._non_terminal_newline), 'else', repeat($._non_terminal_newline), $.block)),
     )),
 
     predicate: $ => choice(
@@ -294,6 +300,7 @@ module.exports = grammar({
       'false',
       'abort',
       'return',
+      'break',
     ),
 
     block: $ => seq(
@@ -404,6 +411,8 @@ module.exports = grammar({
         ),
       ),
 
+    break: _ => 'break',
+
     comment: $ => token(prec(-10, /#.*/)),
 
     float: $ => token(
@@ -437,7 +446,10 @@ module.exports = grammar({
 
     escape_sequence: _ => token.immediate(seq(
       '\\',
-      /('|"|\\|n|\n|0|r|t|\{|\})/,
+      choice(
+        /('|"|\\|n|\n|0|r|t|\{|\})/,
+        /u\{[0-9a-fA-F]{1,6}\}/,
+      ),
     )),
 
     raw_string: $ => seq(
@@ -475,19 +487,17 @@ module.exports = grammar({
 
     null: $ => 'null',
 
-    timestamp: $ => seq(
+    // Relaxed RFC 3339 as accepted by chrono (which VRL's compiler uses), e.g.
+    // t'2021-02-11T10:32:50.553-04:00'. Anything else is a parse error.
+    // shortcut: no unpadded numbers or inner spaces, nobody writes those; widen if needed.
+    timestamp: _ => token(seq(
       't\'',
-      repeat($._timestamp_content),
+      /\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])/,
+      /[Tt ]/,
+      /([01]\d|2[0-3]):[0-5]\d:([0-5]\d|60)(\.\d+)?/,
+      /([Zz]|[Uu][Tt][Cc]|[+-]([01]\d|2[0-3]):?[0-5]\d)/,
       '\'',
-    ),
-
-    _timestamp_content: $ => choice(
-      token.immediate(prec(1, /[^\\'\n]+/)),
-      token.immediate(seq(
-        '\\',
-        /('|\\)/,
-      )),
-    ),
+    )),
 
     ident: _ => token(/[_a-zA-Z0-9][a-zA-Z0-9_]*/),
 
