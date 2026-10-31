@@ -277,7 +277,7 @@ export default grammar({
         $,
         "customize-mode",
         cmdOpts(options($, "NZ"), $._format, $._filter, $._target_pane),
-        $.template,
+        optional($.template),
       ),
     delete_buffer_directive: $ =>
       command($, choice("delete-buffer", "deleteb"), cmdOpts($._buffer_name)),
@@ -916,7 +916,7 @@ export default grammar({
         $._command_string,
       ),
 
-    comment: _ => seq('#', /[^\n]*/),
+    comment: $ => seq('#', /[ \t\v]*/, alias(/[^\n]*/, $.body)),
     _space: _ => prec(-1, repeat1(/[ \t]/)),
   },
 });
