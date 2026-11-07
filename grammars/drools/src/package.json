@@ -1,6 +1,6 @@
 {
   "name": "tree-sitter-drools",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Drools grammar for tree-sitter",
   "type": "module",
   "repository": {

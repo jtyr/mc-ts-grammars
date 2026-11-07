@@ -1,10 +1,26 @@
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
 
-module.exports = grammar({
+// Operator precedence rules, from loosest to tightest, based on Tera's (v1) parser.
+const PREC = {
+	or: 1,
+	and: 2,
+	not: 3,
+	compare: 4,
+	filter: 5,
+	add: 6,
+	multiply: 7,
+	negate: 8,
+};
+
+export default grammar({
 	name: 'tera',
 
-	externals: ($) => [$.frontmatter_delimiter, $.content],
+	externals: ($) => [$.frontmatter_delimiter, $.content, $.raw_content],
+
+	// Following a branch's `%}`, `{%` either starts a nested tag or the next branch
+	// (`{% elif %}`, `{% else %}`, `{% endif %}`), only the keyword itself can distinguish.
+	conflicts: ($) => [[$.elif_clause], [$.else_clause]],
 
 	rules: {
 		source_file: ($) => seq(optional($.frontmatter), repeat($._template)),
@@ -59,16 +75,25 @@ module.exports = grammar({
 					field('right', $._value),
 				);
 			return choice(
-				...['*', '/', '%'].map((op) => prec.left(2, exp(op))),
-				...['+', '-', '~'].map((op) => prec.left(1, exp(op))),
-				...['==', '!=', '<', '>', '<=', '>=', 'in', 'and', 'or'].map(
-					(op) => prec.left(exp(op)),
-				),
+				...['*', '/', '%'].map((op) => prec.left(PREC.multiply, exp(op))),
+				...['+', '-', '~'].map((op) => prec.left(PREC.add, exp(op))),
+				...[
+					'==',
+					'!=',
+					'<',
+					'>',
+					'<=',
+					'>=',
+					'in',
+					seq('not', 'in'),
+				].map((op) => prec.left(PREC.compare, exp(op))),
+				prec.left(PREC.and, exp('and')),
+				prec.left(PREC.or, exp('or')),
 			);
 		},
 		filter_expression: ($) =>
 			prec.left(
-				2,
+				PREC.filter,
 				seq(
 					field('value', $._value),
 					field('operator', '|'),
@@ -77,7 +102,10 @@ module.exports = grammar({
 				),
 			),
 		unary_expression: ($) =>
-			prec(3, choice(seq('-', $._value), seq('not', $._value))),
+			choice(
+				prec(PREC.negate, seq('-', $._value)),
+				prec(PREC.not, seq('not', $._value)),
+			),
 		assignment_expression: ($) =>
 			seq(
 				field('left', choice($.identifier, $.member_expression)),
@@ -96,11 +124,18 @@ module.exports = grammar({
 			),
 		test_expression: ($) =>
 			seq(
-				field('value', $._value),
+				field('value', choice($.identifier, $.member_expression)),
 				'is',
 				optional('not'),
 				field('test', $.identifier),
-				optional(field('argument', seq('(', $._value, ')'))),
+				optional(
+					seq(
+						'(',
+						field('argument', $._value),
+						repeat(seq(',', field('argument', $._value))),
+						')',
+					),
+				),
 			),
 
 		// Something that can resolve to a value.
@@ -116,6 +151,7 @@ module.exports = grammar({
 				$.unary_expression,
 				$.call_expression,
 				$.filter_expression,
+				$.test_expression,
 			),
 
 		/* Tags */
@@ -128,8 +164,7 @@ module.exports = grammar({
 			),
 
 		// Comment
-		comment_tag: ($) =>
-			seq(choice('{#', '{#-'), /[^#]+/, choice('#}', '-#}')),
+		comment_tag: (_) => token(seq('{#', /[^#]*#+([^#}][^#]*#+)*/, '}')),
 
 		// Expression
 		expression_tag: ($) =>
@@ -155,10 +190,7 @@ module.exports = grammar({
 		if_statement: ($) =>
 			seq(
 				statement(
-					seq(
-						'if',
-						field('condition', choice($._value, $.test_expression)),
-					),
+					seq('if', field('condition', $._value)),
 				),
 				field('consequence', repeat($._template)),
 				optional(field('alternative', repeat($.elif_clause))),
@@ -166,25 +198,14 @@ module.exports = grammar({
 				statement('endif'),
 			),
 		elif_clause: ($) =>
-			prec.right(
-				1,
-				seq(
-					statement(
-						field(
-							'condition',
-							seq('elif', choice($._value, $.test_expression)),
-						),
-					),
-					field('consequence', repeat($._template)),
-				),
+			seq(
+				statement(field('condition', seq('elif', $._value))),
+				field('consequence', repeat($._template)),
 			),
 		else_clause: ($) =>
-			prec.right(
-				1,
-				seq(
-					statement('else'),
-					field('consequence', repeat($._template)),
-				),
+			seq(
+				statement('else'),
+				field('consequence', repeat($._template)),
 			),
 		for_statement: ($) =>
 			seq(
@@ -215,7 +236,7 @@ module.exports = grammar({
 				seq(
 					'include',
 					choice($.string, $.array),
-					optional('ignore missing'),
+					optional(seq('ignore', 'missing')),
 				),
 			),
 		import_statement: ($) =>
@@ -250,7 +271,13 @@ module.exports = grammar({
 			),
 		filter_statement: ($) =>
 			seq(
-				statement(seq('filter', $.identifier)),
+				statement(
+					seq(
+						'filter',
+						field('filter', $.identifier),
+						optional(field('arguments', $.argument_list)),
+					),
+				),
 				repeat($._template),
 				statement('endfilter'),
 			),
@@ -258,12 +285,12 @@ module.exports = grammar({
 			seq(
 				statement(seq('block', $.identifier)),
 				repeat($._template),
-				statement(seq('endblock', $.identifier)),
+				statement(seq('endblock', optional($.identifier))),
 			),
 		raw_statement: ($) =>
 			seq(
 				statement('raw'),
-				field('body', repeat($._template)),
+				optional(field('body', $.raw_content)),
 				statement('endraw'),
 			),
 	},
