@@ -82,6 +82,12 @@ const OP_OTHER_FIRST = "#?@\\\\~" + SM_NONASCII + "\\p{So}";
 
 const opRegex = body => new RegExp(body, "u");
 
+// The letters of a name outside ASCII. Every one of them can start a name
+// and continue one. The name tokens spell their ASCII letters apart from
+// these, so the lexer tests the short ASCII ranges before this large set.
+const ID_NON_ASCII =
+  "[[\\p{Lu}\\p{Lt}\\p{Nl}\\p{Lo}\\p{Lm}\\p{Ll}\\u00AA\\u00BB\\u02B0-\\u02B8\\u02C0-\\u02C1\\u02E0-\\u02E4\\u037A\\u1D78\\u1D9B-\\u1DBF\\u2071\\u207F\\u2090-\\u209C\\u2C7C-\\u2C7D\\uA69C-\\uA69D\\uA770\\uA7F8-\\uA7F9\\uAB5C-\\uAB5F]&&[^\\x00-\\x7F]]";
+
 // One token per SLS 6.12.3 precedence class, split by the final character:
 // `:` makes an operator right-associative, `=` demotes it to assignment
 // precedence unless it is `<=`, `>=`, `!=` or starts with `=`. The
@@ -404,6 +410,9 @@ module.exports = grammar({
     // that Scala 2 reads as an identifier (`enum`), so the scanner lexes the
     // name rather than an infix operator.
     $._name_gate,
+    // An INDENT that opens the body of a case clause. Only the body takes
+    // it, so the scanner knows the region is a case body.
+    $._case_body_indent,
   ],
 
   inline: $ => [
@@ -439,6 +448,20 @@ module.exports = grammar({
     $._xml_pattern_content,
     $._structural_type,
     $._refinement,
+    // Hidden wrappers on hot paths. Each one cost a tree node per use, and
+    // inlining these adds under 1MiB to parser.c. Error recovery is the only
+    // output that depends on them.
+    $._infix_operand,
+    $._semis,
+    $._top_level_definition,
+    $._namespace_path_segment,
+    $._function_declaration,
+    $._parameters_tail,
+    $._definition_body,
+    $._expr_case_clause,
+    $._constructor_applications,
+    $._start_val,
+    $._using_parameters_clause,
   ],
 
   // Doc: https://tree-sitter.github.io/tree-sitter/creating-parsers, search "precedences"
@@ -2260,10 +2283,11 @@ module.exports = grammar({
       ),
 
     // `{ x: T => body }` is legal only as a block result. The weight beats
-    // the reading of `x: T` as a statement taking a colon argument.
+    // the reading of `x: T` as a statement taking a colon argument, even when
+    // `T` is a parenthesized tuple type that could match `_colon_bindings` (dynamic prec 3).
     _braced_typed_lambda: $ =>
       prec.dynamic(
-        1,
+        4,
         prec.right(
           "lambda",
           seq(
@@ -2454,7 +2478,26 @@ module.exports = grammar({
 
     case_clause: $ =>
       prec.left(
-        seq("case", $._case_pattern, field("body", optional($._block))),
+        seq(
+          "case",
+          $._case_pattern,
+          field("body", optional(choice($._block, $._indented_case_body))),
+        ),
+      ),
+
+    // A case body that starts on a deeper line than `case` is an indentation
+    // region, as in scalac: its lines are measured against the body's width,
+    // so `if c then` + a line at the `if`'s width opens no nested region.
+    // As in scalac, statements may follow on lines that close the region but
+    // stay deeper than `case`.
+    _indented_case_body: $ =>
+      prec.left(
+        seq(
+          $._case_body_indent,
+          $._block,
+          choice($._outdent, $._comma_outdent),
+          optional(seq(optional($._semis), $._block_statements)),
+        ),
       ),
 
     // Dynamic precedence to win over lambda_expression in complex contexts
@@ -2491,7 +2534,7 @@ module.exports = grammar({
       prec(
         PREC.call,
         seq(
-          field("function", $.expression),
+          field("function", $._simple_expression),
           field("type_arguments", $.type_arguments),
         ),
       ),
@@ -2901,7 +2944,9 @@ module.exports = grammar({
     _alpha_identifier: $ =>
       token(
         seq(
-          /[\p{Lu}\p{Lt}\p{Nl}\p{Lo}\p{Lm}\$\p{Ll}_\u00AA\u00BB\u02B0-\u02B8\u02C0-\u02C1\u02E0-\u02E4\u037A\u1D78\u1D9B-\u1DBF\u2071\u207F\u2090-\u209C\u2C7C-\u2C7D\uA69C-\uA69D\uA770\uA7F8-\uA7F9\uAB5C-\uAB5F\$][\p{Lu}\p{Lt}\p{Nl}\p{Lo}\p{Lm}\$\p{Ll}_\u00AA\u00BB\u02B0-\u02B8\u02C0-\u02C1\u02E0-\u02E4\u037A\u1D78\u1D9B-\u1DBF\u2071\u207F\u2090-\u209C\u2C7C-\u2C7D\uA69C-\uA69D\uA770\uA7F8-\uA7F9\uAB5C-\uAB5F0-9\$_\p{Ll}]*/,
+          new RustRegex(
+            `(?:[A-Za-z$_][A-Za-z0-9$_]*|${ID_NON_ASCII}[A-Za-z0-9$_]*)(?:${ID_NON_ASCII}[A-Za-z0-9$_]*)*`,
+          ),
           optional(opRegex(`_(?:${OP_STEP}+|/)`)),
         ),
       ),

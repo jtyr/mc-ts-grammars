@@ -78,7 +78,7 @@ enum TokenType {
   /* zero-width lookahead tokens */
   TOKEN_BRACE_END_ZW,
   TOKEN_DOLLAR_IDENT_ZW,
-  TOKEN_NO_INTERP_WHITESPACE_ZW,
+  TOKEN_NO_INTERP_EXTRA_ZW,
   TOKEN_NO_INTERP_BACKSLASH_ZW,
   /* zero-width high priority token */
   TOKEN_NONASSOC,
@@ -872,13 +872,21 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     }
   }
 
-  if (!is_ERROR && iswspace(c) && valid_symbols[TOKEN_NO_INTERP_WHITESPACE_ZW]) {
-    TOKEN(TOKEN_NO_INTERP_WHITESPACE_ZW);
+  /* A sigil (or `->`) followed by whitespace or `#` stays literal: perl reads
+   * on as string content, but the lexer would skip either as an extra (a `#`
+   * as a comment that eats the rest of the line, "a@#b"). */
+  if (!is_ERROR && (iswspace(c) || c == '#') && valid_symbols[TOKEN_NO_INTERP_EXTRA_ZW]) {
+    TOKEN(TOKEN_NO_INTERP_EXTRA_ZW);
   }
   if (!is_ERROR && c == '\\' && valid_symbols[TOKEN_NO_INTERP_BACKSLASH_ZW]) {
     TOKEN(TOKEN_NO_INTERP_BACKSLASH_ZW);
   }
-  crossed_newline = skip_ws_to_eol(lexer);
+  /* Inside a quote, leading whitespace is content (`" a"`, `' '`); skipping
+   * it as an extra drops it from the string and leaves a blank literal with
+   * no content at all. */
+  bool wants_quote_content =
+    !is_ERROR && (valid_symbols[TOKEN_Q_STRING_CONTENT] || valid_symbols[TOKEN_QQ_STRING_CONTENT]);
+  if (!wants_quote_content) crossed_newline = skip_ws_to_eol(lexer);
   /* heredocs override everything, so they must be here before */
   if (valid_symbols[TOKEN_HEREDOC_START]) {
     if (state->heredoc_state == HEREDOC_START && lexer->get_column(lexer) == 0) {
@@ -918,7 +926,7 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     TOKEN(TOKEN_ATTRIBUTE_VALUE);
   }
 
-  if (is_tsp_whitespace(c)) {
+  if (is_tsp_whitespace(c) && !wants_quote_content) {
     // NOTE - the first whitespace skipping is skip_ws_to_eol over in heredoc
     // handling
     skipped_whitespace = true;
@@ -1241,7 +1249,10 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     TOKEN(TOKEN_BACKTICK);
   }
 
-  if (valid_symbols[TOKEN_DOLLAR_IN_REGEXP] && c == '$') {
+  /* A '$' that closes the quote (m$...$, qr$...$, s$...$...$) is the closer,
+   * never an anchor or a sigil: leave it for QUOTELIKE_END below. */
+  if (valid_symbols[TOKEN_DOLLAR_IN_REGEXP] && c == '$' &&
+      !lexerstate_is_quote_closer(state, c)) {
     DEBUG("Dollar in regexp\n", 0);
     ADVANCE_C;
 
@@ -1321,9 +1332,7 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   // (`s=a\n=b=`) is the delimiter, not POD, even before a letter
   // Inside a quote, a column-0 `=` is content (`print "\n` then `====`), so
   // POD is only tried where the parser isn't asking for string content
-  bool in_quote_content =
-    !is_ERROR && (valid_symbols[TOKEN_Q_STRING_CONTENT] || valid_symbols[TOKEN_QQ_STRING_CONTENT]);
-  if (valid_symbols[TOKEN_POD] && !valid_symbols[TOKEN_QUOTELIKE_BEGIN] && !in_quote_content &&
+  if (valid_symbols[TOKEN_POD] && !valid_symbols[TOKEN_QUOTELIKE_BEGIN] && !wants_quote_content &&
       !lexerstate_is_quote_closer(state, '=')) {
     int column = lexer->get_column(lexer);
     if (column == 0 && c == '=') {
