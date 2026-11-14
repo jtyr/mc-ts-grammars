@@ -190,7 +190,7 @@ module.exports = grammar({
     /* zero-width lookahead tokens */
     $._brace_end_zw,
     $._dollar_ident_zw,
-    $._no_interp_whitespace_zw,
+    $._no_interp_extra_zw,
     $._no_interp_backslash_zw,
     /* zero-width high priority token */
     $._NONASSOC,
@@ -269,8 +269,11 @@ module.exports = grammar({
 
     _fullstmt: $ => choice($._barestmt, $.statement_label),
 
-    // perly.y calls this labfullstmt
-    statement_label: $ => seq(field('label', choice($.identifier, alias($._PHASE_NAME, $.identifier))), ':', field('statement', $._fullstmt)),
+    // perly.y calls this labfullstmt. perl reads a `}` (or EOF) as an implied
+    // `;`, so `L: }` labels an empty statement, the same one `L: ;` labels.
+    statement_label: $ => seq(
+      field('label', choice($.identifier, alias($._PHASE_NAME, $.identifier))), ':',
+      field('statement', choice($._fullstmt, alias($._PERLY_SEMICOLON, ';')))),
     _semicolon: $ => choice(';', $._PERLY_SEMICOLON),
 
     _barestmt: $ => choice(
@@ -412,8 +415,7 @@ module.exports = grammar({
     // `sub foo ($sig);`. Anonymous subs always need a body, so they keep
     // `_anon_sub_tail`; here we allow either a body or a terminating `;`.
     _sub_decl_tail: $ => seq(
-      optseq(':', optional(field('attributes', $.attrlist))),
-      optional(choice($.prototype, $.signature)),
+      optional($._sub_attrs_and_params),
       choice(field('body', alias($._body_block, $.block)), $._semicolon),
     ),
 
@@ -428,7 +430,12 @@ module.exports = grammar({
         optional($._else)
       ),
     _loop_body: $ => seq(field('block', alias($._body_block, $.block)), optseq('continue', field('continue', alias($._body_block, $.block)))),
-    loop_statement: $ => seq($._loops, '(', field('condition', $._expr), ')', $._loop_body),
+    // perly.y gives `while` a texpr, which may be empty (`while () {}` loops
+    // forever), and `until` an iexpr, which may not
+    loop_statement: $ => choice(
+      seq('while', '(', optional(field('condition', $._expr)), ')', $._loop_body),
+      seq('until', '(', field('condition', $._expr), ')', $._loop_body),
+    ),
     cstyle_for_statement: $ =>
       seq($._KW_FOR,
         '(',
@@ -800,9 +807,17 @@ module.exports = grammar({
     ),
 
     _anon_sub_tail: $ => seq(
-      optseq(':', optional(field('attributes', $.attrlist))),
-      optional(choice($.prototype, $.signature)),
+      optional($._sub_attrs_and_params),
       field('body', $.block),
+    ),
+
+    // perly.y puts a prototype before the attributes (`sub f ($) :lvalue`) and
+    // a signature after them (`sub f :lvalue ($x)`); one shared rule keeps the
+    // named and anonymous tails from drifting apart.
+    _sub_attrs_and_params: $ => choice(
+      seq(':', optional(field('attributes', $.attrlist)), optional(choice($.prototype, $.signature))),
+      choice($.prototype, $.signature),
+      seq($.prototype, ':', optional(field('attributes', $.attrlist))),
     ),
 
     anonymous_subroutine_expression: $ => seq(
@@ -1346,9 +1361,9 @@ module.exports = grammar({
       )
     ),
     _interpolation_fallbacks: $ => choice(
-      // a lone `@` before whitespace or a backslash stays literal; the backslash
+      // a lone `@` before whitespace, `#` or a backslash stays literal; the backslash
       // is left for the escape that follows ("\"@\"", m/[@\/]/)
-      seq('@', choice($._no_interp_whitespace_zw, $._no_interp_backslash_zw)),
+      seq('@', choice($._no_interp_extra_zw, $._no_interp_backslash_zw)),
       // Most array punctuation vars do not interpolate
       // we need the zw quote-end for "" (we leave regular _end so the scanner looks for it)
       seq('@', choice(/[^A-Za-z0-9_\$'+:\\-]/, $._quotelike_end_zw, $._quotelike_end)),
@@ -1358,7 +1373,7 @@ module.exports = grammar({
         alias(token.immediate('->'), 'not-interpolated'),
         choice(
           // handle "$ting->@ {blah}" and "$ting-> {blah}"
-          seq(optional(choice('@', '$')), $._no_interp_whitespace_zw),
+          seq(optional(choice('@', '$')), $._no_interp_extra_zw),
           // "$ting->" at the end of the string (listing the real end too makes the
           // scanner consider the zero-width one, as for "@" above), and "$ting->\n"
           // (the escape stays an escape)
@@ -1487,7 +1502,7 @@ module.exports = grammar({
         alias($._regexp_open_brace, '{'),
         $._interpolation_fallbacks,
         $._interpolations,
-        seq('$', $._no_interp_whitespace_zw),
+        seq('$', $._no_interp_extra_zw),
       )
     ),
 

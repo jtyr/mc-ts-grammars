@@ -58,7 +58,7 @@
 - language: apex
   name: soql
   url: https://github.com/aheber/tree-sitter-sfapex
-  ref: 218083d5ddd8d8614e9e31a6c203807f61f43348
+  ref: 1a4baf203f0bf1b8ab8bcaed3a6ce011a9c1837f
   path: soql
   metadata:
     hasParser: true
@@ -208,7 +208,7 @@
 - language: beancount
   url: https://github.com/polarmutex/tree-sitter-beancount
   branch: master
-  ref: c8a9780610dbe8ade4888045b1f2caa7a0a9d8aa
+  ref: 97e38a1f9a20ec3d34ea9381bb45f2ba988c0de0
   metadata:
     hasParser: true
     hasScanner: true
@@ -1168,7 +1168,7 @@
 
 - language: fluentbit
   url: https://github.com/sh-cho/tree-sitter-fluentbit
-  ref: cf54dcc0a9f68ad838144b5d3b3c64c4d29b6c8c
+  ref: 7e02756fdf7efb0333a2443abbffc9e0bc5998b9
   metadata:
     hasParser: true
     hasHighlights: true
@@ -1209,7 +1209,7 @@
 - language: fortran
   url: https://github.com/stadelmanma/tree-sitter-fortran
   branch: master
-  ref: 72f8759dea28ff6671e0868a9ed5ad4a18413917
+  ref: d05165a6f0bd044ba1f89865927a752dd5168e66
   release: true
   metadata:
     hasParser: true
@@ -2385,7 +2385,7 @@
 
 - language: liquidsoap
   url: https://github.com/savonet/tree-sitter-liquidsoap
-  ref: v1.2.3
+  ref: v1.2.4
   metadata:
     hasParser: true
     hasScanner: true
@@ -2758,7 +2758,7 @@
 - language: nix
   url: https://github.com/nix-community/tree-sitter-nix
   branch: master
-  ref: e9f150648a7e0015b77f4c9b315648b389d6364e
+  ref: 64d4f7827dc1a8c7c88108ffdb47b961a729df05
   metadata:
     hasParser: true
     hasScanner: true
@@ -2875,7 +2875,7 @@
 - language: ocaml
   url: https://github.com/tree-sitter/tree-sitter-ocaml
   branch: master
-  ref: 3b2e14e0697d405c9aa0beddfa09b71f45abc504
+  ref: a1c562e73ab787dcc69fdc2e5510c53bbce5364f
   release: true
   path: grammars/ocaml
   metadata:
@@ -3001,7 +3001,7 @@
 - language: perl
   url: https://github.com/tree-sitter-perl/tree-sitter-perl
   branch: master
-  ref: 80781e3dd98108199a3a1b5860f00fac22088b79
+  ref: 5e30b919b86ea7dfbf8525537e1523af235e140d
   release: true
   generate: true
   metadata:
@@ -3573,7 +3573,7 @@
 - language: roc
   url: https://github.com/faldor20/tree-sitter-roc
   branch: master
-  ref: 7f9ae855ba7819c5d9279853691fd072e233226b
+  ref: 19cc6243c82b2f706810ea71fb8d89000b68b335
   metadata:
     hasParser: true
     hasScanner: true
@@ -3673,7 +3673,7 @@
 
 - language: scala
   url: https://github.com/tree-sitter/tree-sitter-scala
-  ref: v0.26.9
+  ref: v0.26.13
   release: true
   metadata:
     hasParser: true
@@ -3724,7 +3724,7 @@
 
 - language: sdml
   url: https://github.com/sdm-lang/tree-sitter-sdml
-  ref: 1b9cebf8fd5a83c36456111c8c0a7a664ce78fb3
+  ref: 7dae983f0f827bde51eaa555230f969e312c88b1
   metadata:
     hasParser: true
     hasHighlights: true
@@ -3986,7 +3986,7 @@
 
 - language: ssh_client_config
   url: https://github.com/metio/tree-sitter-ssh-client-config
-  ref: 71c633a9803ba614b4d90cf35712ee070991c456
+  ref: 499fa3d1a48579589b83a617e3dd23a703663853
   metadata:
     hasParser: true
     hasHighlights: true
@@ -4140,7 +4140,7 @@
 
 - language: swift
   url: https://github.com/alex-pinkus/tree-sitter-swift
-  ref: 9e3b87f66f1fd2f3b931376fd3723ab788e337c3
+  ref: a1d4a7b80260bf960f9e25198cddecbe5e6c46aa
   release: true
   generate: true
   metadata:
@@ -4203,7 +4203,7 @@
 - language: systemverilog
   url: https://github.com/gmlarumbe/tree-sitter-systemverilog
   branch: master
-  ref: 08c5e379b9b6022d4c433a9249e6d54dedd051ba
+  ref: 73d7620ffdc467aab3c2089be9be5cbbc1be2eaa
   metadata:
     hasParser: true
     hasHighlights: true
@@ -4261,7 +4261,7 @@
 
 - language: tcl
   url: https://github.com/tree-sitter-grammars/tree-sitter-tcl
-  ref: 850a72ab6436e06645b33b11cfa60cbdb04b1f01
+  ref: 90e87ed495a04fd0bf18db4be12b7033cd7402f6
   release: true
   metadata:
     hasParser: true
