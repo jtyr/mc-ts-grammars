@@ -1,4 +1,5 @@
 /* SPDX-FileCopyrightText: 2022 Christoph Sax <c_sax@mailbox.org>
+ * SPDX-FileCopyrightText: 2026 Philipp Foth <philipp.foth@lauterbach.com>
  *
  * SPDX-License-Identifier: MIT
  */
@@ -56,6 +57,9 @@ typedef struct pathScan_s {
 	bool has_letters;
 	sequences_t seq[1];
 	unsigned num_total_slashes;
+	unsigned num_total_backslashes;
+	unsigned num_total_dots;
+	unsigned num_total_tildes;
 }
 pathScan_t;
 
@@ -189,7 +193,7 @@ static bool IsSpace(
 static bool IsSign(
 	int32_t const glyph)
 {
-	return (glyph == '+' && glyph <= '-');
+	return (glyph == '+' || glyph == '-');
 }
 
 
@@ -355,6 +359,8 @@ static unsigned ScanLengthDecimalNumber(
 	 * &e = 1.0%
 	 *
 	 * WINPOS A 50%,0
+	 *
+	 * WIDTH 4Lane
 	 */
 	MarkEnd(lexer);
 
@@ -399,6 +405,11 @@ static unsigned ScanLengthDecimalNumber(
 		lexer->lookahead == 'k' || lexer->lookahead == 'm' || lexer->lookahead == 'g' || lexer->lookahead == 'h' ||
 		lexer->lookahead == 'K' || lexer->lookahead == 'M' || lexer->lookahead == 'G' || lexer->lookahead == 'H'
 	) {
+		return 0u;
+	}
+
+	// Identifier starting with a number
+	if (IsAlpha(lexer->lookahead) || lexer->lookahead == '_') {
 		return 0u;
 	}
 
@@ -702,24 +713,23 @@ static bool ScanPathLiteral(
 	bool is_line_continuation = false;
 	bool is_option = false;
 	bool is_symbol = false;
+	bool is_binop = false;
 
 	pathScan_t scan[1] = {{0}};
 
 	unsigned ii = 0u;
 	while (!(IsSpace(lexer->lookahead) || IsEof(lexer))) {
-		if (
-			lexer->lookahead == '(' ||
-			lexer->lookahead == ')' ||
-			lexer->lookahead == '&' ||
-			lexer->lookahead == '%' ||
-			lexer->lookahead == '+' ||
-			lexer->lookahead == '"' ||
-			lexer->lookahead == '`' ||
-			lexer->lookahead == '\'' ||
-			((ii == 0u || scan->seq->num_tildes > 0u) && IsDecimalDigit(lexer->lookahead))
+		if (lexer->lookahead == '(' ||
+		    lexer->lookahead == ')' ||
+		    lexer->lookahead == '&' ||
+		    lexer->lookahead == '%' ||
+		    lexer->lookahead == '+' ||
+		    lexer->lookahead == '"' ||
+		    lexer->lookahead == '`' ||
+		    lexer->lookahead == '\'' ||
+		    ((ii == 0u || scan->seq->num_tildes > 0u) && IsDecimalDigit(lexer->lookahead))
 		) {
-			/*
-			 * Detect expressions containing tilde operators, macros or
+			/* Detect expressions containing tilde operators, macros or
 			 * time literals.
 			 */
 			is_expression = true;
@@ -744,14 +754,18 @@ static bool ScanPathLiteral(
 			scan->has_letters = true;
 		}
 
-		if (ii == 1 && lexer->lookahead == ':') {
+		if (ii == 1u && lexer->lookahead == ':') {
 			scan->has_drive = true;
 		}
-		else if (ii == 2 && scan->has_drive) {
-			scan->has_drive = (lexer->lookahead == '\\');
+		else if (ii == 2u && scan->has_drive) {
+			scan->has_drive = (lexer->lookahead == '\\' || lexer->lookahead == '/');
 		}
 		else if (lexer->lookahead == '*' || lexer->lookahead == '?') {
-			if (scan->seq->num_slashes > 0u || scan->seq->num_backslashes > 0u) {
+			if (
+				scan->seq->num_slashes > 0u ||
+				scan->seq->num_backslashes > 0u ||
+				scan->seq->num_dots > 0u
+			) {
 				scan->has_wildcard = true;
 			}
 		}
@@ -775,19 +789,44 @@ static bool ScanPathLiteral(
 		if (lexer->lookahead == '/') {
 			scan->num_total_slashes += 1u;
 		}
+		else if (lexer->lookahead == '\\') {
+			scan->num_total_backslashes += 1u;
+		}
+		else if (lexer->lookahead == '.') {
+			scan->num_total_dots += 1u;
+		}
+		else if (lexer->lookahead == '~') {
+			scan->num_total_tildes += 1u;
+		}
 
 		Advance(lexer);
 		ii += 1u;
 	}
 
-	if (scan->seq->num_backslashes > 0u && (lexer->lookahead == '\r' || lexer->lookahead == '\n')) {
+	if (scan->seq->num_backslashes > 0u &&
+	    (lexer->lookahead == '\r' || lexer->lookahead == '\n')
+	) {
 		is_line_continuation = true;
 	}
 	else if (is_option && scan->num_total_slashes != 1u) {
 		is_option = false;
 	}
 
-	if (is_comment || is_line_continuation || is_option || is_symbol) {
+	if (IsSign(lexer->lookahead) &&
+	    scan->num_total_backslashes > 0u &&
+	    scan->num_total_slashes <= 0u &&
+	    scan->num_total_tildes <= 0u &&
+	    scan->num_total_dots <= 0u
+	) {
+		is_binop = true;
+	}
+
+	if (is_comment ||
+	    is_line_continuation ||
+	    is_option ||
+	    is_symbol ||
+	    is_binop
+	) {
 		return false;
 	}
 
@@ -826,14 +865,17 @@ bool tree_sitter_t32_external_scanner_scan(
 
 	// Labels must start in the first column
 	if (valid_symbols[LABEL_IDENTIFIER] && lexer->get_column(lexer) == 0u) {
-		bool const starts_with_device_prefix = (lexer->lookahead == 'B');
+		bool const starts_with_device_prefix = (
+			lexer->lookahead == 'B' ||
+			lexer->lookahead == 'E'
+		);
 
 		unsigned const len = ScanLengthLabelIdentifier(lexer);
 		if (len > 0u && lexer->lookahead == ':') {
 			MarkEnd(lexer);
 			Advance(lexer);
 
-			/* B:: is a device prefix at the beginning of commands */
+			/* B:: or E:: are device prompts at the beginning of commands */
 			if (len == 1u && starts_with_device_prefix && lexer->lookahead == ':') {
 				return false;
 			}

@@ -2,6 +2,7 @@
  * Copyright (c) 2014 Max Brunsfeld
  * SPDX-FileCopyrightText: 2014 Max Brunsfeld
  * SPDX-FileCopyrightText: 2022 Christoph Sax <c_sax@mailbox.org>
+ * SPDX-FileCopyrightText: 2026 Philipp Foth <philipp.foth@lauterbach.com>
  *
  * SPDX-License-Identifier: MIT
  */
@@ -38,13 +39,16 @@ const PREC = {
 }
 
 const RE_BIN_HEX_NUMBER = [
-  /0y[0-9]+/,  // Binary
-  /0[xX][0-9a-fA-F]+/,  // Hexadecimal
+  /0y[0-9]+/,  // Binary number
+  /0[xX][0-9a-fA-F]+/,  // Hexadecimal number with prefix
+  /0+[a-fA-F][0-9a-fA-F]*/,  // Hexadecimal number without prefix (2+ digits)
+  /[a-fA-F]+[0-9][0-9a-fA-F]+/,  // Hexadecimal number without prefix (3+ digits)
 ]
 
+const RE_DEVICE_PROMPT = /((::)?[BE])?::/
+const RE_MACHINE_PROG_MOD_NAME = /\w+/
 const RE_QUOTED_SYMBOL_NAME = /`[^`\n]+`/
 const RE_UNQUOTED_SYMBOL_NAME = /[a-zA-Z_]\w*/
-const RE_MACHINE_PROG_MOD_NAME = /\w+/
 
 const RE_FUNCTION_NAME = /[a-zA-Z_]\w*(::[a-zA-Z_]\w*)*|`[^`\n]+`/
 const RE_METHOD_NAME = /[a-zA-Z_]\w*(::[a-zA-Z_]\w*)+/
@@ -73,13 +77,13 @@ module.exports = grammar({
     [$.hll_type_descriptor],
     [$.if_block],
     [$.memory_space],
+    [$.memory_space, $.address],
     [$.option_expression],
     [$.hll_option_expression],
     [$.symbol],
     [$._address_expression, $._literal],
     [$._binary_expression, $._and_expression],
     [$._command_argument, $.assignment_expression],
-    [$._expression, $._function_identifier],
     [$._expression, $._address_expression],
     [$._hll_declaration_specifiers],
     [$._hll_pointer_declarator_specifier],
@@ -141,6 +145,7 @@ module.exports = grammar({
     _non_labeled_statement: $ => choice(
       alias($.macro_assignment_expression, $.assignment_expression),
       $.command_expression,
+      $.device_selection,
       $.macro_definition,
       $.macro,
       $.if_block,
@@ -193,10 +198,13 @@ module.exports = grammar({
         ),
         seq(
           $._terminator,
-          optional(seq(
-            repeat($.comment),
-            $.block
-          ))
+          repeat($._filler_line),
+          optional($.block)
+        ),
+        seq(
+          $._terminator,
+          repeat1($._filler_line),
+          repeat1($._blank)
         )
       )
     )),
@@ -444,7 +452,7 @@ module.exports = grammar({
       }));
     },
 
-    assignment_expression: $ => prec.right(seq(
+    assignment_expression: $ => prec.left(seq(
       field('left', $._expression),
       repeat($._blank),
       field('operator', '='),
@@ -458,7 +466,7 @@ module.exports = grammar({
     ),
 
     macro_definition: $ => seq(
-      optional(/(::)?B::/),
+      optional(RE_DEVICE_PROMPT),
       field('command', alias($.macro_definition_command, $.identifier)),
       repeat1(seq(
         repeat1($._blank),
@@ -468,35 +476,39 @@ module.exports = grammar({
     ),
 
     parameter_declaration: $ => seq(
-      optional(/(::)?B::/),
-      seq(
-        choice(
-          field('command', alias(longAndShortForm('PARAMETERS'), $.identifier)),
-          field('command', alias(longAndShortForm('RETURNVALUES'), $.identifier)),
+      optional(RE_DEVICE_PROMPT),
+      choice(
+        seq(
           seq(
-            field('command', alias(longAndShortForm('ENTRY'), $.identifier)),
-            optional(seq(
-              repeat(seq(
-                repeat1($._blank),
-                field('macro', $.macro)
-              )),
+            choice(
+              field('command', alias(longAndShortForm('PARAMETERS'), $.identifier)),
+              field('command', alias(longAndShortForm('RETURNVALUES'), $.identifier)),
               seq(
-                repeat1($._blank),
-                alias(longAndShortForm('%LINE'), $.identifier)
+                field('command', alias(longAndShortForm('ENTRY'), $.identifier)),
+                optional(seq(
+                  repeat(seq(
+                    repeat1($._blank),
+                    field('macro', $.macro)
+                  )),
+                  seq(
+                    repeat1($._blank),
+                    alias(longAndShortForm('%LINE'), $.identifier)
+                  )
+                ))
               )
-            ))
-          )
-        ),
-        repeat1(seq(
-          repeat1($._blank),
-          field('macro', $.macro)
-        ))
+            )
+          ),
+          repeat(seq(
+            repeat1($._blank),
+            field('macro', $.macro)
+          ))
+        )
       ),
       $._terminator
     ),
 
     subroutine_call_expression: $ => seq(
-      optional(/(::)?B::/),
+      optional(RE_DEVICE_PROMPT),
       field('command', alias(longAndShortForm('GOSUB'), $.identifier)),
       repeat1($._blank),
       field('subroutine', choice(
@@ -561,8 +573,18 @@ module.exports = grammar({
     ),
 
     command_expression: $ => seq(
-      optional(/(::)?B::/),
+      optional(choice(
+        RE_DEVICE_PROMPT,
+        seq(
+          $.macro,
+          repeat1($._blank)
+        )
+      )),
       choice(
+        seq(
+          $._cpu_selection_command,
+          $._terminator
+        ),
         seq(
           $._var_command,
           $._terminator
@@ -578,6 +600,11 @@ module.exports = grammar({
       )
     ),
 
+    device_selection: $ => seq(
+        RE_DEVICE_PROMPT,
+        $._terminator
+    ),
+
     _host_command: $ => seq(
       field('command', alias($._host_command_with_default_format, $.identifier)),
       repeat1($._blank),
@@ -586,10 +613,10 @@ module.exports = grammar({
 
     _host_command_with_default_format: $ => seq(
       longAndShortForm('OS'),
-      seq(
+      repeat1(seq(
         '.',
         alias($.identifier, 'subcommand')
-      )
+      ))
     ),
 
     _other_command: $ => seq(
@@ -604,9 +631,25 @@ module.exports = grammar({
       alias($.identifier, 'command'),
       repeat(seq(
         '.',
-        alias($.identifier, 'subcommand')
+        choice(
+          alias($.identifier, 'subcommand'),
+          $.macro,
+          $.macro_text_expansion
+        ),
       ))
     ),
+
+    _cpu_selection_command: $ => seq(
+      field('command', alias(token(seq(
+         longAndShortForm('SYStem'),
+         '.',
+         longAndShortForm('CPU')
+       )), $.identifier)),
+       repeat1($._blank),
+       field('arguments', optional(alias($._cpu_selection_command_arguments, $.argument_list))),
+    ),
+
+    _cpu_selection_command_arguments: $ => alias(/[*+\w\?-]+/, $.identifier),
 
     _command_arguments: $ => seq(choice(
       seq(
@@ -664,19 +707,23 @@ module.exports = grammar({
     )),
 
     _host_command_argument_list_default_format: $ => seq(
-      choice(
-        $.macro,
-        $.string,
-        repeat1(/[^ \t\r\n]/)
-      ),
+      $._host_command_argument,
       repeat(seq(
         repeat1($._blank),
-        choice(
-          $.macro,
-          $.string,
-          repeat1(/[^ \t\r\n]/)
-        )
+        $._host_command_argument
       ))
+    ),
+
+    _host_command_argument: $ => choice(
+      $.string,
+      repeat1(choice(
+        $.macro,
+        /[^ \t\r\n]/,
+      )),
+      seq(
+        $._ampersand_char,
+        optional($._ampersand_char)
+      )
     ),
 
     _command_argument: $ => choice(
@@ -695,6 +742,7 @@ module.exports = grammar({
       $.identifier,
       $.macro,
       $.macro_text_expansion,
+      $._path_expression,
       $.unary_expression,
       $._literal
     )),
@@ -707,7 +755,10 @@ module.exports = grammar({
 
     option_expression: $ => prec(PREC.option, seq(
       '/',
-      field('option', $.identifier),
+      field('option', choice(
+          $.identifier,
+          alias($._segmented_identifier, $.identifier)
+      )),
       optional(seq(
         repeat1($._blank),
         field('value', choice(
@@ -735,21 +786,24 @@ module.exports = grammar({
     ),
 
     call_expression: $ => prec(PREC.call, choice(
+      $._hll_task_call_expression,
       $._hll_var_call_expression,
       seq(
-        field('function', choice(
-          $._expression,
-          alias($._function_identifier, $.identifier)
-        )),
+        field('function', $._expression),
         field('arguments', $.argument_list)
       )
     )),
 
-    _function_identifier: $ => seq(
-      alias($.identifier, 'function'),
-      repeat(seq(
+    _segmented_identifier: $ => seq(
+      alias($.identifier, 'segment'),
+      repeat1(seq(
         '.',
-        alias($.identifier, 'subfunction')
+        choice(
+          alias($.identifier, 'segment'),
+          alias(/[0-9]+/, 'segment'),
+          $.macro,
+          $.macro_text_expansion
+        ),
       ))
     ),
 
@@ -993,18 +1047,41 @@ module.exports = grammar({
 
     _var_definition_command_argument_list_format: $ => $.hll_declaration,
 
-    _hll_var_call_expression_function: $ => seq(
-        longAndShortForm('Var'),
-        '.',
-        alias($.identifier, 'subfunction')
+    _hll_task_call_expression: $ => seq(
+      field('function', alias($._hll_task_call_expression_function, $.identifier)),
+      field('arguments', alias($.hll_call_expression_argument_list, $.argument_list))
     ),
 
     _hll_var_call_expression: $ => seq(
       field('function', alias($._hll_var_call_expression_function, $.identifier)),
-      field('arguments', alias($.hll_var_call_expression_argument_list, $.argument_list))
+      field('arguments', alias($.hll_call_expression_argument_list, $.argument_list))
     ),
 
-    hll_var_call_expression_argument_list: $ => seq(
+    _hll_task_call_expression_function: $ => seq(
+        longAndShortForm('TASK'),
+        repeat1(seq(
+          '.',
+          choice(
+            alias($.identifier, 'subfunction'),
+            $.macro,
+            $.macro_text_expansion
+          )
+        ))
+    ),
+
+    _hll_var_call_expression_function: $ => seq(
+        longAndShortForm('Var'),
+        seq(
+          '.',
+          choice(
+            alias($.identifier, 'subfunction'),
+            $.macro,
+            $.macro_text_expansion
+          )
+        )
+    ),
+
+    hll_call_expression_argument_list: $ => seq(
       '(',
       $._hll_expression,
       ')'
@@ -1044,7 +1121,10 @@ module.exports = grammar({
 
     hll_option_expression: $ => prec(PREC.option, seq(
       '/',
-      field('option', $.identifier),
+      field('option', choice(
+          $.identifier,
+          alias($._segmented_identifier, $.identifier)
+      )),
       optional(seq(
         repeat1($._blank),
         field('value', choice(
@@ -1083,6 +1163,7 @@ module.exports = grammar({
       $.hll_string_literal,
       $.hll_char_literal,
       $.hll_parenthesized_expression,
+      $.hll_most_derived_class_expression,
       $.identifier,
       $.symbol
     ),
@@ -1237,6 +1318,12 @@ module.exports = grammar({
         repeat($._blank),
         field('right', $._hll_expression)
     )),
+
+    hll_most_derived_class_expression: $ => seq(
+      '[',
+       field('argument', $._hll_expression),
+      ']'
+    ),
 
     hll_assignment_expression: $ => prec.right(seq(
       field('left', $._hll_assignment_left_expression),
@@ -1416,8 +1503,10 @@ module.exports = grammar({
     )),
 
     hll_declaration: $ => seq(
-      $._hll_declaration_specifiers,
-      repeat($._blank),
+      optional(seq(
+        $._hll_declaration_specifiers,
+        repeat($._blank),
+      )),
       field('declarator', $._hll_declarator)
     ),
 
@@ -1608,7 +1697,7 @@ module.exports = grammar({
       $.address,
       $.bitmask,
       $.character,
-      alias($._composed_name, $.identifier),
+      alias($._wildcard_name, $.identifier),
       $.file_handle,
       $.float,
       $.frequency,
@@ -1621,9 +1710,11 @@ module.exports = grammar({
     ),
 
     _address_expression: $ => choice(
+      $.identifier,
       $.integer,
       $.macro,
       $.macro_text_expansion,
+      $.symbol,
       alias($._address_binary_expression, $.binary_expression),
       $.call_expression,
       $._parenthesized_address_expression
@@ -1720,8 +1811,11 @@ module.exports = grammar({
         return prec.left(pre, seq(
           field('left', $._address_expression),
           field('operator', op),
-          field('right', $._address_expression)
-        ))
+          field('right', choice(
+            $.address,
+            $._address_expression
+          )
+        )))
       }));
     },
 
@@ -1733,7 +1827,7 @@ module.exports = grammar({
       )
     ),
 
-    float: $ => /[0-9]+\.[0-9]+(e[-+][0-9]+)?/,
+    float: $ => /[0-9]+\.[0-9]+([eE][-+]?[0-9]+)?/,
 
     bitmask: $ => choice(
       /0y[0-9xX]+/,  // Bitmask
@@ -2005,18 +2099,13 @@ module.exports = grammar({
             $.macro_text_expansion
           )
         ))
-      )
+      ),
+      /\.[A-Za-z_]\w*/
     ),
 
-    _composed_name: $ => token(seq(
-      /[A-Za-z][A-Za-z0-9]+/,
-      repeat1(seq(
-        '-',
-        /[A-Za-z0-9]+/
-      ))
-    )),
+    _wildcard_name: $ => /(\w+([?]+|[*])|([?]+|[*]))(\w([?]+|[*])?)*/,
 
-    time: $ => /[0-9]+\.?[0-9]*[mnu]*s/,
+    time: $ => /[0-9]+\.?[0-9]*[kKmMnNu]*[sS]/,
 
     frequency: $ => /[0-9]+\.?[0-9]*[kKmMgG]*[hH][zZ]/,
 
@@ -2045,6 +2134,7 @@ module.exports = grammar({
       $.macro,
       $.macro_text_expansion,
       $._literal,
+      alias($._segmented_identifier, $.identifier),
       $._parenthesized_expression,
       $._path_expression
     ),

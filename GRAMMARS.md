@@ -38,7 +38,7 @@
 | [c](https://github.com/tree-sitter/tree-sitter-c/tree/b780e47fc780ddc8da13afa35a3f4ed5c157823d) | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :white_check_mark: | 15 |
 | ~~[c3](https://github.com/c3lang/tree-sitter-c3/tree/78e2ae9cff29ef8ca6666006abe80f1236d42996)~~ | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 15 |
 | [c3](https://github.com/zweimach/tree-sitter-c3/tree/20211339830745a9bce045587c84449c20dea202) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
-| [c_sharp](https://github.com/tree-sitter/tree-sitter-c-sharp/tree/8c0abe0b84a3681d3e6852ce2e2a1eecb4f731c5) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :white_check_mark: | 15 |
+| [c_sharp](https://github.com/tree-sitter/tree-sitter-c-sharp/tree/e3971fcb53bf5573a7e0d4ff6db46d2a77a4bf71) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :white_check_mark: | 15 |
 | [caddy](https://github.com/opa-oz/tree-sitter-caddy/tree/2b0dd9066900568a3d6b33dc51d2e271cb48bd92) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 15 |
 | ~~[cairo](https://github.com/JoranHonig/tree-sitter-cairo/tree/127f38a6c03d009ccf5798cf0eaad7d5df982445)~~ | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | 14 |
 | [cairo](https://github.com/tree-sitter-grammars/tree-sitter-cairo/tree/6238f609bea233040fe927858156dee5515a0745) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
@@ -105,7 +105,7 @@
 | [enforce](https://github.com/simonvic/tree-sitter-enforce/tree/f6daeccf744141c13b4a94c39d7de22307173735) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | 15 |
 | ~~[erlang](https://github.com/AbstractMachinesLab/tree-sitter-erlang/tree/3a9c769444f08bbccce03845270efac0c641c5e7)~~ | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 13 |
 | ~~[erlang](https://github.com/the-mikedavis/tree-sitter-erlang/tree/d85b18e76962d6a3ba131bc5b514d77558e82762)~~ | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 15 |
-| [erlang](https://github.com/WhatsApp/tree-sitter-erlang/tree/62c82e67b73e13f3ef06e4c8c07ff035a8235d30) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
+| [erlang](https://github.com/WhatsApp/tree-sitter-erlang/tree/d40106aa0d6077beea08c5e14b901d98ab79d224) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | ~~[eventrule](https://github.com/3p3r/tree-sitter-eventrule/tree/v1.8.0)~~ | :x: | :x: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | N/A |
 | [facility](https://github.com/FacilityApi/tree-sitter-facility/tree/e4bfd3e960de9f4b4648acb1c92e9b95b47d8cfb) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
 | [faust](https://github.com/khiner/tree-sitter-faust/tree/6074204d3511392fd0b9c4fa1cef347ded65b246) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | 15 |
@@ -116,13 +116,13 @@
 | [fidl](https://github.com/google/tree-sitter-fidl/tree/bd81f6429a1539b05f52a4344bc9f6ac11d73d1f) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | 14 |
 | [firrtl](https://github.com/tree-sitter-grammars/tree-sitter-firrtl/tree/8503d3a0fe0f9e427863cb0055699ff2d29ae5f5) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
 | [fish](https://github.com/ram02z/tree-sitter-fish/tree/3.7.0) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
-| [fluentbit](https://github.com/sh-cho/tree-sitter-fluentbit/tree/7e02756fdf7efb0333a2443abbffc9e0bc5998b9) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
+| [fluentbit](https://github.com/sh-cho/tree-sitter-fluentbit/tree/9bec63d73cb4fef14a7ca26b04479e550b75ca91) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [foam](https://github.com/FoamScience/tree-sitter-foam/tree/f72e493dadcca6a334c113b4cbaf864460541de4) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 15 |
 | [formula](https://github.com/siraben/tree-sitter-formula/tree/351159cf66f0e7f8d86fa06fc44ab3c2055082df) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :white_check_mark: | 13 |
 | [forth](https://github.com/AlexanderBrevig/tree-sitter-forth/tree/7190f2173060d19a2174c96bfb5b7c6f9745512b) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
 | [fortran](https://github.com/stadelmanma/tree-sitter-fortran/tree/d05165a6f0bd044ba1f89865927a752dd5168e66) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | 15 |
 | [fsh](https://github.com/mgramigna/tree-sitter-fsh/tree/fad2e175099a45efbc98f000cc196d3674cc45e0) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
-| [fsharp](https://github.com/ionide/tree-sitter-fsharp/tree/0.3.12) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | 15 |
+| [fsharp](https://github.com/ionide/tree-sitter-fsharp/tree/0.3.13) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | 15 |
 | ~~[func](https://github.com/akifoq/tree-sitter-func/tree/dffbbd70bc14bfc26e4d9130aefc36133b6ff11a)~~ | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 13 |
 | [func](https://github.com/tree-sitter-grammars/tree-sitter-func/tree/f780ca55e65e7d7360d0229331763e16c452fc98) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [fusion](https://gitlab.com/jirgn/tree-sitter-fusion.git/tree/v1.1.2) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | 13 |
@@ -146,7 +146,7 @@
 | [glimmer_typescript](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | N/A |
 | [glsl](https://github.com/tree-sitter-grammars/tree-sitter-glsl/tree/24a6c8ef698e4480fecf8340d771fbcb5de8fbb4) | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [gn](https://github.com/tree-sitter-grammars/tree-sitter-gn/tree/stable) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
-| [gnuplot](https://github.com/dpezto/tree-sitter-gnuplot/tree/8344b33e6b6a3b81bf780ab5b286ca6d95e60027) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | 14 |
+| [gnuplot](https://github.com/dpezto/tree-sitter-gnuplot/tree/a29b0c5d4f6f67a7dd308810a9ef0dc4931a7bb3) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | 14 |
 | [go](https://github.com/tree-sitter/tree-sitter-go/tree/2346a3ab1bb3857b48b29d779a1ef9799a248cd7) | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :white_check_mark: | 15 |
 | [goctl](https://github.com/chaozwn/tree-sitter-goctl/tree/49c43532689fe1f53e8b9e009d0521cab02c432b) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [goctl](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | N/A |
@@ -229,7 +229,7 @@
 | [lalrpop](https://github.com/traxys/tree-sitter-lalrpop/tree/27b0f7bb55b4cabd8f01a933d9ee6a49dbfc2192) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | 15 |
 | [latex](https://github.com/latex-lsp/tree-sitter-latex/tree/v0.6.0) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | 15 |
 | [latex](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | N/A |
-| [lean](https://github.com/Julian/tree-sitter-lean/tree/0d28e5d6e8c4755f5df7ef9bde3b6ec6f59fae94) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 13 |
+| [lean](https://github.com/Julian/tree-sitter-lean/tree/fefc2eff9a83eeb72cda44646709e40e33e09175) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 13 |
 | [ledger](https://github.com/cbarrete/tree-sitter-ledger/tree/d5f3973cfe2d42f98819336ce6334ada75b7696f) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [ledger](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | N/A |
 | [leo](https://github.com/r001/tree-sitter-leo/tree/6bc5564917edacd070afc4d33cf5e2e677831ea9) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | 14 |
@@ -247,7 +247,7 @@
 | ~~[luau](https://github.com/polychromatist/tree-sitter-luau/tree/71b03e66b2c8dd04e0133c9b998a54a58f239ca4)~~ | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [luau](https://github.com/tree-sitter-grammars/tree-sitter-luau/tree/v1.2.0) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
 | [m68k](https://github.com/grahambates/tree-sitter-m68k/tree/v0.3.2) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: | :x: | 14 |
-| [magik](https://github.com/krn-robin/tree-sitter-magik/tree/2ccff2474031ce6e9ce3f94b021ff705a2ce880c) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
+| [magik](https://github.com/krn-robin/tree-sitter-magik/tree/ed72470ac75542bf4b6e6ba683a3f4489d75c647) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
 | [mail](https://github.com/stevenxxiu/tree-sitter-mail/tree/8d2905d06a15586652c3a73387b4170424201e1a) | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
 | ~~[make](https://github.com/alemuller/tree-sitter-make/tree/a4b9187417d6be349ee5fd4b6e77b4172c6827dd)~~ | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 13 |
 | [make](https://github.com/tree-sitter-grammars/tree-sitter-make/tree/70613f3d812cbabbd7f38d104d60a409c4008b43) | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | 15 |
@@ -274,7 +274,7 @@
 | [nim](https://github.com/alaviss/tree-sitter-nim/tree/ac72ba30d16edf0be021588a9301ede4accd6cf4) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [nim_format_string](https://github.com/aMOPel/tree-sitter-nim-format-string/tree/d45f75022d147cda056e98bfba68222c9c8eca3a) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [nim_format_string](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | N/A |
-| [nix](https://github.com/nix-community/tree-sitter-nix/tree/64d4f7827dc1a8c7c88108ffdb47b961a729df05) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :white_check_mark: | 13 |
+| [nix](https://github.com/nix-community/tree-sitter-nix/tree/0645c95c47b272f23d15c1e83446973401bd1a53) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :white_check_mark: | 13 |
 | [noir](https://github.com/hhamud/tree-sitter-noir/tree/89cc4dbbfbc4ab3fadf75bf8f5c54d6a5f8ce682) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [nois](https://github.com/nois-lang/tree-sitter-nois/tree/0e9c9e962177dc0a17d6bd79ff14330334466800) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [norg_meta](https://github.com/nvim-neorg/tree-sitter-norg-meta/tree/v0.1.0) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | - |
@@ -297,9 +297,9 @@
 | [passwd](https://github.com/ath3/tree-sitter-passwd/tree/20239395eacdc2e0923a7e5683ad3605aee7b716) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [passwd](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | N/A |
 | [pem](https://github.com/tree-sitter-grammars/tree-sitter-pem/tree/e525b177a229b1154fd81bc0691f943028d9e685) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
-| [perl](https://github.com/tree-sitter-perl/tree-sitter-perl/tree/5e30b919b86ea7dfbf8525537e1523af235e140d) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | 15 |
+| [perl](https://github.com/tree-sitter-perl/tree-sitter-perl/tree/b5093852a9403eefd1ff87ea932bae141737d57c) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | 15 |
 | [pgn](https://github.com/rolandwalker/tree-sitter-pgn/tree/85fb5a2f09dbd70b0028c04c4177d2e20979211e) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
-| [php](https://github.com/tree-sitter/tree-sitter-php/tree/58d5643086ae60e93a3746cca648363ee97c8761) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: | 15 |
+| [php](https://github.com/tree-sitter/tree-sitter-php/tree/c1e13490bd656b8869cd47e6f74997ed46750a08) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: | 15 |
 | [phpdoc](https://github.com/claytonrcarter/tree-sitter-phpdoc/tree/v0.1.8) | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [phpdoc](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | N/A |
 | [pioasm](https://github.com/leo60228/tree-sitter-pioasm/tree/afece58efdb30440bddd151ef1347fa8d6f744a9) | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
@@ -320,7 +320,7 @@
 | [promql](https://github.com/MichaHoffmann/tree-sitter-promql/tree/77625d78eebc3ffc44d114a07b2f348dff3061b0) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [promql](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | N/A |
 | [properties](https://github.com/tree-sitter-grammars/tree-sitter-properties/tree/6310671b24d4e04b803577b1c675d765cbd5773b) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :white_check_mark: | 14 |
-| [proto](https://github.com/coder3101/tree-sitter-proto/tree/18366491f37d43d6d5d02cbb1e79b650b5728145) | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | 15 |
+| [proto](https://github.com/coder3101/tree-sitter-proto/tree/68a898a1715f1b0fce0d21ae6d1f4e24c60fcb2c) | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | 15 |
 | ~~[proto](https://github.com/mitchellh/tree-sitter-proto/tree/42d82fa18f8afe59b5fc0b16c207ee4f84cb185f)~~ | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: | :x: | 13 |
 | ~~[proto](https://github.com/treywood/tree-sitter-proto/tree/e9f6b43f6844bd2189b50a422d4e2094313f6aa3)~~ | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: | :x: | 14 |
 | ~~[prql](https://github.com/PRQL/tree-sitter-prql/tree/09e158cd3650581c0af4c49c2e5b10c4834c8646)~~ | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | 14 |
@@ -347,7 +347,7 @@
 | [regex](https://github.com/tree-sitter/tree-sitter-regex/tree/v0.25.0) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
 | [rego](https://github.com/FallenAngel97/tree-sitter-rego/tree/da2a1f63cd877efb05d56de61fe516e90012b9a7) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | 15 |
 | [requirements](https://github.com/tree-sitter-grammars/tree-sitter-requirements/tree/v0.6.1) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
-| [rescript](https://github.com/rescript-lang/tree-sitter-rescript/tree/cc6a15ee6297d493089134cb661a54fc7a13e376) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | 15 |
+| [rescript](https://github.com/rescript-lang/tree-sitter-rescript/tree/d93f5cb4187bc233e8d76d2b19f4a2fe3084bce7) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | 15 |
 | [rnoweb](https://github.com/bamonroe/tree-sitter-rnoweb/tree/1a74dc0ed731ad07db39f063e2c5a6fe528cae7f) | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :white_check_mark: | :x: | :x: | :x: | 13 |
 | [rnoweb](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | N/A |
 | [robot](https://github.com/Hubro/tree-sitter-robot/tree/85c0bf63b7146292404974e6b01d3f5cb2c80708) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: | :white_check_mark: | :x: | 15 |
@@ -372,7 +372,7 @@
 | [slang](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | N/A |
 | [slim](https://github.com/theoo/tree-sitter-slim/tree/d4ff7e388eb271c04662f2176c08548c9c51078f) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
 | ~~[slint](https://github.com/slint-ui/slint/tree/5a31f019e195fd75f2e26b3f8c3fda510cf2919b)~~ | :x: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | N/A |
-| [slint](https://github.com/slint-ui/tree-sitter-slint/tree/b494447aeb10e540b9f0fbde08748c052859e42d) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 15 |
+| [slint](https://github.com/slint-ui/tree-sitter-slint/tree/b22bb31bd1cf1dfc47e7432197a9474b62d05b14) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 15 |
 | [slint](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | N/A |
 | [smali](https://github.com/tree-sitter-grammars/tree-sitter-smali/tree/fdfa6a1febc43c7467aa7e937b87b607956f2346) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
 | [smallbasic](https://github.com/comom87/tree-sitter-smallbasic/tree/4c732d2407dcf2831bbb4e4d4aebb339b7f11183) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
@@ -392,7 +392,7 @@
 | ~~[sql_bigquery](https://github.com/takegue/tree-sitter-sql-bigquery/tree/c0c4f0ed7b87846cb1be19df5d638ca227a9fe41)~~ | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [sqlite](https://github.com/dhcmrlchtdj/tree-sitter-sqlite/tree/993be0a91c0c90b0cc7799e6ff65922390e2cefe) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [squirrel](https://github.com/tree-sitter-grammars/tree-sitter-squirrel/tree/072c969749e66f000dba35a33c387650e203e96e) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
-| [ssh_client_config](https://github.com/metio/tree-sitter-ssh-client-config/tree/499fa3d1a48579589b83a617e3dd23a703663853) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
+| [ssh_client_config](https://github.com/metio/tree-sitter-ssh-client-config/tree/23c00eb36c3658b428433a1d1139fb120d0539ac) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [ssh_config](https://github.com/tree-sitter-grammars/tree-sitter-ssh-config/tree/0c35b243392268f48fd096607da192d76c843398) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | 14 |
 | [stan](https://github.com/WardBrian/tree-sitter-stan/tree/v0.3.1) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :white_check_mark: | 14 |
 | [starlark](https://github.com/tree-sitter-grammars/tree-sitter-starlark/tree/v1.3.0) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
@@ -405,14 +405,14 @@
 | ~~[svelte](https://github.com/Himujjal/tree-sitter-svelte/tree/60ea1d673a1a3eeeb597e098d9ada9ed0c79ef4b)~~ | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | 14 |
 | [svelte](https://github.com/tree-sitter-grammars/tree-sitter-svelte/tree/ae5199db47757f785e43a14b332118a5474de1a2) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
 | [sway](https://github.com/FuelLabs/tree-sitter-sway/tree/9b7845ce06ecb38b040c3940970b4fd0adc331d1) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | :x: | 14 |
-| [swift](https://github.com/alex-pinkus/tree-sitter-swift/tree/a1d4a7b80260bf960f9e25198cddecbe5e6c46aa) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | 15 |
+| [swift](https://github.com/alex-pinkus/tree-sitter-swift/tree/fef1236022ccde2d2bc5c32d4db8947c87a7f848) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | 15 |
 | ~~[swift](https://github.com/tree-sitter/tree-sitter-swift/tree/db675450dcc1478ee128c96ecc61c13272431aab)~~ | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 10 |
 | [sxhkdrc](https://github.com/RaafatTurki/tree-sitter-sxhkdrc/tree/440d5f913d9465c9c776a1bd92334d32febcf065) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 13 |
 | [sxhkdrc](https://github.com/nvim-treesitter/nvim-treesitter/tree/2b50ab5ccbcd9e5708deb351308edd738adbf84c) | :x: | :x: | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | N/A |
 | [systemrdl](https://github.com/SystemRDL/tree-sitter-systemrdl/tree/2c27e329f7724e39f40439e68e22133e285a3e3b) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [systemtap](https://github.com/ok-ryoko/tree-sitter-systemtap/tree/v0.2.0) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | 14 |
-| [systemverilog](https://github.com/gmlarumbe/tree-sitter-systemverilog/tree/73d7620ffdc467aab3c2089be9be5cbbc1be2eaa) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
-| [t32](https://codeberg.org/xasc/tree-sitter-t32/tree/v9.0.3) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | 15 |
+| [systemverilog](https://github.com/gmlarumbe/tree-sitter-systemverilog/tree/ad3921ba232ba50cf95935bf07554b63b39a1e39) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
+| [t32](https://codeberg.org/xasc/tree-sitter-t32/tree/v10.0.0) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :white_check_mark: | 15 |
 | ~~[tablegen](https://github.com/Flakebi/tree-sitter-tablegen/tree/3e9c4822ab5cdcccf4f8aa9dcd42117f736d51d9)~~ | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 14 |
 | [tablegen](https://github.com/tree-sitter-grammars/tree-sitter-tablegen/tree/b1170880c61355aaf38fc06f4af7d3c55abdabc4) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 14 |
 | [tact](https://github.com/tact-lang/tree-sitter-tact/tree/1c689f0a8bbe5910db628a62bfc26d37f54bf9be) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :white_check_mark: | 14 |
@@ -450,7 +450,7 @@
 | [v](https://github.com/nedpals/tree-sitter-v/tree/fee18d64a51127b32a221a56509f77c942d9923f) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 13 |
 | ~~[v](https://github.com/vlang/v-analyzer/tree/095865df4b9ddd21e376d635586c663d5a736f71)~~ | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
 | ~~[v](https://github.com/vlang/vls/tree/60062d1fc584089ddbfca310921a5f345a500cb0)~~ | :x: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | N/A |
-| [vala](https://github.com/vala-lang/tree-sitter-vala/tree/97e6db3c8c73b15a9541a458d8e797a07f588ef4) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | 13 |
+| [vala](https://github.com/vala-lang/tree-sitter-vala/tree/dff1b1cf0c80ce625902b90359dbd50be6bfdbde) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | 13 |
 | [vbnet](https://github.com/CodeAnt-AI/tree-sitter-vb-dotnet/tree/cfca210ce8fdcb5245bd9cd5c47ce0a21a8488d5) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 15 |
 | [vcard](https://github.com/TitouanReal/tree-sitter-vcard/tree/8c0777114ca3dea2872809d75a629eac7013a413) | :x: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | 15 |
 | [vcl](https://github.com/ntsk/tree-sitter-vcl/tree/v0.4.1) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :white_check_mark: | :white_check_mark: | :x: | 15 |
@@ -494,7 +494,7 @@
 | [zig](https://github.com/tree-sitter-grammars/tree-sitter-zig/tree/6479aa13f32f701c383083d8b28360ebd682fb7d) | :x: | :white_check_mark: | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | 15 |
 | ~~[zig](https://github.com/ziglibs/tree-sitter-zig/tree/2866ee6f8b8f67c9b1eca2ca6c88f0a5f1bcc13f)~~ | :x: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | :x: | N/A |
 | [ziggy](https://github.com/kristoff-it/ziggy/tree/7fc62a537ba3e3a84287025b5b794e0cfaadef2f) | :x: | :white_check_mark: | :x: | :white_check_mark: | :x: | :x: | :x: | :white_check_mark: | :x: | 14 |
-| [zsh](https://github.com/georgeharker/tree-sitter-zsh/tree/v0.63.5) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
+| [zsh](https://github.com/georgeharker/tree-sitter-zsh/tree/v0.64.3) | :x: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: | :x: | :x: | :x: | :x: | 15 |
 
 | Metric | Count |
 |--------|-------|

@@ -48,7 +48,6 @@ export default grammar({
     [$._simple_name, $.type_parameter],
     [$._simple_name, $.subpattern],
 
-    [$.tuple_element, $.type_pattern],
     [$.tuple_element, $.using_variable_declarator],
     [$.tuple_element, $.declaration_expression],
 
@@ -88,9 +87,11 @@ export default grammar({
 
     [$.expression_element, $.argument],
     [$.spread_element, $.range_expression],
-    [$.collection_expression, $.list_pattern],
+    [$._list_pattern_body, $.collection_expression],
 
     [$._reserved_identifier, $.modifier],
+    [$.preproc_if_in_expression, $.preproc_if_in_initializer],
+    [$.preproc_if_in_expression, $.preproc_if_in_collection],
     [$._reserved_identifier, $.scoped_type],
     [$._reserved_identifier, $.implicit_type],
     [$._reserved_identifier, $.from_clause],
@@ -115,6 +116,11 @@ export default grammar({
     // reserved identifier (when there's no further type). Keep all
     // three alive until later tokens disambiguate.
     [$.receiver_parameter, $.scoped_type, $._reserved_identifier],
+
+    // An `#if` block can hold several attribute lists, or a declaration whose
+    // own attribute lists start the same way; the `#endif` decides.
+    [$._attribute_list, $.preproc_if_in_attribute_list],
+    [$._attribute_list, $.preproc_else_in_attribute_list],
   ],
 
   externals: $ => [
@@ -134,6 +140,9 @@ export default grammar({
     // simple-lambda parameter list (at least one element has a parameter
     // modifier) closed by ')=>'.
     $._lambda_paren_open,
+    // `#if` immediately followed (after the condition line) by `else`.
+    $._preproc_else_if_start,
+    $._conditional_member_question,
   ],
 
   extras: $ => [
@@ -148,6 +157,7 @@ export default grammar({
     $.preproc_warning,
     $.preproc_define,
     $.preproc_undef,
+    $.ignored_directive,
   ],
 
   inline: $ => [
@@ -313,7 +323,10 @@ export default grammar({
     _struct_declaration_initializer: $ => seq(
       repeat($._attribute_list),
       repeat($.modifier),
-      optional('ref'),
+      // C# requires `partial` to be the LAST modifier before the type keyword,
+      // so the legal order is `ref partial struct`. A modifier after `ref` is a
+      // `modifier` node, like the ones before it.
+      optional(seq('ref', repeat($.modifier))),
       'struct',
       field('name', $.identifier),
       repeat(choice($.type_parameter_list, $.parameter_list, $.base_list)),
@@ -718,10 +731,12 @@ export default grammar({
     ),
 
     _parameter_type_with_modifiers: $ => seq(
-      repeat(prec.left(alias(
-        choice('this', 'scoped', 'ref', 'out', 'in', 'readonly'),
-        $.modifier,
-      ))),
+      repeat(choice(
+        prec.left(alias(choice('this', 'scoped', 'ref', 'readonly'), $.modifier)),
+        // `in`/`out` also start an `argument` (prec 1), which won the shift/reduce
+        // against this reduction and sent `(in T x) => ...` to ERROR.
+        prec.left(1, alias(choice('out', 'in'), $.modifier)),
+      )),
       field('type', $.type),
     ),
 
@@ -757,20 +772,26 @@ export default grammar({
       ')',
     ),
 
-    argument: $ => prec(1, seq(
-      optional(seq(field('name', $.identifier), ':')),
-      optional(choice('ref', 'out', 'in')),
-      choice(
-        $.expression,
-        $.declaration_expression,
-      ),
-    )),
+    // A declaration is only valid after `out`, so `M(t * x)` multiplies and
+    // `M(a < b, c > d)` compares. Without `out` it stays available for error
+    // tolerance, below every expression, including a `generic_name`.
+    argument: $ => argumentRule($, -(PREC.GENERIC + 2)),
+
+    // `(A<B> a, C b) = t` declares variables, so a generic type still wins here,
+    // while `(a * b, c)` remains a multiplication.
+    _tuple_argument: $ => argumentRule($, -1),
 
     block: $ => seq('{', repeat($.statement), '}'),
 
     arrow_expression_clause: $ => seq('=>', $.expression),
 
     _function_body: $ => choice(
+      $._plain_function_body,
+      // `void M() #if A { } #else => x; #endif`: the body differs per branch.
+      alias($.preproc_if_in_function_body, $.preproc_if),
+    ),
+
+    _plain_function_body: $ => choice(
       field('body', $.block),
       seq(field('body', $.arrow_expression_clause), ';'),
       ';',
@@ -829,7 +850,7 @@ export default grammar({
       field('name', $._simple_name),
     )),
 
-    generic_name: $ => seq($.identifier, $.type_argument_list),
+    generic_name: $ => prec.dynamic(PREC.GENERIC, seq($.identifier, $.type_argument_list)),
 
     type_argument_list: $ => seq(
       '<',
@@ -1056,7 +1077,22 @@ export default grammar({
       ')',
     ),
 
-    return_statement: $ => seq('return', optional($.expression), ';'),
+    return_statement: $ => seq(
+      'return',
+      choice(
+        seq(optional($.expression), ';'),
+        // `return c ? a : #if X b; #else d; #endif`: the `;` is inside each branch.
+        alias($._conditional_ending_in_preproc, $.conditional_expression),
+      ),
+    ),
+
+    _conditional_ending_in_preproc: $ => seq(
+      field('condition', $.expression),
+      '?',
+      field('consequence', $.expression),
+      ':',
+      field('alternative', alias($.preproc_if_in_statement_tail, $.preproc_if)),
+    ),
 
     lock_statement: $ => seq('lock', '(', $.expression, ')', $.statement),
 
@@ -1179,9 +1215,20 @@ export default grammar({
       field('condition', $.expression),
       ')',
       field('consequence', $.statement),
-      optional(seq(
-        'else',
-        field('alternative', $.statement),
+      optional(choice(
+        seq(
+          'else',
+          field('alternative', $.statement),
+        ),
+        // `if (a) { } #if X else if (b) { } #endif`: the `else` lives in the block.
+        // A plain `else` may still follow `#endif` and continue the chain.
+        seq(
+          alias($.preproc_if_in_else, $.preproc_if),
+          optional(seq(
+            'else',
+            field('alternative', $.statement),
+          )),
+        ),
       )),
     )),
 
@@ -1243,6 +1290,7 @@ export default grammar({
 
     constant_pattern: $ => choice(
       $.binary_expression,
+      $.checked_expression,
       $.default_expression,
       $.interpolated_string_expression,
       $.parenthesized_expression,
@@ -1284,25 +1332,34 @@ export default grammar({
 
     var_pattern: $ => seq('var', $._variable_designation),
 
-    type_pattern: $ => prec.right(field('type', $.type)),
+    // Precedence above _variable_designation so `case int when x:` reduces
+    // to a type pattern before `when` instead of using `when` as a name.
+    type_pattern: $ => prec.right(2, field('type', $.type)),
 
-    list_pattern: $ => prec.right(seq(
+    // The designation-less form outranks the one with a designation so that, on
+    // `when`, the parser reduces here and lets `when_clause` take it instead of
+    // reading `when` as the designation: `[var a] when Is(a) => ...`.
+    list_pattern: $ => choice(
+      prec.right(2, $._list_pattern_body),
+      prec.right(1, seq($._list_pattern_body, $._variable_designation)),
+    ),
+
+    _list_pattern_body: $ => seq(
       '[',
       optional(seq(
         commaSep1(choice($.pattern, $.slice_pattern)),
         optional(','),
       )),
       ']',
-      optional($._variable_designation),
-    )),
+    ),
 
     // C# 11 slice pattern: `..` optionally followed by a subpattern that
     // binds the captured slice. `[a, .. var rest, z]`, `[..]` (bare),
     // `[.. List<int> rest]` (declaration_pattern), etc.
-    slice_pattern: $ => prec.right(seq(
-      '..',
-      optional($.pattern),
-    )),
+    slice_pattern: $ => choice(
+      prec(PREC.RANGE + 1, '..'),
+      prec.right(seq('..', $.pattern)),
+    ),
 
     recursive_pattern: $ => prec.left(choice(
       // name followed by positional pattern WITH variable designation
@@ -1561,7 +1618,28 @@ export default grammar({
 
     _pointer_indirection_expression: $ => prec.right(PREC.UNARY, seq(
       '*',
-      $.lvalue_expression,
+      choice(
+        $.lvalue_expression,
+        // `*(p + 1)` and `*(T*)p`. The operand is not an lvalue, so the #413
+        // restriction above shut them out. They stay legal here, but with a
+        // negative dynamic precedence so `(a) * (b + c)` still reads as a
+        // multiplication rather than a cast of a dereference.
+        prec.dynamic(-2, $.parenthesized_expression),
+        prec.dynamic(-2, alias($._pointer_cast_expression, $.cast_expression)),
+      ),
+    )),
+
+    _pointer_cast_expression: $ => prec(PREC.CAST, seq(
+      '(',
+      field('type', $.pointer_type),
+      ')',
+      // Not a full `expression`: `*(T*)p = 1` must stay an assignment to the
+      // dereference, not a cast of `p = 1`.
+      field('value', choice(
+        $.lvalue_expression,
+        $.parenthesized_expression,
+        alias($._address_of_expression, $.prefix_unary_expression),
+      )),
     )),
 
     // Address-of is split out from `prefix_unary_expression` so that
@@ -1655,14 +1733,21 @@ export default grammar({
       field('alternative', $.expression),
     )),
 
-    conditional_access_expression: $ => prec.right(PREC.CONDITIONAL, seq(
-      field('condition', $.expression),
-      '?',
-      choice(
+    conditional_access_expression: $ => choice(
+      prec.right(PREC.DOT, seq(
+        field('condition', $.expression),
+        alias($._conditional_member_question, '?'),
         $.member_binding_expression,
-        alias($.bracketed_argument_list, $.element_binding_expression),
-      ),
-    )),
+      )),
+      prec.right(PREC.CONDITIONAL, seq(
+        field('condition', $.expression),
+        '?',
+        choice(
+          $.member_binding_expression,
+          alias($.bracketed_argument_list, $.element_binding_expression),
+        ),
+      )),
+    ),
 
     as_expression: $ => prec(PREC.REL, seq(
       field('left', $.expression),
@@ -1909,11 +1994,22 @@ export default grammar({
 
     collection_expression: $ => seq(
       '[',
-      optional(seq(
-        commaSep1($.collection_element),
-        optional(','),
-      )),
+      optional($._collection_items),
       ']',
+    ),
+
+    // A list of elements in which `#if` blocks may hold whole comma-terminated
+    // elements: `[ 1, #if X 2, 3, #endif ]`. Roslyn treats a directive as
+    // trivia, so the comma inside the block is legal.
+    _collection_items: $ => choice(
+      seq(
+        repeat1(choice(
+          seq($.collection_element, ','),
+          alias($.preproc_if_in_collection, $.preproc_if),
+        )),
+        optional($.collection_element),
+      ),
+      $.collection_element,
     ),
 
     collection_element: $ => choice(
@@ -1927,9 +2023,20 @@ export default grammar({
 
     initializer_expression: $ => seq(
       '{',
-      commaSep($.expression),
-      optional(','),
+      optional($._initializer_items),
       '}',
+    ),
+
+    // Same shape as `_collection_items`: `{ a, #if X b, #endif }`.
+    _initializer_items: $ => choice(
+      seq(
+        repeat1(choice(
+          seq($.expression, ','),
+          alias($.preproc_if_in_initializer, $.preproc_if),
+        )),
+        optional($.expression),
+      ),
+      $.expression,
     ),
 
     declaration_expression: $ => prec.dynamic(1, seq(
@@ -2013,7 +2120,7 @@ export default grammar({
 
     tuple_expression: $ => seq(
       '(',
-      commaSep2($.argument),
+      commaSep2(alias($._tuple_argument, $.argument)),
       ')',
     ),
 
@@ -2148,7 +2255,13 @@ export default grammar({
       'on',
       'orderby',
       'param',
+      // Contextual keywords that are ordinary names outside their construct:
+      // `var with = ...` (with-expressions), `var partial = ...` (partial types)
+      // and `required = 0;` (required members). Where both readings parse, as in
+      // `public partial C(int x);`, the modifier reading wins.
+      prec.dynamic(-1, 'partial'),
       'property',
+      prec.dynamic(-1, 'required'),
       'scoped',
       'select',
       'type',
@@ -2157,6 +2270,7 @@ export default grammar({
       'var',
       'when',
       'where',
+      'with',
       'yield',
     ),
 
@@ -2165,8 +2279,16 @@ export default grammar({
     ...preprocIf('', $ => $.declaration),
     ...preprocIf('_in_top_level', $ => choice($._top_level_item_no_statement, $.statement)),
     ...preprocIf('_in_expression', $ => $.expression, -2, false),
+    ...preprocIf('_in_statement_tail', $ => seq($.expression, ';'), 0, false),
+    ...preprocIf('_in_function_body', $ => seq(repeat($.type_parameter_constraints_clause), $._plain_function_body), 0, false),
+    // The block opens with an external `#if` that the scanner only emits when the
+    // first thing inside is `else`, so a plain `#if` after an if-statement is
+    // still a statement-level block.
+    ...preprocIf('_in_else', $ => seq('else', $.statement), 0, false, $ => $._preproc_else_if_start),
+    ...preprocIf('_in_collection', $ => $._collection_items, -2, false),
+    ...preprocIf('_in_initializer', $ => $._initializer_items, -2, false),
     ...preprocIf('_in_enum_member_declaration', $ => $.enum_member_declaration, 0, false),
-    ...preprocIf('_in_attribute_list', $ => $.attribute_list, -1, false),
+    ...preprocIf('_in_attribute_list', $ => $.attribute_list, -1),
 
     preproc_arg: _ => token(prec(-1, /\S([^/\n]|\/[^*]|\\\r?\n)*/)),
     preproc_directive: _ => /#[ \t]*[a-zA-Z0-9]\w*/,
@@ -2222,18 +2344,25 @@ export default grammar({
       /\n/,
     ),
 
+    // A file name has no escape sequences: `"C:\dir\"` is complete.
+    _preproc_file_name: $ => seq(
+      '"',
+      optional(alias(token.immediate(prec(1, /[^"\r\n]+/)), $.string_literal_content)),
+      token.immediate('"'),
+    ),
+
     preproc_line: $ => seq(
       preprocessor('line'),
       choice(
         'default',
         'hidden',
-        seq($.integer_literal, optional($.string_literal)),
+        seq($.integer_literal, optional(alias($._preproc_file_name, $.string_literal))),
         seq(
           '(', $.integer_literal, ',', $.integer_literal, ')',
           '-',
           '(', $.integer_literal, ',', $.integer_literal, ')',
           optional($.integer_literal),
-          $.string_literal,
+          alias($._preproc_file_name, $.string_literal),
         ),
       ),
       /\n/,
@@ -2287,6 +2416,55 @@ export default grammar({
 
     shebang_directive: _ => token(seq('#!', /.*/)),
 
+    // C# 14 / .NET 10 file-based apps directives. The compiler ignores them;
+    // the .NET SDK reads them. Structure follows the SDK spec:
+    // https://github.com/dotnet/sdk/blob/main/documentation/general/dotnet-run-file.md
+    //
+    //   #:package Name@Version     #:sdk Name@Version     #:property Name=Value
+    //   #:project path             #:ref path             #:include glob    ...
+    //
+    // `package`, `sdk` and `property` split into name, separator and value.
+    // Any other kind (including unknown ones) takes the rest of the line as
+    // its value. Kinds are immediate tokens only valid right after `#:`, so
+    // they never reserve these words elsewhere.
+    ignored_directive: $ => seq(
+      '#:',
+      optional(choice(
+        seq(
+          field('kind', choice(
+            alias(token.immediate('package'), $.directive_kind),
+            alias(token.immediate('sdk'), $.directive_kind),
+            alias(token.immediate('property'), $.directive_kind),
+          )),
+          optional(seq(
+            field('name', $.directive_name),
+            optional(field('separator', $.directive_separator)),
+            optional(field('value', $.directive_value)),
+          )),
+        ),
+        seq(
+          field('kind', alias(token.immediate(/[A-Za-z_][A-Za-z0-9_-]*/), $.directive_kind)),
+          optional(field('value', $.directive_value)),
+        ),
+        // Not a well-formed directive (e.g. `#: package X`): still ignored by
+        // the compiler, so keep the rest of the line as an unstructured value.
+        field('value', alias(token.immediate(/[ \t]+[^\s]([^\r\n]*[^\s])?/), $.directive_value)),
+      )),
+      /\n/,
+    ),
+
+    directive_name: _ => token(choice(
+      /[^\s@="]+/,
+      /"([^"\\\n]|\\.)*"/,
+    )),
+
+    // `@` for package/sdk versions, `=` for property values. A dedicated
+    // token (rather than reusing the C# `@`/`=` literals) keeps these
+    // directives from perturbing GLR tie-breaks elsewhere in the grammar.
+    directive_separator: _ => token(/[@=]/),
+
+    directive_value: _ => token(/[^\s@=]([^\r\n]*[^\s])?/),
+
     comment: _ => token(choice(
       seq('//', /[^\n\r]*/),
       seq(
@@ -2321,7 +2499,7 @@ function preprocessor(command) {
  *
  * @returns {RuleBuilders<string, string>}
  */
-function preprocIf(suffix, content, precedence = 0, rep = true) {
+function preprocIf(suffix, content, precedence = 0, rep = true, ifToken = null) {
   /**
    *
    * @param {GrammarSymbols<string>} $
@@ -2337,7 +2515,7 @@ function preprocIf(suffix, content, precedence = 0, rep = true) {
 
   return {
     ['preproc_if' + suffix]: $ => prec(precedence, seq(
-      preprocessor('if'),
+      ifToken ? alias(ifToken($), '#if') : preprocessor('if'),
       field('condition', $._preproc_expression),
       /\n/,
       rep ? repeat(content($)) : optional(content($)),
@@ -2358,6 +2536,29 @@ function preprocIf(suffix, content, precedence = 0, rep = true) {
       field('alternative', optional(alternativeBlock($))),
     )),
   };
+}
+
+/**
+ * Creates an argument, which may declare a variable after `out`
+ *
+ * @param {GrammarSymbols<string>} $
+ *
+ * @param {number} declarationPrecedence dynamic precedence of a declaration
+ * that does not follow `out`
+ *
+ * @returns {PrecRule}
+ */
+function argumentRule($, declarationPrecedence) {
+  return prec(1, seq(
+    optional(seq(field('name', $.identifier), ':')),
+    choice(
+      seq('out', choice($.expression, $.declaration_expression)),
+      seq(
+        optional(choice('ref', 'in')),
+        choice($.expression, prec.dynamic(declarationPrecedence, $.declaration_expression)),
+      ),
+    ),
+  ));
 }
 
 /**
