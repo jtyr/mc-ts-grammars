@@ -928,7 +928,7 @@ const rules = {
   constraint_block_item: $ => choice(
     seq('solve', $.solve_before_list, 'before', $.solve_before_list, ';'),
     $.constraint_expression,
-    $._directives // Out of LRM
+    prec.dynamic(-1, $._directives) // Out of LRM
   ),
 
   solve_before_list: $ => commaSep1($.constraint_primary),
@@ -1178,8 +1178,9 @@ const rules = {
 
 // ** A.2.2 Declaration data types
 // *** A.2.2.1 Net and variable types
-  // $.integral_number, $.constant_mintypmax_expression and $.type_reference replace the $.constant_primary
-  // branch, as these are the only possible options of $.constant_primary in a static cast.
+  // $.constant_primary itself is left out (it caused an issue with a concatenation on the RHS), so the
+  // branches marked below replace it: a number, a parenthesized expression, a type reference, an identifier
+  // with a select, and a function or system call.
   // A.10.45: It shall be legal to use a type_reference constant_primary as the casting_type in a static cast.
   casting_type: $ => choice(
     $._simple_type,
@@ -1190,7 +1191,13 @@ const rules = {
     'string',
     'const',
     $.hierarchical_identifier, // Out of LRM but supported by most tools
+    seq($.hierarchical_identifier, $.select), // $.constant_primary branch
+    $.system_tf_call,          // $.constant_primary branch ($.constant_function_call)
+    alias($._casting_tf_call, $.tf_call), // $.constant_primary branch ($.constant_function_call)
   ),
+
+  // Only calls with parentheses, so that a bare identifier stays a $.hierarchical_identifier
+  _casting_tf_call: $ => seq($.hierarchical_identifier, '(', optional($.list_of_arguments), ')'),
 
   data_type: $ => prec('data_type', choice(
     seq($.integer_vector_type, optional($._signing), repeat($.packed_dimension)),
@@ -1315,15 +1322,14 @@ const rules = {
     '(', choice($.expression, $._data_type_or_incomplete_class_scoped_type), ')'
   ),
 
-  _data_type_or_incomplete_class_scoped_type: $ => prec('_data_type_or_incomplete_class_scoped_type', choice(
+  _data_type_or_incomplete_class_scoped_type: $ => choice(
     $.data_type,
     $._incomplete_class_scoped_type
-  )),
+  ),
 
-  // Set precedence to fix parsing conflict: could result in an endless loop due to recursivity
   _incomplete_class_scoped_type: $ => prec('_incomplete_class_scoped_type', choice(
     seq($.type_identifier, '::', $._type_identifier_or_class_type),
-    $._incomplete_class_scoped_type, '::', $._type_identifier_or_class_type
+    seq($._incomplete_class_scoped_type, '::', $._type_identifier_or_class_type)
   )),
 
   _type_identifier_or_class_type: $ => prec('_type_identifier_or_class_type', choice($.type_identifier, $.class_type)),
@@ -3891,7 +3897,7 @@ const rules = {
     $.constant_expression, choice('+:', '-:'), $.constant_expression
   ),
 
-  expression: $ => prec('expression', choice(
+  expression: $ => choice(
     $.primary,
     $._unary_expression,
     $.inc_or_dec_expression,
@@ -3901,8 +3907,7 @@ const rules = {
     $.inside_expression,
     $.tagged_union_expression,
     $.text_macro_usage,               // Out of LRM
-    $.file_or_line_compiler_directive // Out of LRM
-  )),
+  ),
 
   tagged_union_expression: $ => prec.right(seq(
     'tagged', $.member_identifier, optional($.primary)
@@ -3948,7 +3953,18 @@ const rules = {
   _genvar_expression: $ => $.constant_expression,
 
   // The ones below are not part of the LRM explicitly (added to simplify reading of the grammar)
-  _unary_expression: $ => unary_expr($, $.unary_operator, $.primary),
+  // Out of LRM: besides a primary, the operand can be a parenthesized assignment or a postfix increment
+  // or decrement, as slang accepts (e.g. !(x = y), !x++). Both are aliased to primary, the LRM operand.
+  _unary_expression: $ => unary_expr($, $.unary_operator, choice($.primary, alias($._unary_operand, $.primary))),
+
+  _unary_operand: $ => choice(
+    $._parenthesized_expression,
+    alias($._postfix_inc_or_dec_expression, $.inc_or_dec_expression),
+  ),
+
+  _postfix_inc_or_dec_expression: $ => prec.left(PREC.UNARY, seq(
+    $.variable_lvalue, repeat($.attribute_instance), $.inc_or_dec_operator
+  )),
 
   _binary_expression: $ => binary_expr($, BINARY_OP_TABLE, $.expression),
 
@@ -3986,7 +4002,8 @@ const rules = {
     $._constant_assignment_pattern_expression,
     $.type_reference,
     '$', // Out of LRM, required for 7.10.4 (bullet point 47): The $ primary shall be legal only in a select for a queue variable.
-    'null'
+    'null',
+    prec.dynamic(-1, seq($.text_macro_usage, optional($.constant_select))), // Out of LRM: a macro expands to a primary before parsing
   )),
 
   module_path_primary: $ => choice(
@@ -4046,6 +4063,7 @@ const rules = {
     $.time_literal,
     $.unbased_unsized_literal,
     $.string_literal,
+    $.file_or_line_compiler_directive, // Out of LRM: expands to a number or a string
   ),
 
   time_literal: $ => seq(
@@ -4370,7 +4388,7 @@ const rules = {
       choice($._identifier, $.text_macro_usage), // Slightly out of LRM to support use of $.text_macro_usage as part of hierarchical identifiers
       optional($.constant_bit_select),
       '.'))) ,
-    $._identifier
+    choice($._identifier, prec.dynamic(-1, $.text_macro_usage)) // Out of LRM: a macro expands to an identifier before parsing
   )),
 
   hierarchical_net_identifier: $ => $.hierarchical_identifier,
@@ -4504,7 +4522,7 @@ const rules = {
   ),
 
 // * 22. Compiler directives
-  _directives: $ => prec('_directives', choice(
+  _directives: $ => choice(
     $.resetall_compiler_directive,
     $.include_compiler_directive,
     $.text_macro_definition,
@@ -4523,7 +4541,7 @@ const rules = {
     $.file_or_line_compiler_directive,
     $.keywords_directive,
     $.endkeywords_directive
-  )),
+  ),
 
 
 // ** 22-3 `resetall
@@ -5080,14 +5098,6 @@ module.exports = grammar({
     ['class_constructor_declaration', 'implicit_class_handle'],
 
 
-    // Not sure about this one, but the other way around creates an endless loop in the parsing process
-    //
-    // 'typedef'  _incomplete_class_scoped_type  •  '\'  …
-    // 1:  'typedef'  (_data_type_or_incomplete_class_scoped_type  _incomplete_class_scoped_type)  •  '\'  …
-    // 2:  'typedef'  (_incomplete_class_scoped_type  _incomplete_class_scoped_type)  •  '\'  …
-    ['_data_type_or_incomplete_class_scoped_type', '_incomplete_class_scoped_type'],
-
-
     // pure virtual function will always be a function prototype overriden in the extended class
     //
     // 'class'  _identifier  ';'  'pure'  'virtual'  •  'function'  …
@@ -5440,14 +5450,6 @@ module.exports = grammar({
     ['constraint_set', 'empty_unpacked_array_concatenation'],
 
 
-    // Out of LRM support for macros in identifiers
-    //
-    // text_macro_usage  •  '['  …
-    // 1:  (_directives  text_macro_usage)  •  '['  …                                         (precedence: '_directives')
-    // 2:  (hierarchical_identifier_repeat1  text_macro_usage  •  constant_bit_select  '.')  (precedence: 'hierarchical_identifier')
-    ['hierarchical_identifier', '_directives'],
-
-
     // Set the one higher in the syntax tree: _incomplete_class_scoped_type
     //
     // 'typedef'  _identifier  •  '::'  …
@@ -5466,6 +5468,7 @@ module.exports = grammar({
     // 2:  'typedef'  _identifier  '::'  (_type_identifier_or_class_type  _identifier)  •  '\'  …
     // 3:  'typedef'  _identifier  (class_type_repeat1  '::'  _identifier)  •  '\'  …             (precedence: 'class_type')
     ['class_type_repeat1', '_type_identifier_or_class_type'],
+    ['class_type_repeat1', 'class_type'],
 
 
     // Save one extra level of unnecessary nesting with data_type
@@ -5606,12 +5609,6 @@ module.exports = grammar({
     //   1:  (_simple_type  _identifier)  •  '''  …             (precedence: '_simple_type')
     //   2:  (hierarchical_identifier  _identifier)  •  '''  …  (precedence: 'hierarchical_identifier')
     ['_simple_type', 'hierarchical_identifier'],
-
-
-    // Allow conditional compilation on constraint blocks (#67)
-    // 1:  'randomize'  'with'  '{'  (_directives  text_macro_usage)  •  '-'  …  (precedence: '_directives')
-    // 2:  'randomize'  'with'  '{'  (expression  text_macro_usage)  •  '-'  …
-    ['expression', '_directives'],
 
 
     // Leave these two standalone to avoid having to replicate code with function 'list_of_args'
@@ -5936,7 +5933,13 @@ module.exports = grammar({
     // '('  text_macro_usage  •  ':'  …
     // 1:  '('  (constant_expression  text_macro_usage)  •  ':'  …
     // 2:  '('  (expression  text_macro_usage)  •  ':'  …
-    [$.constant_expression, $.expression],
+    //
+    // A macro can also be the last segment of a $.hierarchical_identifier, and a $.constant_primary,
+    // so the same `M has one more parse in each context. Dynamic precedence picks the plain macro.
+    [$.constant_expression, $.expression, $.constant_primary, $.hierarchical_identifier],
+    [$.constant_expression, $.constant_primary, $.hierarchical_identifier],
+    [$.expression, $.hierarchical_identifier],
+    [$._method_call_root, $.constant_primary, $.hierarchical_identifier],
 
 
     // $.nonrange_select would cover the $.dynamic_array_new case
@@ -6048,7 +6051,11 @@ module.exports = grammar({
     // 1:  '['  (primary  hierarchical_identifier  •  select)  (precedence: 'primary')
     // 2:  '['  (primary  hierarchical_identifier)  •  '.'  …  (precedence: 'primary')
     // 3:  '['  (tf_call  hierarchical_identifier)  •  '.'  …  (precedence: 'tf_call', associativity: Right)
-    [$.tf_call, $.primary],
+    //
+    // $.casting_type also takes a call or a select, decided by the '\'' after it, e.g. f(x)'(y), a[1]'(y)
+    [$.casting_type, $.tf_call, $.primary],
+    [$.casting_type, $.tf_call, $.primary, $.variable_lvalue],
+    [$.casting_type, $.tf_call, $.primary, $.net_lvalue, $.variable_lvalue],
 
 
     // Didn't test but makes sense to leave the conflict to avoid errors
@@ -6145,7 +6152,7 @@ module.exports = grammar({
     //  $.class_new branch in $.blocking_assignment
     [$.blocking_assignment, $.class_qualifier],
     [$.blocking_assignment, $._method_call_root, $.primary, $.class_qualifier, $.variable_lvalue, $.nonrange_variable_lvalue],
-    [$.blocking_assignment, $.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.casting_type, $.blocking_assignment, $.clockvar, $.tf_call, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.blocking_assignment, $.variable_lvalue, $.nonrange_variable_lvalue],
     [$.blocking_assignment, $.variable_lvalue],
     [$.blocking_assignment, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
@@ -6153,7 +6160,7 @@ module.exports = grammar({
 
     // After removing $.constant_primary from $.casting_type to fix issue with concatenation on RHS
     [$._simple_type, $.blocking_assignment, $._assignment_pattern_expression_type, $.class_qualifier],
-    [$.blocking_assignment, $.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
+    [$.casting_type, $.blocking_assignment, $.clockvar, $.primary, $.variable_lvalue, $.nonrange_variable_lvalue],
 
 
     // Sequences/Properties/Assertions
@@ -6232,14 +6239,17 @@ module.exports = grammar({
     [$.constraint_block, $.empty_unpacked_array_concatenation],
 
 
-    // Allow text_macro_usage on LHS of blocking and non-blocking assignments (on $.variable_lvalue)
-    [$.variable_lvalue, $._directives],
-    [$.expression, $.variable_lvalue],
-    [$.constant_expression, $.expression, $.variable_lvalue],
+    // Allow text_macro_usage on LHS of blocking and non-blocking assignments (on $.variable_lvalue),
+    // reached through the last segment of $.hierarchical_identifier
+    [$.variable_lvalue, $.hierarchical_identifier],
+    [$.variable_lvalue, $.hierarchical_identifier, $._directives],
+    [$.expression, $.variable_lvalue, $.hierarchical_identifier],
+    [$.constant_expression, $.expression, $.constant_primary, $.variable_lvalue, $.hierarchical_identifier],
 
 
     // Fix macro arguments parsing
     [$._identifier, $.formal_argument],
+    [$.hierarchical_identifier, $.formal_argument],
 
 
     // Support for `ifdefs in module header package import section
@@ -6251,10 +6261,17 @@ module.exports = grammar({
     [$.constant_primary, $.net_lvalue, $.hierarchical_identifier],
     [$.data_type, $.constant_primary, $.hierarchical_identifier],
 
-    // Allow conditional compilation on constraint blocks (#67)
-    [$.constant_expression, $._directives],
-    [$.expression, $.variable_lvalue, $._directives],
-    [$.constant_expression, $.expression, $._directives],
+    // Allow conditional compilation on constraint blocks (#67), with the macro also reached
+    // through $.hierarchical_identifier and $.constant_primary
+    [$.constant_expression, $.constant_primary, $.hierarchical_identifier, $._directives],
+    [$.expression, $.variable_lvalue, $.hierarchical_identifier, $._directives],
+    [$.constant_expression, $.expression, $.constant_primary, $.hierarchical_identifier, $._directives],
+
+    // A macro or a `__FILE__/`__LINE__ can be a directive, or a primary/identifier inside an expression
+    [$.hierarchical_identifier, $._directives],
+    [$.expression, $.hierarchical_identifier, $._directives],
+    [$._method_call_root, $.hierarchical_identifier, $._directives],
+    [$.primary_literal, $._directives],
   ],
 
 });

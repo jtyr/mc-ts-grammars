@@ -19,6 +19,8 @@ enum TokenType {
     RAW_STRING_END,
     RAW_STRING_CONTENT,
     LAMBDA_PAREN_OPEN,
+    PREPROC_ELSE_IF_START,
+    CONDITIONAL_MEMBER_QUESTION,
 };
 
 typedef enum {
@@ -306,6 +308,68 @@ static LambdaScanResult scan_lambda_paren_open(TSLexer *lexer) {
 }
 #undef BAIL
 
+
+// `#if <condition>` whose first content, after the condition line and any blank
+// lines or comments, is the keyword `else`. Only `#if` is consumed (mark_end);
+// the rest is read ahead and handed back so the normal tokens lex it. Lets an
+// `else` branch live inside a directive without a parser conflict on `#if`.
+static bool scan_preproc_else_if_start(TSLexer *lexer) {
+    while (iswspace(lexer->lookahead)) {
+        skip(lexer);
+    }
+    if (lexer->lookahead != '#') return false;
+    advance(lexer);
+    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') advance(lexer);
+    if (lexer->lookahead != 'i') return false;
+    advance(lexer);
+    if (lexer->lookahead != 'f') return false;
+    advance(lexer);
+    if (is_id_continue(lexer->lookahead)) return false;
+    lexer->mark_end(lexer);
+    // rest of the condition line
+    while (lexer->lookahead != 0 && lexer->lookahead != '\n') advance(lexer);
+    skip_ws_and_comments(lexer);
+    const char *kw = "else";
+    for (int i = 0; kw[i]; i++) {
+        if (lexer->lookahead != (int32_t)kw[i]) return false;
+        advance(lexer);
+    }
+    if (is_id_continue(lexer->lookahead)) return false;
+    lexer->result_symbol = PREPROC_ELSE_IF_START;
+    return true;
+}
+
+// Match the grammar extras independently of the process locale.
+static bool is_member_access_space(int32_t c) {
+    return (c >= '\t' && c <= '\r') || c == ' ' || c == 0xA0 || c == 0x3000 || c == 0xFEFF;
+}
+
+static bool skip_member_access_trivia(TSLexer *lexer) {
+    for (;;) {
+        while (is_member_access_space(lexer->lookahead)) advance(lexer);
+        if (lexer->lookahead != '/') return true;
+        advance(lexer);
+        if (lexer->lookahead == '/') {
+            while (lexer->lookahead != 0 && lexer->lookahead != '\n' && lexer->lookahead != '\r') {
+                advance(lexer);
+            }
+        } else if (lexer->lookahead == '*') {
+            advance(lexer);
+            for (;;) {
+                if (lexer->lookahead == 0) return false;
+                int32_t c = lexer->lookahead;
+                advance(lexer);
+                if (c == '*' && lexer->lookahead == '/') {
+                    advance(lexer);
+                    break;
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+}
+
 bool tree_sitter_c_sharp_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
     Scanner *scanner = (Scanner *)payload;
 
@@ -333,9 +397,33 @@ bool tree_sitter_c_sharp_external_scanner_scan(void *payload, TSLexer *lexer, co
         }
     }
 
+    if (valid_symbols[PREPROC_ELSE_IF_START]) {
+        if (scan_preproc_else_if_start(lexer)) return true;
+        return false;
+    }
+
     // error recovery, gives better trees this way
     if (valid_symbols[OPT_SEMI] && valid_symbols[INTERPOLATION_REGULAR_START]) {
         return false;
+    }
+
+    if (valid_symbols[CONDITIONAL_MEMBER_QUESTION]) {
+        while (is_member_access_space(lexer->lookahead)) {
+            skip(lexer);
+        }
+        if (lexer->lookahead == '?') {
+            advance(lexer);
+            lexer->mark_end(lexer);
+            if (!skip_member_access_trivia(lexer)) return false;
+            if (lexer->lookahead == '.') {
+                advance(lexer);
+                if (lexer->lookahead < '0' || lexer->lookahead > '9') {
+                    lexer->result_symbol = CONDITIONAL_MEMBER_QUESTION;
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     if (valid_symbols[OPT_SEMI]) {
@@ -485,21 +573,39 @@ bool tree_sitter_c_sharp_external_scanner_scan(void *payload, TSLexer *lexer, co
     if (valid_symbols[INTERPOLATION_END_QUOTE] && scanner->interpolation_stack.size > 0) {
         Interpolation *current_interpolation = array_back(&scanner->interpolation_stack);
 
-        while (lexer->lookahead == '"') {
+        if (is_raw(current_interpolation)) {
+            while (lexer->lookahead == '"') {
+                advance(lexer);
+                quote_count++;
+            }
+
+            if (quote_count == current_interpolation->quote_count) {
+                lexer->result_symbol = INTERPOLATION_END_QUOTE;
+                array_pop(&scanner->interpolation_stack);
+                return true;
+            }
+
+            did_advance = quote_count > 0;
+        } else if (lexer->lookahead == '"') {
+            // A regular or verbatim string ends at ONE quote. Counting the whole run of quotes
+            // (as a raw string must) misread a verbatim `""` escape that follows a hole or the
+            // start quote: in `$@"a ""{t}"""` the `"""` after `{t}` counted three, matched
+            // nothing, and the content then ran past the real end of the string.
             advance(lexer);
-            quote_count++;
+            if (!is_verbatim(current_interpolation) || lexer->lookahead != '"') {
+                lexer->result_symbol = INTERPOLATION_END_QUOTE;
+                array_pop(&scanner->interpolation_stack);
+                return true;
+            }
+            // `""` in a verbatim string is an escaped quote: both quotes are string content.
+            advance(lexer);
+            did_advance = true;
         }
-
-        if (quote_count == current_interpolation->quote_count) {
-            lexer->result_symbol = INTERPOLATION_END_QUOTE;
-            array_pop(&scanner->interpolation_stack);
-            return true;
-        }
-
-        did_advance = quote_count > 0;
     }
 
-    if (valid_symbols[INTERPOLATION_OPEN_BRACE] && scanner->interpolation_stack.size > 0) {
+    // A brace token never starts after quotes taken above: those quotes are string content, and a
+    // brace token here would span them (`$@"{a}""{b}"` read `""{` as the hole's brace).
+    if (valid_symbols[INTERPOLATION_OPEN_BRACE] && scanner->interpolation_stack.size > 0 && !did_advance) {
         Interpolation *current_interpolation = array_back(&scanner->interpolation_stack);
 
         while (lexer->lookahead == '{' && brace_advanced < current_interpolation->dollar_count) {
@@ -515,7 +621,7 @@ bool tree_sitter_c_sharp_external_scanner_scan(void *payload, TSLexer *lexer, co
         }
     }
 
-    if (valid_symbols[INTERPOLATION_CLOSE_BRACE] && scanner->interpolation_stack.size > 0) {
+    if (valid_symbols[INTERPOLATION_CLOSE_BRACE] && scanner->interpolation_stack.size > 0 && !did_advance) {
         uint8_t brace_advanced = 0;
         Interpolation *current_interpolation = array_back(&scanner->interpolation_stack);
 
@@ -599,6 +705,17 @@ bool tree_sitter_c_sharp_external_scanner_scan(void *payload, TSLexer *lexer, co
                         (brace_advanced == 0 || lexer->lookahead != '{')) {
                         return did_advance;
                     }
+                    // `{{` is an escaped brace, and both braces are content. Take the second one
+                    // here and start counting again, so a `{` straight after the escape can still
+                    // open a hole: in `$"{{{x}}}"` the third `{` starts `{x}`. Without the reset
+                    // `brace_advanced` stays at the limit, the third `{` is read as content too,
+                    // and the hole's expression becomes string text.
+                    if (lexer->lookahead == '{') {
+                        advance(lexer);
+                        brace_advanced = 0;
+                        did_advance = true;
+                        continue;
+                    }
                 }
             }
 
@@ -621,6 +738,13 @@ bool tree_sitter_c_sharp_external_scanner_scan(void *payload, TSLexer *lexer, co
                         (brace_advanced == 0 || lexer->lookahead != '{')) { // if we're in a brace we're not allowed to
                                                                             // collect more than the open_brace_count
                         return did_advance;
+                    }
+                    // An escaped `{{`: see the verbatim branch above.
+                    if (lexer->lookahead == '{') {
+                        advance(lexer);
+                        brace_advanced = 0;
+                        did_advance = true;
+                        continue;
                     }
                 }
             }

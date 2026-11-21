@@ -4,6 +4,7 @@
 #include "tsp_keywords.h"
 #include "tsp_intuit_more.h"
 #include "tsp_intuit_readline.h"
+#include "tsp_quote_closer.h"
 
 // grumble grumble no stdlib
 static char *tsp_strchr(register const char *s, int c) {
@@ -103,6 +104,19 @@ enum TokenType {
   /* a subscript opener glued to an interpolated variable */
   TOKEN_INTERP_OPEN_BRACKET,
   TOKEN_INTERP_OPEN_BRACE,
+  /* the opener of a quote that has no closer */
+  TOKEN_UNTERMINATED_QUOTE,
+  /* zero-width: the grammar asks for this before any recovery closer or fake
+   * semicolon, so those do not have to be valid in every after-term state */
+  TOKEN_RECOVER_END,
+  /* zero-width: a class/role/method declaration opens this line.  Valid at
+   * the start of any statement; a sub or method body closes on it. */
+  TOKEN_RECOVER_BLOCK_MARK,
+  /* regex and transliteration flags */
+  TOKEN_QR_MODIFIERS,
+  TOKEN_M_MODIFIERS,
+  TOKEN_S_MODIFIERS,
+  TOKEN_TR_MODIFIERS,
   /* error condition is always last */
   TOKEN_ERROR
 };
@@ -147,6 +161,20 @@ static int32_t close_for_open(int32_t c) {
   }
 }
 
+/* The rule is tsp_closer_opens_next_string; this only reads it the rest of
+ * the closer's line.  Called with the lookahead just past the closer. */
+static bool closer_opens_next_string(TSLexer *lexer, int32_t quote, bool crossed_line,
+                                     const int32_t before[2]) {
+  int32_t rest[TSP_CLOSER_WINDOW];
+  int len = 0;
+  while (len < TSP_CLOSER_WINDOW && !lexer->eof(lexer) && lexer->lookahead != '\n' &&
+         lexer->lookahead != '\r') {
+    rest[len++] = lexer->lookahead;
+    lexer->advance(lexer, false);
+  }
+  return tsp_closer_opens_next_string(rest, len, quote, crossed_line, before);
+}
+
 /* Pure lookahead: matching closer before EOF?  Covers ' and " (non-paired:
  * closer == opener) and the quote-likes.  Without it an unterminated quote
  * eats the rest of the file.
@@ -161,10 +189,17 @@ static int32_t close_for_open(int32_t c) {
  * leads_with_delim: optional, paired only -- body's first non-space char is
  * the opener again (m{{...}}); see TSPQuote.body_leads_with_delim.
  *
+ * budget: bytes to look through, or -1 for all of them.  Running out counts
+ * as unterminated.
+ *
+ * bare: a ' or " string, not a quote-like operator's delimiter.  Its closer
+ * also has to read as one (tsp_quote_closer.h).
+ *
  * MUST follow MARK_END, or the lookahead extends the token.
  */
-static bool quote_terminated(TSLexer *lexer, int32_t opener,
-                             bool *leads_with_delim) {
+typedef enum { QUOTE_CLOSED, QUOTE_RAN_TO_EOF, QUOTE_GAVE_UP } QuoteAhead;
+static QuoteAhead quote_closer_ahead(TSLexer *lexer, int32_t opener, bool bare,
+                                     bool *leads_with_delim, long budget) {
   int32_t closer = close_for_open(opener);
   bool paired = closer != 0;
   if (!paired)
@@ -173,6 +208,8 @@ static bool quote_terminated(TSLexer *lexer, int32_t opener,
   if (leads_with_delim)
     *leads_with_delim = false;
   int depth = 1;
+  bool crossed_line = false;
+  int32_t before[2] = {0, 0};
 
   bool backslash_escapes = opener != '\\';
 
@@ -184,12 +221,16 @@ static bool quote_terminated(TSLexer *lexer, int32_t opener,
   }
 
   while (!lexer->eof(lexer)) {
+    if (budget >= 0 && budget-- == 0)
+      return QUOTE_GAVE_UP;
     int32_t c = lexer->lookahead;
     if (backslash_escapes && c == '\\') {
       lexer->advance(lexer, false);
       if (lexer->eof(lexer))
-        return false;
+        return QUOTE_RAN_TO_EOF;
       lexer->advance(lexer, false);
+      // an escape is string content whatever it escapes
+      before[1] = '\\', before[0] = 'a';
       continue;
     }
     if (paired && c == opener) {
@@ -197,11 +238,22 @@ static bool quote_terminated(TSLexer *lexer, int32_t opener,
       lexer->advance(lexer, false);
       continue;
     }
-    if (c == closer && (!paired || --depth == 0))
-      return true;
+    if (c == closer && (!paired || --depth == 0)) {
+      if (!bare)
+        return QUOTE_CLOSED;
+      lexer->advance(lexer, false);
+      return closer_opens_next_string(lexer, closer, crossed_line, before) ? QUOTE_GAVE_UP
+                                                                           : QUOTE_CLOSED;
+    }
+    if (c == '\n') {
+      crossed_line = true;
+      before[0] = before[1] = 0;
+    } else {
+      before[1] = before[0], before[0] = c;
+    }
     lexer->advance(lexer, false);
   }
-  return false;
+  return QUOTE_RAN_TO_EOF;
 }
 
 typedef struct {
@@ -233,6 +285,13 @@ static TSPQuote tspquote_new() { return (TSPQuote){0, 0, 0, false, false}; }
 
 enum HeredocState { HEREDOC_NONE, HEREDOC_START, HEREDOC_UNKNOWN, HEREDOC_CONTINUE, HEREDOC_END };
 
+enum PrevSent {
+  SENT_NOTHING,
+  SENT_RECOVERY,        // a recovery token
+  SENT_BLOCK_MARK,      // the block mark, which is also a recovery token
+  SENT_AUTOQUOTE_AHEAD, // the autoquote-ahead marker for a `class =>` key
+};
+
 /* Perl allows multiple heredocs queued on a single line, consumed FIFO after
  * the newline.  We hold up to HEREDOC_QUEUE_MAX pending heredocs; each one
  * carries its own delimiter and interpolate/indent flags.  The consume-FSM
@@ -242,6 +301,8 @@ enum HeredocState { HEREDOC_NONE, HEREDOC_START, HEREDOC_UNKNOWN, HEREDOC_CONTIN
 typedef struct {
   TSPString delim;
   bool interpolates, indents;
+  /* its body has begun: a heredoc introduced inside it nests ahead of it */
+  bool started;
 } HeredocEntry;
 
 typedef struct {
@@ -251,8 +312,42 @@ typedef struct {
   HeredocEntry heredoc_queue[HEREDOC_QUEUE_MAX];
   uint8_t heredoc_count;
   enum HeredocState heredoc_state;
-  bool recovery_emitted;
+  /* What the previous call sent, for the call that follows it at the same
+   * position. */
+  enum PrevSent prev_sent;
+  /* Bit c is set once an opener c ran to EOF without a closer.  Every later
+   * opener of that character would repeat the same scan to EOF, which is
+   * quadratic in a file full of them. */
+  uint64_t unclosed_delims[2];
 } LexerState;
+
+/* How far a paired opener looks for its closer once its delimiter is in
+ * unclosed_delims.  A same-character delimiter needs no second look: the scan
+ * that found it unclosed passed every later candidate. */
+#define UNCLOSED_DELIM_BUDGET 4096
+
+static bool delim_is_unclosed(LexerState *state, int32_t opener) {
+  return opener > 0 && opener < 128 && (state->unclosed_delims[opener >> 6] >> (opener & 63) & 1);
+}
+
+static bool quote_terminated(TSLexer *lexer, LexerState *state, int32_t opener, bool bare,
+                             bool *leads_with_delim) {
+  long budget = -1;
+  if (delim_is_unclosed(state, opener)) {
+    if (!close_for_open(opener)) {
+      if (leads_with_delim)
+        *leads_with_delim = false;
+      return false;
+    }
+    budget = UNCLOSED_DELIM_BUDGET;
+  }
+  QuoteAhead ahead = quote_closer_ahead(lexer, opener, bare, leads_with_delim, budget);
+  if (ahead == QUOTE_CLOSED)
+    return true;
+  if (opener > 0 && opener < 128 && ahead == QUOTE_RAN_TO_EOF)
+    state->unclosed_delims[opener >> 6] |= (uint64_t)1 << (opener & 63);
+  return false;
+}
 
 static void lexerstate_push_quote(LexerState *state, int32_t opener) {
   TSPQuote q = tspquote_new();
@@ -368,13 +463,25 @@ static HeredocEntry *lexerstate_front_heredoc(LexerState *state) {
  * is graceful degradation for a pathological input. */
 static void lexerstate_add_heredoc(LexerState *state, TSPString *delim, bool interp, bool indent) {
   HeredocEntry *e;
-  if (state->heredoc_count >= HEREDOC_QUEUE_MAX)
+  /* A heredoc introduced inside the body of one that has begun (`@{[ <<B ]}`
+   * in an interpolating body) takes its lines first: it goes ahead of the
+   * begun one, behind any nested sibling from the same line. */
+  int at = 0;
+  while (at < state->heredoc_count && !state->heredoc_queue[at].started) at++;
+  if (at < state->heredoc_count && state->heredoc_count < HEREDOC_QUEUE_MAX) {
+    for (int i = state->heredoc_count; i > at; i--)
+      state->heredoc_queue[i] = state->heredoc_queue[i - 1];
+    state->heredoc_count++;
+    e = &state->heredoc_queue[at];
+    if (at == 0) state->heredoc_state = HEREDOC_START;
+  } else if (state->heredoc_count >= HEREDOC_QUEUE_MAX)
     e = &state->heredoc_queue[HEREDOC_QUEUE_MAX - 1];
   else
     e = &state->heredoc_queue[state->heredoc_count++];
   e->delim = *delim;
   e->interpolates = interp;
   e->indents = indent;
+  e->started = false;
   if (state->heredoc_count == 1) state->heredoc_state = HEREDOC_START;
 }
 
@@ -390,7 +497,10 @@ static void lexerstate_finish_heredoc(LexerState *state) {
       state->heredoc_queue[i] = state->heredoc_queue[i + 1];
   }
   state->heredoc_queue[state->heredoc_count] = (HeredocEntry){0};
-  state->heredoc_state = state->heredoc_count > 0 ? HEREDOC_START : HEREDOC_NONE;
+  /* a begun heredoc left on top was interrupted by a nested one: it resumes
+   * at the start of a line */
+  state->heredoc_state = state->heredoc_count == 0 ? HEREDOC_NONE
+    : state->heredoc_queue[0].started ? HEREDOC_UNKNOWN : HEREDOC_START;
 }
 
 #define ADVANCE_C                                                             \
@@ -422,10 +532,10 @@ static void lexerstate_finish_heredoc(LexerState *state) {
 // TOKEN() contains `return true`.  brace_ok: skip brace recovery at '}'
 // (that's the real closer); ';' is safe (only valid in subscript context).
 #define EMIT_RECOVERY_TOKENS(brace_ok) do { \
-    if (valid_symbols[TOKEN_RECOVER_ARROW])        { state->recovery_emitted = true; TOKEN(TOKEN_RECOVER_ARROW); } \
-    if (valid_symbols[TOKEN_RECOVER_PAREN_CLOSE])  { state->recovery_emitted = true; TOKEN(TOKEN_RECOVER_PAREN_CLOSE); } \
-    if (valid_symbols[TOKEN_RECOVER_BRACKET_CLOSE]) { state->recovery_emitted = true; TOKEN(TOKEN_RECOVER_BRACKET_CLOSE); } \
-    if ((brace_ok) && valid_symbols[TOKEN_RECOVER_BRACE_CLOSE]) { state->recovery_emitted = true; TOKEN(TOKEN_RECOVER_BRACE_CLOSE); } \
+    if (valid_symbols[TOKEN_RECOVER_ARROW])        { state->prev_sent = SENT_RECOVERY; TOKEN(TOKEN_RECOVER_ARROW); } \
+    if (valid_symbols[TOKEN_RECOVER_PAREN_CLOSE])  { state->prev_sent = SENT_RECOVERY; TOKEN(TOKEN_RECOVER_PAREN_CLOSE); } \
+    if (valid_symbols[TOKEN_RECOVER_BRACKET_CLOSE]) { state->prev_sent = SENT_RECOVERY; TOKEN(TOKEN_RECOVER_BRACKET_CLOSE); } \
+    if ((brace_ok) && valid_symbols[TOKEN_RECOVER_BRACE_CLOSE]) { state->prev_sent = SENT_RECOVERY; TOKEN(TOKEN_RECOVER_BRACE_CLOSE); } \
   } while(0)
 
 static void skip_whitespace(TSLexer *lexer) {
@@ -637,10 +747,10 @@ static bool is_interpolation_escape(int32_t c) { return c < 256 && tsp_strchr("$
  * BOUNDED — the same graceful-degradation contract the heredoc overflow already uses.
  */
 #define SER_FIXED_OVERHEAD \
-  (1 /* quote_count   */ + \
+  (1 /* quote_count   */ + 1 /* any unclosed_delims */ + 16 /* unclosed_delims */ + \
    1 /* heredoc_state */ + 1 /* heredoc_count */ + \
-   HEREDOC_QUEUE_MAX * (1 /* interpolates */ + 1 /* indents */ + (int)sizeof(TSPString)) + \
-   1 /* recovery_emitted */)
+   HEREDOC_QUEUE_MAX * (1 /* interpolates */ + 1 /* indents */ + 1 /* started */ + (int)sizeof(TSPString)) + \
+   1 /* prev_sent */)
 #define MAX_SERIALIZED_QUOTES \
   ((TREE_SITTER_SERIALIZATION_BUFFER_SIZE - SER_FIXED_OVERHEAD) / (int)sizeof(TSPQuote))
 
@@ -668,10 +778,18 @@ unsigned int tree_sitter_perl_external_scanner_serialize(void *payload, char *bu
     HeredocEntry *e = &state->heredoc_queue[i];
     buffer[size++] = (char)e->interpolates;
     buffer[size++] = (char)e->indents;
+    buffer[size++] = (char)e->started;
     memcpy(&buffer[size], &e->delim, sizeof(TSPString));
     size += sizeof(TSPString);
   }
-  buffer[size++] = (char)state->recovery_emitted;
+  buffer[size++] = (char)state->prev_sent;
+  // almost always empty, so it costs one byte
+  bool any_unclosed = state->unclosed_delims[0] || state->unclosed_delims[1];
+  buffer[size++] = (char)any_unclosed;
+  if (any_unclosed) {
+    memcpy(&buffer[size], state->unclosed_delims, sizeof state->unclosed_delims);
+    size += sizeof state->unclosed_delims;
+  }
 
   return size;
 }
@@ -681,6 +799,7 @@ void tree_sitter_perl_external_scanner_deserialize(void *payload, const char *bu
   LexerState *state = payload;
   size_t size = 0;
   array_delete(&state->quotes);
+  state->unclosed_delims[0] = state->unclosed_delims[1] = 0;
   if (length > 0) {
     // Deserialize the quotes array
     size_t quote_count = (uint8_t)buffer[size++];
@@ -702,10 +821,13 @@ void tree_sitter_perl_external_scanner_deserialize(void *payload, const char *bu
       HeredocEntry *e = &state->heredoc_queue[i];
       e->interpolates = (bool)buffer[size++];
       e->indents = (bool)buffer[size++];
+      e->started = (bool)buffer[size++];
       memcpy(&e->delim, &buffer[size], sizeof(TSPString));
       size += sizeof(TSPString);
     }
-    state->recovery_emitted = (bool)buffer[size++];
+    state->prev_sent = (enum PrevSent)buffer[size++];
+    if (buffer[size++])
+      memcpy(state->unclosed_delims, &buffer[size], sizeof state->unclosed_delims);
   } else {
     state->heredoc_count = 0;
     state->heredoc_state = HEREDOC_NONE;
@@ -719,8 +841,13 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   bool is_ERROR = valid_symbols[TOKEN_ERROR];
   bool skipped_whitespace = false;
   bool crossed_newline = false;
-  bool recovery_emitted = state->recovery_emitted;
-  state->recovery_emitted = false;
+  bool block_marked =
+    state->prev_sent == SENT_BLOCK_MARK || state->prev_sent == SENT_AUTOQUOTE_AHEAD;
+  bool recovery_emitted =
+    state->prev_sent == SENT_RECOVERY || state->prev_sent == SENT_BLOCK_MARK;
+  bool x_word = false;
+  bool x_start = false;
+  state->prev_sent = SENT_NOTHING;
 
   int32_t c = lexer->lookahead;
 
@@ -783,6 +910,23 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
    * operator */
   if (!is_ERROR && valid_symbols[TOKEN_NONASSOC]) TOKEN(TOKEN_NONASSOC);
 
+  /* Regex and transliteration flags, glued to the closing delimiter.  They are
+   * external so that no after-term state has to tell them from a word: as
+   * internal tokens they conflicted lexically with every identifier-shaped
+   * token and kept states apart that are otherwise the same. */
+  if (!is_ERROR) {
+    const char *flags = NULL;
+    int flags_token = 0;
+    if (valid_symbols[TOKEN_QR_MODIFIERS]) { flags = "msixpodualn"; flags_token = TOKEN_QR_MODIFIERS; }
+    else if (valid_symbols[TOKEN_M_MODIFIERS]) { flags = "msixpogcdualn"; flags_token = TOKEN_M_MODIFIERS; }
+    else if (valid_symbols[TOKEN_S_MODIFIERS]) { flags = "msixpogcedualr"; flags_token = TOKEN_S_MODIFIERS; }
+    else if (valid_symbols[TOKEN_TR_MODIFIERS]) { flags = "cdsr"; flags_token = TOKEN_TR_MODIFIERS; }
+    if (flags && c > 0 && c < 128 && tsp_strchr(flags, c)) {
+      while (c > 0 && c < 128 && tsp_strchr(flags, c)) ADVANCE_C;
+      MARK_END;
+      TOKEN(flags_token);
+    }
+  }
   /* The `x` repetition operator glued to its count (`"ab"x3`, `("")x4`). The
    * internal lexer would greedily take `x3` as one identifier, so when the
    * grammar offers the operator here (an operator is expected — perl's
@@ -792,15 +936,23 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   if (!is_ERROR && valid_symbols[TOKEN_X_OP] && c == 'x') {
     ADVANCE_C;
     if (c >= '0' && c <= '9') { MARK_END; TOKEN(TOKEN_X_OP); }
+    /* A lone `x` where an operator is expected is the operator too.  `x=` is
+     * left to the lexer. */
+    if (!isidcont(c) && c != '=') { MARK_END; TOKEN(TOKEN_X_OP); }
     return false;
   }
 
   // this is whitespace sensitive, so it must go before any whitespace is
   // skipped
-  if (valid_symbols[TOKEN_HEREDOC_MIDDLE] && !is_ERROR && state->heredoc_count > 0) {
+  // A nested heredoc waits on top of the one whose body we are in: finish
+  // this line of the outer body, then let the nested one start.
+  bool nested_pending = state->heredoc_state == HEREDOC_START && state->heredoc_count > 1 &&
+                        state->heredoc_queue[1].started;
+  if (valid_symbols[TOKEN_HEREDOC_MIDDLE] && !is_ERROR && state->heredoc_count > 0 &&
+      !(nested_pending && lexer->get_column(lexer) == 0)) {
     HeredocEntry *front = lexerstate_front_heredoc(state);
     DEBUG("Beginning heredoc contents\n", 0);
-    if (state->heredoc_state != HEREDOC_CONTINUE) {
+    if (state->heredoc_state != HEREDOC_CONTINUE && !nested_pending) {
       TSPString line = {0};
       // read as many lines as we can
       while (!lexer->eof(lexer)) {
@@ -856,11 +1008,17 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
       // handle the continue case; read ahead until we get a \n or an escape
       bool saw_chars = false;
       while (1) {
-        if (is_interpolation_escape(c)) {
+        // a last line with no newline: without this the loop never ends
+        if (is_interpolation_escape(c) || lexer->eof(lexer)) {
           MARK_END;
           break;
         }
         if (c == '\n') {
+          if (nested_pending) {
+            ADVANCE_C;
+            MARK_END;
+            TOKEN(TOKEN_HEREDOC_MIDDLE);
+          }
           MARK_END;
           state->heredoc_state = HEREDOC_UNKNOWN;
           TOKEN(TOKEN_HEREDOC_MIDDLE);
@@ -891,6 +1049,7 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   if (valid_symbols[TOKEN_HEREDOC_START]) {
     if (state->heredoc_state == HEREDOC_START && lexer->get_column(lexer) == 0) {
       state->heredoc_state = HEREDOC_UNKNOWN;
+      lexerstate_front_heredoc(state)->started = true;
       TOKEN(TOKEN_HEREDOC_START);
     }
   }
@@ -934,6 +1093,9 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     c = lexer->lookahead;
   }
 
+  /* The same after whitespace: `$a x 3`.  The word is read in the autoquote
+   * block below, which has to look past it for `=>` first. */
+  x_start = c == 'x';
   // CTRL-Z must be here, b/c it cares about whitespace
   if (c == 26 && valid_symbols[TOKEN_CTRL_Z]) TOKEN(TOKEN_CTRL_Z);
 
@@ -943,6 +1105,7 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     valid_symbols[TOKEN_RECOVER_BRACKET_CLOSE] ||
     valid_symbols[TOKEN_RECOVER_BRACE_CLOSE] ||
     valid_symbols[TOKEN_RECOVER_BLOCK_CLOSE] ||
+    valid_symbols[TOKEN_RECOVER_END] ||
     valid_symbols[PERLY_SEMICOLON];
 
   // Contextual keywords: class/role/method are declarations only when a name (or
@@ -959,12 +1122,42 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   if (!is_ERROR && (enter_oo || enter_asynctry)) {
     char word[8];
     int wlen = 0;
+    // On a new line the block mark goes out before the keyword, once.
+    bool mark_block = !block_marked && valid_symbols[TOKEN_RECOVER_BLOCK_MARK] &&
+                      (crossed_newline || recovery_emitted);
+    if (mark_block) MARK_END;  // zero-width, in front of the word
     while (isidcont(c)) {  // consume the whole identifier (store first 7 chars)
       if (wlen < 7) word[wlen++] = (char)c;
       lexer->advance(lexer, false);
       c = lexer->lookahead;
     }
     word[wlen] = '\0';
+    if (mark_block && (strcmp(word, "class") == 0 || strcmp(word, "role") == 0 || strcmp(word, "method") == 0)) {
+      /* The mark is still in front of the word, so only a zero-width token can
+       * leave from here: the block mark for a declaration, the autoquote-ahead
+       * marker for a fat-comma key, and a plain re-lex for a call. */
+      bool is_m = word[0] == 'm';
+      while (is_tsp_whitespace(c)) { lexer->advance(lexer, false); c = lexer->lookahead; }
+      bool decl = false;
+      if (is_m && (c == '{' || c == '(')) decl = true;
+      else if (isidfirst(c)) {
+        decl = true;
+        if (is_m) {
+          while (isidcont(c)) { lexer->advance(lexer, false); c = lexer->lookahead; }
+          while (is_tsp_whitespace(c)) { lexer->advance(lexer, false); c = lexer->lookahead; }
+          if (c == '=') return false;  // method NAME => ... is a call
+        }
+      }
+      if (decl) {
+        state->prev_sent = SENT_BLOCK_MARK;
+        TOKEN(TOKEN_RECOVER_BLOCK_MARK);
+      }
+      if (c == '=' && valid_symbols[TOKEN_FAT_COMMA_AUTOQUOTED_AHEAD]) {
+        state->prev_sent = SENT_AUTOQUOTE_AHEAD;
+        TOKEN(TOKEN_FAT_COMMA_AUTOQUOTED_AHEAD);
+      }
+      return false;
+    }
     MARK_END;  // the token covers exactly the word (lookahead past here is free)
     while (is_tsp_whitespace(c)) {  // peek past whitespace at the next token
       lexer->advance(lexer, false);
@@ -1037,14 +1230,40 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   // peels one layer — the parser keeps calling until everything is closed.
   //
   // Syntactic boundary: '}', ';', or EOF
+  // `__END__` and `__DATA__` end the last statement the way EOF does (and so
+  // do ^D and ^Z below).  The grammar used to accept them directly after an
+  // expression, which made them one more thing every after-term state had
+  // to accept.  Any other word starting with `_` goes on to the autoquote
+  // check with its end already marked.
+  if (!is_ERROR && c == '_' && (valid_symbols[TOKEN_RECOVER_END] || valid_symbols[PERLY_SEMICOLON])) {
+    char dw[10];
+    int dl = 0;
+    MARK_END;
+    while (isidcont(c)) {
+      if (dl < 9) dw[dl++] = (char)c;
+      ADVANCE_C;
+    }
+    dw[dl] = 0;
+    if (strcmp(dw, "__END__") == 0 || strcmp(dw, "__DATA__") == 0) {
+      if (valid_symbols[TOKEN_RECOVER_END]) TOKEN(TOKEN_RECOVER_END);
+      TOKEN(PERLY_SEMICOLON);
+    }
+    MARK_END;
+    goto kw_autoquote;
+  }
   if (!is_ERROR) {
-    if (c == '}' || c == ';' || lexer->eof(lexer)) {
+    if (c == '}' || c == ';' || c == 4 || c == 26 || lexer->eof(lexer)) {
       EMIT_RECOVERY_TOKENS(c != '}');
+      // No closer was valid yet: they sit behind the end marker.  Send it;
+      // the next call lands here again with the closers valid.  Not before a
+      // `}` that may end a `${ name }`: that one is `_brace_end_zw`'s.
+      if (valid_symbols[TOKEN_RECOVER_END] && !(c == '}' && valid_symbols[TOKEN_BRACE_END_ZW]))
+        TOKEN(TOKEN_RECOVER_END);
     }
   }
 
   if (valid_symbols[PERLY_SEMICOLON]) {
-    if (c == '}' || lexer->eof(lexer)) {
+    if (c == '}' || c == 4 || c == 26 || lexer->eof(lexer)) {
       if (is_ERROR || !valid_symbols[TOKEN_BRACE_END_ZW]) {
         DEBUG("Fake PERLY_SEMICOLON at end-of-scope\n", 0);
         TOKEN(PERLY_SEMICOLON);
@@ -1055,7 +1274,7 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
 
   // Statement keyword boundary: a statement keyword on a new line means
   // the previous expression is done.  Also fires when a recovery token
-  // was just emitted (recovery_emitted flag) since the newline was already
+  // was just emitted (`prev_sent`) since the newline was already
   // consumed by the previous call.
   // Gate on the first-char filter so we don't call MARK_END (and freeze
   // the token end at the keyword-start position) when the lookahead can't
@@ -1071,26 +1290,36 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     if (peek == PEEK_KEYWORD) {
       DEBUG("keyword boundary\n", 0);
       EMIT_RECOVERY_TOKENS(true);
+      // The newline is behind us now, so the flag is what brings the next
+      // call back to this keyword boundary, where the closers are valid.
+      if (valid_symbols[TOKEN_RECOVER_END]) {
+        state->prev_sent = SENT_RECOVERY;
+        TOKEN(TOKEN_RECOVER_END);
+      }
       // Body block-close: only a structural OO keyword (method/class/role)
       // closes a half-typed sub/method body.  Fires after any inner paren/
       // bracket closers above; the enclosing class block can't accept this
       // token, so the cascade stops at one body (no over-closing).
+      if (is_structural && !block_marked && valid_symbols[TOKEN_RECOVER_BLOCK_MARK]) {
+        state->prev_sent = SENT_BLOCK_MARK;
+        TOKEN(TOKEN_RECOVER_BLOCK_MARK);
+      }
       if (is_structural && valid_symbols[TOKEN_RECOVER_BLOCK_CLOSE]) {
         DEBUG("body block recovery at structural keyword\n", 0);
         // Re-arm the cascade so the next scan re-enters and can close the NEXT
         // enclosing recover-aware block (e.g. an unclosed `if`/loop body inside
         // the method: close the if-block, then the method body).
-        state->recovery_emitted = true;
+        state->prev_sent = SENT_RECOVERY;
         TOKEN(TOKEN_RECOVER_BLOCK_CLOSE);
       }
       // A statement terminator may need to fire BEFORE the body block-close:
       // after an inner closer (e.g. `my @x = [` -> `]`) completes an expression,
       // the statement still needs `;` before the enclosing body can reduce and
-      // close.  Re-arm the recovery cascade (recovery_emitted) so the next scan
+      // close.  Re-arm the recovery cascade (`prev_sent`) so the next scan
       // re-enters here and can emit the block-close.  Harmless when nothing
       // follows: the re-entry finds no further valid recovery token.
       if (valid_symbols[PERLY_SEMICOLON]) {
-        state->recovery_emitted = true;
+        state->prev_sent = SENT_RECOVERY;
         TOKEN(PERLY_SEMICOLON);
       }
     }
@@ -1218,8 +1447,12 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   if (valid_symbols[TOKEN_APOSTROPHE] && c == '\'') {
     ADVANCE_C;
     MARK_END; /* token is just the quote */
-    if (!quote_terminated(lexer, '\'', NULL))
-      return false;
+    // after m, s, qr and friends the closer is followed by flags or a second part
+    bool bare = !valid_symbols[TOKEN_QUOTELIKE_BEGIN];
+    if (!quote_terminated(lexer, state, '\'', bare, NULL)) {
+      if (is_ERROR || !valid_symbols[TOKEN_UNTERMINATED_QUOTE]) return false;
+      TOKEN(TOKEN_UNTERMINATED_QUOTE);
+    }
     lexerstate_push_quote(state, '\'');
     TOKEN(TOKEN_APOSTROPHE);
   }
@@ -1238,8 +1471,10 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   if (valid_symbols[TOKEN_DOUBLE_QUOTE] && c == '"') {
     ADVANCE_C;
     MARK_END;
-    if (!quote_terminated(lexer, '"', NULL))
-      return false;
+    if (!quote_terminated(lexer, state, '"', !valid_symbols[TOKEN_QUOTELIKE_BEGIN], NULL)) {
+      if (is_ERROR || !valid_symbols[TOKEN_UNTERMINATED_QUOTE]) return false;
+      TOKEN(TOKEN_UNTERMINATED_QUOTE);
+    }
     lexerstate_push_quote(state, '"');
     TOKEN(TOKEN_DOUBLE_QUOTE);
   }
@@ -1334,8 +1569,9 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
   // POD is only tried where the parser isn't asking for string content
   if (valid_symbols[TOKEN_POD] && !valid_symbols[TOKEN_QUOTELIKE_BEGIN] && !wants_quote_content &&
       !lexerstate_is_quote_closer(state, '=')) {
-    int column = lexer->get_column(lexer);
-    if (column == 0 && c == '=') {
+    // get_column re-walks the line, and pod is an extra, so this is asked
+    // before nearly every token: test the character first
+    if (c == '=' && lexer->get_column(lexer) == 0) {
       // perl only starts POD on `=` followed by a letter (`=head1`, `=pod`); a
       // line-initial `=>`, `==`, `=~`, `= 5` or `=_x` is still code
       ADVANCE_C;
@@ -1470,7 +1706,8 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     // Decide before the pop/push below: bailing out after it would strand the
     // pattern's quote in a multi-part s{}{}.
     bool leads_with_delim = false;
-    if (!quote_terminated(lexer, delim, &leads_with_delim))
+    bool terminated = quote_terminated(lexer, state, delim, false, &leads_with_delim);
+    if (!terminated && (is_ERROR || !valid_symbols[TOKEN_UNTERMINATED_QUOTE]))
       return false;
 
     // In a paired multi-part quote (s{}{}, tr[][], ...), the replacement pair
@@ -1483,6 +1720,8 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     if (valid_symbols[TOKEN_QUOTELIKE_MIDDLE_SKIP] && state->quotes.size) {
       lexerstate_pop_quote(state, state->quotes.size);
     }
+
+    if (!terminated) TOKEN(TOKEN_UNTERMINATED_QUOTE);
 
     lexerstate_push_quote(state, delim);
     if (leads_with_delim)
@@ -1703,11 +1942,14 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     if (c == '}') TOKEN(TOKEN_BRACE_AUTOQUOTED);
     return false;
   }
-  if (isidfirst(c) &&
-      (valid_symbols[TOKEN_FAT_COMMA_AUTOQUOTED] || valid_symbols[TOKEN_BRACE_AUTOQUOTED])) {
+  if ((isidfirst(c) &&
+       (valid_symbols[TOKEN_FAT_COMMA_AUTOQUOTED] || valid_symbols[TOKEN_BRACE_AUTOQUOTED])) ||
+      (x_start && c == 'x' && valid_symbols[TOKEN_X_OP] && !is_ERROR)) {
     // we zip until the end of the identifier; then we do a lookeahed to see if it's autoquoted
+    x_word = x_start && c == 'x';
     do {
       ADVANCE_C;
+      if (isidcont(c)) x_word = false;
     } while (isidcont(c));
     MARK_END;
     // TODO - carefully check if we got a 2 char quote such that we need to guard against
@@ -1741,6 +1983,7 @@ bool tree_sitter_perl_external_scanner_scan(void *payload, TSLexer *lexer,
     if (valid_symbols[TOKEN_BRACE_AUTOQUOTED]) {
       if (c1 == '}') TOKEN(TOKEN_BRACE_AUTOQUOTED);
     }
+    if (x_word && valid_symbols[TOKEN_X_OP] && !is_ERROR && c1 != '=') TOKEN(TOKEN_X_OP);
   } else {
     /* it's ZW time! */
     MARK_END;
